@@ -1058,3 +1058,64 @@ func FetchClinePass(env map[string]string) ([]Entry, error) {
 	}
 	return entries, nil
 }
+
+// FetchStepFun lists models from the StepFun OpenAI-compatible API.
+// Docs: https://platform.stepfun.ai/docs/en/guides/basic-concepts
+// Pricing: https://platform.stepfun.ai/docs/en/guides/pricing/details
+func FetchStepFun(env map[string]string) ([]Entry, error) {
+	entries, err := fetchOpenAICompatModels(
+		context.Background(),
+		envOr(env, "STEP_BASE_URL", "https://api.stepfun.ai/v1"),
+		env["STEP_API_KEY"], "Bearer",
+	)
+	if err != nil {
+		return nil, err
+	}
+	for i := range entries {
+		entries[i] = enrichStepFunEntry(entries[i])
+	}
+	return entries, nil
+}
+
+var stepFunOfficialTextSpecs = map[string]struct {
+	ContextWindow, MaxOutput int
+	Tools, Vision, Thinking  bool
+	InputPrice, OutputPrice  float64
+}{
+	"step-3.7-flash":      {256_000, 65_536, true, true, true, 0.20, 1.15},
+	"step-3.5-flash":      {256_000, 65_536, true, false, true, 0.10, 0.30},
+	"step-3.5-flash-2603": {256_000, 65_536, true, false, true, 0.10, 0.30},
+}
+
+func enrichStepFunEntry(e Entry) Entry {
+	id := strings.TrimSpace(e.ID)
+	if i := strings.LastIndex(id, "/"); i >= 0 {
+		id = id[i+1:]
+	}
+	spec, ok := stepFunOfficialTextSpecs[id]
+	if !ok {
+		return e
+	}
+	if e.ContextWindow <= 0 {
+		e.ContextWindow = spec.ContextWindow
+	}
+	if e.MaxOutput <= 0 {
+		e.MaxOutput = spec.MaxOutput
+	}
+	if spec.Tools {
+		e.Features = appendUnique(e.Features, "tools")
+	}
+	if spec.Vision {
+		e.ImageInput = true
+		e.Features = appendUnique(e.Features, "image_input")
+	}
+	if spec.Thinking {
+		e.ThinkingEnabled = true
+		e.Features = appendUnique(e.Features, "thinking:enabled")
+	}
+	if spec.InputPrice >= 0 && spec.OutputPrice >= 0 {
+		e.InputPricePer1M = spec.InputPrice
+		e.OutputPricePer1M = spec.OutputPrice
+	}
+	return e
+}

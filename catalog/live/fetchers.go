@@ -85,6 +85,7 @@ var Registry = map[string]FetchFunc{
 	"poolside":               FetchPoolside,
 	"groq":                   FetchGroq,
 	"clinepass":              FetchClinePass,
+	"stepfun":                FetchStepFun,
 }
 
 // Fetch runs a registered live fetcher.

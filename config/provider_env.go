@@ -63,6 +63,9 @@ type ProviderConfig struct {
 	ClinePassAPIKey            string                      `json:"clinepass_api_key,omitempty"`
 	ClinePassBaseURL           string                      `json:"clinepass_base_url,omitempty"`
 	ClinePassModel             string                      `json:"clinepass_model,omitempty"`
+	StepFunAPIKey              string                      `json:"stepfun_api_key,omitempty"`
+	StepFunBaseURL             string                      `json:"stepfun_base_url,omitempty"`
+	StepFunModel               string                      `json:"stepfun_model,omitempty"`
 	MiniMaxModel               string                      `json:"minimax_model,omitempty"`
 	AnthropicModel             string                      `json:"anthropic_model,omitempty"`
 	OpenAIModel                string                      `json:"openai_model,omitempty"`
@@ -240,6 +243,11 @@ var providerFields = map[string]providerFieldMap{
 		APIKeys: func(c *ProviderConfig) []string { return []string{c.XiaomiMimoTokenPlanAPIKey} },
 		Models:  func(c *ProviderConfig) []string { return []string{c.XiaomiModel} },
 		BaseURL: func(c *ProviderConfig) string { return c.XiaomiMimoTokenPlanBaseURL },
+	},
+	ProviderStepFun: {
+		APIKeys: func(c *ProviderConfig) []string { return []string{c.StepFunAPIKey} },
+		Models:  func(c *ProviderConfig) []string { return []string{c.StepFunModel} },
+		BaseURL: func(c *ProviderConfig) string { return c.StepFunBaseURL },
 	},
 }
 
@@ -587,6 +595,7 @@ func ClearProviderRuntimeEnv() {
 		"POOLSIDE_API_KEY", "POOLSIDE_MODEL", "POOLSIDE_BASE_URL",
 		"CLINE_API_KEY", "CLINE_MODEL", "CLINE_API_BASE",
 		"MOONSHOT_API_KEY", "MOONSHOT_MODEL", "MOONSHOT_BASE_URL",
+		"STEP_API_KEY", "STEP_MODEL", "STEP_BASE_URL",
 		"XIAOMI_MIMO_PAYG_API_KEY", "XIAOMI_MIMO_TOKEN_PLAN_API_KEY",
 		"XIAOMI_MIMO_TOKEN_PLAN_REGION", "XIAOMI_MODEL", "XIAOMI_BASE_URL",
 		"XIAOMI_MIMO_PAYG_BASE_URL", "XIAOMI_MIMO_TOKEN_PLAN_BASE_URL",
@@ -823,6 +832,14 @@ func ApplyProviderEnv(provider string, config *ProviderConfig, activeModel strin
 		if base != "" {
 			collectOpenAICompatibleProvider(env, "XIAOMI", apiKey, m, base, overwrite)
 		}
+	case ProviderStepFun:
+		apiKey := AsNonEmptyString(config.StepFunAPIKey)
+		base := firstNonEmpty(config.StepFunBaseURL, DefaultStepFunOpenAIBaseURL)
+		m := activeModel
+		if m == "" {
+			m = catalog.GetProviderDefaultModel("stepfun", cat)
+		}
+		collectOpenAICompatibleProvider(env, "STEP", apiKey, m, base, overwrite)
 	}
 	return env
 }

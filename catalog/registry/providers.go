@@ -174,6 +174,14 @@ func providerSpecs() []ProviderSpec {
 			ProtocolID:         "openai-responses", AdapterID: "concentrate-responses", RuntimeProfileKey: "concentrate",
 		},
 		{
+			ProviderID: "stepfun", DisplayName: "StepFun", DeploymentID: "stepfun-direct", SortOrder: 2, ChatPreference: 27,
+			RequiresKey: true, CredentialEnv: "STEP_API_KEY",
+			BaseURLEnv: []string{"STEP_BASE_URL"},
+			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.stepfun.ai/v1",
+			LiveFetcherKey: "stepfun", LiveCatalogKey: "stepfun",
+			ProtocolID: "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "stepfun",
+		},
+		{
 			ProviderID: "agnes", DisplayName: "Agnes AI", DeploymentID: "agnes-direct", SortOrder: 1, ChatPreference: 25,
 			RequiresKey: true, CredentialEnv: "AGNES_API_KEY",
 			BaseURLEnv: []string{"AGNES_BASE_URL"},

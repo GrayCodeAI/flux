@@ -26,6 +26,7 @@ func defaultProviders() map[string]Provider {
 		"xiaomi_mimo_payg":       {ID: "xiaomi_mimo_payg", Name: "Xiaomi MiMo (Pay-as-you-go)"},
 		"xiaomi_mimo_token_plan": {ID: "xiaomi_mimo_token_plan", Name: "Xiaomi MiMo (Token Plan)"},
 		"deepseek":               {ID: "deepseek", Name: "DeepSeek"},
+		"stepfun":                {ID: "stepfun", Name: "StepFun"},
 	}
 }
 
@@ -59,6 +60,7 @@ func defaultDeployments() map[string]Deployment {
 		"xiaomi_mimo_payg-direct":       deployment("xiaomi_mimo_payg-direct", "Xiaomi MiMo Pay-as-you-go", "xiaomi_mimo_payg", "openai-chat-completions", "xiaomi_mimo", NativeModelIDDiscovered),
 		"xiaomi_mimo_token_plan-direct": deployment("xiaomi_mimo_token_plan-direct", "Xiaomi MiMo Token Plan", "xiaomi_mimo_token_plan", "openai-chat-completions", "xiaomi_mimo", NativeModelIDDiscovered),
 		"deepseek-direct":               deployment("deepseek-direct", "DeepSeek", "deepseek", "openai-chat-completions", "deepseek", NativeModelIDCatalogKnown),
+		"stepfun-direct":                deployment("stepfun-direct", "StepFun", "stepfun", "openai-chat-completions", "openai", NativeModelIDDiscovered),
 	}
 }
 
