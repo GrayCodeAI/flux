@@ -24,4 +24,7 @@ var (
 	BedrockCompat    = adapters.BedrockCompat
 	VertexCompat     = adapters.VertexCompat
 	DeepSeekCompat   = adapters.DeepSeekCompat
+	AgnesCompat      = adapters.AgnesCompat
+	LongCatCompat    = adapters.LongCatCompat
+	MiniMaxCompat    = adapters.MiniMaxCompat
 )

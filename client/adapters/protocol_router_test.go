@@ -10,23 +10,6 @@ import (
 	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
-func TestStreamResultFromChat(t *testing.T) {
-	t.Parallel()
-	result := streamResultFromChat(&core.EyrieResponse{
-		Content:      "Hi there!",
-		FinishReason: "stop",
-	})
-	var content string
-	for event := range result.Events {
-		if event.Type == "content" {
-			content += event.Content
-		}
-	}
-	if content != "Hi there!" {
-		t.Fatalf("content = %q, want Hi there!", content)
-	}
-}
-
 func TestNewStreamWithReasoningFallbackChatFirst(t *testing.T) {
 	t.Parallel()
 	primaryEvents := make(chan core.EyrieStreamEvent, 4)

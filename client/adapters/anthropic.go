@@ -172,7 +172,13 @@ func resolveThinking(opts core.ChatOptions) *anthropicThinking {
 		}
 		return thinking
 	default:
-		// Legacy behavior: if budget > 0, enable with budget
+		// Legacy behavior: ThinkingEnabled toggle wins, else budget > 0 enables with budget.
+		if opts.ThinkingEnabled != nil {
+			if *opts.ThinkingEnabled {
+				return thinkingAdaptive()
+			}
+			return thinkingDisabled()
+		}
 		return thinkingForBudget(opts.ThinkingBudgetTokens)
 	}
 }

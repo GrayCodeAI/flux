@@ -15,8 +15,8 @@ import (
 
 func TestNewZAIClient_OpenAIOnly(t *testing.T) {
 	t.Parallel()
-	client := NewZAIClient("zai-key", "https://zai.example/paas/v4", &ZAICompat, "zai_payg")
-	if client == nil || client.openai == nil {
+	client := NewZAIClient("zai-key", "https://zai.example/paas/v4", "", &ZAICompat, "zai_payg")
+	if client == nil || client.router.OpenAI == nil {
 		t.Fatal("expected OpenAI client")
 	}
 	if client.Name() == "" {
@@ -38,7 +38,7 @@ func TestZAIClient_ChatUsesOpenAIPath(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewZAIClient("key", server.URL, &ZAICompat, "zai_payg", core.WithRetry(core.NewRetryConfig(0, 0, 0)))
+	client := NewZAIClient("key", server.URL, "", &ZAICompat, "zai_payg", core.WithRetry(core.NewRetryConfig(0, 0, 0)))
 	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "glm-5.1", MaxTokens: 16})
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestZAIClient_Ping(t *testing.T) {
 		_, _ = io.WriteString(w, `{"data":[]}`)
 	}))
 	defer server.Close()
-	client := NewZAIClient("key", server.URL, &ZAICompat, "zai_coding", core.WithTimeout(2*time.Second))
+	client := NewZAIClient("key", server.URL, "", &ZAICompat, "zai_coding", core.WithTimeout(2*time.Second))
 	if err := client.Ping(context.Background()); err != nil {
 		t.Fatal(err)
 	}

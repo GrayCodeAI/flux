@@ -86,6 +86,20 @@ func ResolveOpenAIBase(plan Plan, region Region, override string) (string, error
 	}
 }
 
+// Anthropic-compatible bases (fallback for /v1/messages protocol).
+const (
+	InternationalAnthropicBase = "https://api.z.ai/api/anthropic"
+	ChinaAnthropicBase         = "https://open.bigmodel.cn/api/anthropic"
+)
+
+// ResolveAnthropicBase returns the correct Anthropic-compat base for the region.
+func ResolveAnthropicBase(region Region) string {
+	if region == RegionChina {
+		return ChinaAnthropicBase
+	}
+	return InternationalAnthropicBase
+}
+
 // KeyMismatchHint (kept for future key prefix detection).
 func KeyMismatchHint(plan Plan, secret string) string {
 	secret = strings.TrimSpace(secret)

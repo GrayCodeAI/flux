@@ -168,7 +168,7 @@ func (m *maxTokensMockProvider) StreamChat(_ context.Context, msgs []client.Eyri
 	sr := &client.StreamResult{Events: ch}
 	// Wrap Close so we can count invocations.
 	return &client.StreamResult{
-		Events: sr.Events,
+		Events:    sr.Events,
 		RequestID: sr.RequestID,
 	}, nil
 }
@@ -258,10 +258,8 @@ func TestConversationEngine_ContextCancelClosesStream(t *testing.T) {
 }
 
 // blockingMockProvider returns a StreamResult whose Events channel blocks
-// until the context is cancelled. It signals via a channel when Close is called.
-type blockingMockProvider struct {
-	closed chan struct{}
-}
+// until the context is cancelled.
+type blockingMockProvider struct{}
 
 func (b *blockingMockProvider) Name() string {
 	return "blocking-mock"

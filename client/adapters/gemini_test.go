@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -12,6 +13,11 @@ import (
 	"github.com/GrayCodeAI/eyrie/client/core"
 	"github.com/GrayCodeAI/eyrie/types"
 )
+
+func testLogger(t *testing.T) *slog.Logger {
+	t.Helper()
+	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+}
 
 func TestNewGeminiClient(t *testing.T) {
 	t.Parallel()

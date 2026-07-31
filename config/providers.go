@@ -34,6 +34,7 @@ const (
 	DefaultKimiOpenAIBaseURL        = "https://api.moonshot.ai/v1"
 	DefaultXiaomiOpenAIBaseURL      = "https://api.xiaomimimo.com/v1"
 	DefaultMiniMaxOpenAIBaseURL     = "https://api.minimax.io/v1"
+	DefaultMiniMaxAnthropicBaseURL  = "https://api.minimax.io"
 	DefaultGroqOpenAIBaseURL        = "https://api.groq.com/openai/v1"
 	DefaultPoolsideOpenAIBaseURL    = "https://inference.poolside.ai/v1"
 	DefaultClinePassOpenAIBaseURL   = "https://api.cline.bot/api/v1" // #nosec G101 -- public API base URL, not a secret value

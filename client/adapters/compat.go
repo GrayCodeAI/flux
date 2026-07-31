@@ -21,6 +21,14 @@ type OpenAICompatConfig struct {
 	// core.ChatOptions.KimiContextCacheID is non-empty, buildRequestBase prepends a
 	// {"role":"cache","content":<id>} message per the MoonshotAI-Cookbook spec.
 	SupportsCacheRole bool `json:"supports_cache_role,omitempty"`
+	// OmitMaxTokens suppresses the max_tokens field so the provider applies
+	// its own default. Useful for providers that pre-authorize the maximum
+	// token cost (e.g. Agnes AI).
+	OmitMaxTokens bool `json:"omit_max_tokens,omitempty"`
+	// DefaultDisableThinking sets thinking to disabled when no thinking
+	// preference is provided. Useful for providers that enable thinking
+	// by default but don't support it in all configurations.
+	DefaultDisableThinking bool `json:"default_disable_thinking,omitempty"`
 }
 
 // Per-provider compat configs.
@@ -66,11 +74,15 @@ var (
 		MaxTokensField: "max_tokens",
 	}
 	KimiCompat = OpenAICompatConfig{
-		MaxTokensField:    "max_tokens",
-		SupportsCacheRole: true,
+		MaxTokensField:         "max_tokens",
+		SupportsCacheRole:      true,
+		ThinkingFormat:         "kimi",
+		DefaultDisableThinking: true,
 	}
 	XiaomiCompat = OpenAICompatConfig{
-		MaxTokensField: "max_completion_tokens",
+		MaxTokensField:         "max_completion_tokens",
+		ThinkingFormat:         "xiaomi",
+		DefaultDisableThinking: true,
 	}
 	AzureCompat = OpenAICompatConfig{
 		MaxTokensField: "max_tokens",
@@ -81,12 +93,33 @@ var (
 	VertexCompat = OpenAICompatConfig{
 		MaxTokensField: "max_tokens",
 	}
+	// AgnesCompat: OpenAI-compatible; pre-authorizes max token cost, so omit max_tokens.
+	AgnesCompat = OpenAICompatConfig{
+		OmitMaxTokens:  true,
+		ThinkingFormat: "agnes",
+	}
+	// LongCatCompat: OpenAI-compatible; enables thinking by default, so disable it.
+	LongCatCompat = OpenAICompatConfig{
+		MaxTokensField:          "max_tokens",
+		ThinkingFormat:          "longcat",
+		DefaultDisableThinking:  true,
+		StripReasoningFromInput: true,
+	}
+	// MiniMaxCompat: OpenAI-compatible; enables thinking by default, so disable it.
+	MiniMaxCompat = OpenAICompatConfig{
+		MaxTokensField:         "max_tokens",
+		ThinkingFormat:         "minimax",
+		DefaultDisableThinking: true,
+	}
 	// DeepSeekCompat: OpenAI-compatible with usage in streaming.
 	// The provider rejects reasoning_content in input messages with HTTP 400, so we strip it.
+	// Enables thinking by default, so disable it.
 	DeepSeekCompat = OpenAICompatConfig{
 		MaxTokensField:           "max_tokens",
 		SupportsUsageInStreaming: true,
 		StripReasoningFromInput:  true,
+		ThinkingFormat:           "deepseek",
+		DefaultDisableThinking:   true,
 	}
 )
 

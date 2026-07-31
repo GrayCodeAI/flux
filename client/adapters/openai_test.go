@@ -586,3 +586,5 @@ func TestOpenAIClient_BuildOpenAIRequest(t *testing.T) {
 		t.Error("expected non-nil body")
 	}
 }
+
+func float64Ptr(f float64) *float64 { return &f }

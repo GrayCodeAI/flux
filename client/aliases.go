@@ -274,6 +274,8 @@ type (
 	ZAIClient = adapters.ZAIClient
 	// MiMoClient implements Provider for the Xiaomi MiMo API.
 	MiMoClient = adapters.MiMoClient
+	// ConcentrateResponsesClient implements Provider for the Concentrate Responses API.
+	ConcentrateResponsesClient = adapters.ConcentrateResponsesClient
 	// OpenCodeGoClient implements Provider for the OpenCode Go API.
 	OpenCodeGoClient = adapters.OpenCodeGoClient
 	// PoolsideClient implements Poolside reasoning-only stream recovery.
@@ -331,6 +333,10 @@ func NewZAIClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompat
 
 func NewMiMoClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *MiMoClient {
 	return adapters.NewMiMoClient(apiKey, openAIBase, anthropicBase, compat, providerID, opts...)
+}
+
+func NewConcentrateResponsesClient(apiKey, baseURL string, opts ...ClientOption) *ConcentrateResponsesClient {
+	return adapters.NewConcentrateResponsesClient(apiKey, baseURL, opts...)
 }
 
 func NewOpenCodeGoClient(apiKey, baseURL string, opts ...ClientOption) *OpenCodeGoClient {

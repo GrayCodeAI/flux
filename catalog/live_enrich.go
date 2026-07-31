@@ -123,7 +123,7 @@ func FetchLiveModelEntriesForProvider(env map[string]string, providerID string) 
 		return nil, fmt.Errorf("catalog: provider %q has no live model list API", providerID)
 	}
 	env = registry.ScopedProviderEnv(spec, env)
-	if !registry.CredentialPresent(spec, env) {
+	if !spec.PublicModelCatalog && !registry.CredentialPresent(spec, env) {
 		return nil, fmt.Errorf("catalog: set %s for %s", spec.CredentialEnv, providerID)
 	}
 	entries, err := live.Fetch(spec.LiveFetcherKey, env)

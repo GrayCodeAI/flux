@@ -33,11 +33,11 @@ type OperationEdge struct {
 // OperationsGraph represents a graph of operations for eyrie.
 type OperationsGraph struct {
 	mu    sync.RWMutex
-	ID    string                `json:"id"`
-	Name  string                `json:"name"`
+	ID    string                    `json:"id"`
+	Name  string                    `json:"name"`
 	Nodes map[string]*OperationNode `json:"nodes"`
-	Edges []OperationEdge       `json:"edges"`
-	Attrs map[string]interface{} `json:"attrs,omitempty"`
+	Edges []OperationEdge           `json:"edges"`
+	Attrs map[string]interface{}    `json:"attrs,omitempty"`
 }
 
 // NewOperationsGraph creates a new operations graph.
@@ -142,9 +142,9 @@ func (g *OperationsGraph) ToGraphSpec() *graphcontracts.GraphSpec {
 	}
 
 	return &graphcontracts.GraphSpec{
-		ID:     g.ID,
-		Name:   g.Name,
-		Nodes:  nodes,
-		Edges:  edges,
+		ID:    g.ID,
+		Name:  g.Name,
+		Nodes: nodes,
+		Edges: edges,
 	}
 }

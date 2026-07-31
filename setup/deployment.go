@@ -340,6 +340,13 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 			return nil, false
 		}
 		return newMiniMaxDualProtocolClient(apiKey, deployment.BaseURL), true
+	case "concentrate-payg":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CONCENTRATE_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		baseURL := FirstNonEmpty(deployment.BaseURL, config.DefaultConcentrateOpenAIBaseURL)
+		return client.NewConcentrateResponsesClient(apiKey, baseURL), true
 	default:
 		return nil, false
 	}
@@ -460,6 +467,8 @@ func DefaultDeploymentForProvider(provider string) string {
 		return "minimax_token_plan-direct"
 	case config.ProviderMiniMaxPayg:
 		return "minimax_payg-direct"
+	case config.ProviderConcentrate:
+		return "concentrate-payg"
 	default:
 		return ""
 	}
