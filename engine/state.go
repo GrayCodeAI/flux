@@ -20,9 +20,9 @@ type importedCredential struct {
 	hadValue bool
 }
 
-func (e *Engine) importLegacyProviderSecrets(ctx context.Context, cfg config.ProviderConfig) ([]importedCredential, error) {
+func (e *Engine) importProviderConfigSecrets(ctx context.Context, cfg config.ProviderConfig) ([]importedCredential, error) {
 	var writes []importedCredential
-	secrets, err := config.LegacyProviderSecretsStrict(cfg)
+	secrets, err := config.ProviderConfigSecrets(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (e *Engine) saveProviderConfig(ctx context.Context, cfg *config.ProviderCon
 	if cfg == nil {
 		return nil
 	}
-	writes, err := e.importLegacyProviderSecrets(nonNilContext(ctx), *cfg)
+	writes, err := e.importProviderConfigSecrets(nonNilContext(ctx), *cfg)
 	if err != nil {
 		return err
 	}
@@ -171,8 +171,8 @@ func buildDeployments(compiled *catalog.CompiledCatalog, persisted map[string]co
 }
 
 // mergeDeployment keeps only non-secret routing fields from disk while filling
-// credential fields from the injected store. Legacy secret-bearing provider
-// state is never accepted as a runtime credential source.
+// credential fields from the injected store. Secret-bearing provider state is
+// never accepted as a runtime credential source.
 func mergeDeployment(persisted, derived config.DeploymentConfig) config.DeploymentConfig {
 	out := config.SanitizeDeploymentConfigForDisk(persisted)
 	if derived.APIKey != "" {

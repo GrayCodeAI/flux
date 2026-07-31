@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 	"github.com/GrayCodeAI/eyrie/catalog/zai"
 	"github.com/GrayCodeAI/eyrie/client"
@@ -75,7 +76,7 @@ func DeploymentProvider(ctx context.Context, cfg *config.ProviderConfig) (client
 }
 
 // DeploymentProviderFromCatalog is the ambient compatibility constructor. It
-// may consult the default store, process environment, and legacy detection.
+// may consult the default store, process environment, and flat-config detection.
 // Host integrations must use DeploymentProviderFromState instead.
 func DeploymentProviderFromCatalog(cfg *config.ProviderConfig, compiled *catalog.CompiledCatalog) (client.Provider, error) {
 	return deploymentProviderFromCatalog(cfg, compiled, true)
@@ -83,7 +84,7 @@ func DeploymentProviderFromCatalog(cfg *config.ProviderConfig, compiled *catalog
 
 // DeploymentProviderFromState builds a router exclusively from the supplied
 // provider state. It never reads the default credential store, process
-// environment, process-default provider path, or legacy provider detection.
+// environment, process-default provider path, or flat-config detection.
 // Host-facing Engine code must use this strict constructor.
 func DeploymentProviderFromState(cfg *config.ProviderConfig, compiled *catalog.CompiledCatalog) (client.Provider, error) {
 	return deploymentProviderFromCatalog(cfg, compiled, false)
@@ -143,7 +144,7 @@ func explicitDeployments(cfg *config.ProviderConfig) map[string]config.Deploymen
 	return out
 }
 
-// ConfiguredDeployments merges explicit deployments with legacy single-provider config.
+// ConfiguredDeployments merges explicit deployments with flat provider.json config.
 func ConfiguredDeployments(cfg *config.ProviderConfig) map[string]config.DeploymentConfig {
 	out := map[string]config.DeploymentConfig{}
 	if cfg != nil {
@@ -161,7 +162,7 @@ func ConfiguredDeployments(cfg *config.ProviderConfig) map[string]config.Deploym
 		}
 	}
 	if id := DefaultDeploymentForProvider(provider); id != "" {
-		out[id] = LegacyDeploymentConfig(cfg, provider)
+		out[id] = DeploymentConfigFromProviderState(cfg, provider)
 	}
 	return out
 }
@@ -428,111 +429,20 @@ func resolveZAIAnthropicBaseForDeployment(plan zai.Plan, cfg *config.ProviderCon
 	return zai.ResolveAnthropicBase(region)
 }
 
-// DefaultDeploymentForProvider maps a logical provider name to a deployment ID.
+// DefaultDeploymentForProvider resolves the default deployment for a logical
+// provider name from the provider registry. New providers need no setup-side
+// mapping.
 func DefaultDeploymentForProvider(provider string) string {
-	switch provider {
-	case config.ProviderAnthropic:
-		return "anthropic-direct"
-	case config.ProviderOpenAI:
-		return "openai-direct"
-	case config.ProviderAzure:
-		return "openai-azure"
-	case config.ProviderGrok:
-		return "grok-direct"
-	case config.ProviderGemini:
-		return "gemini-direct"
-	case config.ProviderVertex:
-		return "gemini-vertex"
-	case config.ProviderBedrock:
-		return "anthropic-bedrock"
-	case config.ProviderOpenRouter:
-		return "openrouter"
-	case config.ProviderCanopyWave:
-		return "canopywave"
-	case config.ProviderPoolside:
-		return "poolside"
-	case config.ProviderDeepSeek:
-		return "deepseek-direct"
-	case config.ProviderGroq:
-		return "groq-direct"
-	case config.ProviderZAIPayg:
-		return "zai_payg-direct"
-	case config.ProviderZAICoding:
-		return "zai_coding-direct"
-	case config.ProviderOllama:
-		return "ollama-local"
-	case config.ProviderOpenCodeGo:
-		return "opencodego"
-	case config.ProviderKimi:
-		return "kimi-direct"
-	case config.ProviderXiaomiMimoPayg:
-		return "xiaomi_mimo_payg-direct"
-	case config.ProviderXiaomiMimoTokenPlan:
-		return "xiaomi_mimo_token_plan-direct"
-	case config.ProviderMiniMaxTokenPlan:
-		return "minimax_token_plan-direct"
-	case config.ProviderMiniMaxPayg:
-		return "minimax_payg-direct"
-	case config.ProviderConcentrate:
-		return "concentrate-payg"
-	case config.ProviderOpenGateway:
-		return "opengateway-payg"
-	default:
-		return ""
+	if spec, ok := registry.SpecByProviderID(provider); ok {
+		return spec.DeploymentID
 	}
+	return ""
 }
 
-// LegacyDeploymentConfig reads API keys from flat provider.json fields.
-func LegacyDeploymentConfig(cfg *config.ProviderConfig, provider string) config.DeploymentConfig {
-	if cfg == nil {
-		return config.DeploymentConfig{}
-	}
-	switch provider {
-	case config.ProviderAnthropic:
-		return config.DeploymentConfig{APIKey: cfg.AnthropicAPIKey, BaseURL: cfg.AnthropicBaseURL}
-	case config.ProviderOpenAI:
-		return config.DeploymentConfig{APIKey: cfg.OpenAIAPIKey, BaseURL: cfg.OpenAIBaseURL}
-	case config.ProviderGrok:
-		return config.DeploymentConfig{APIKey: FirstNonEmpty(cfg.GrokAPIKey, cfg.XAIAPIKey), BaseURL: FirstNonEmpty(cfg.GrokBaseURL, cfg.XAIBaseURL)}
-	case config.ProviderGemini:
-		return config.DeploymentConfig{APIKey: cfg.GeminiAPIKey, BaseURL: cfg.GeminiBaseURL}
-	case config.ProviderOpenRouter:
-		return config.DeploymentConfig{APIKey: cfg.OpenRouterAPIKey, BaseURL: cfg.OpenRouterBaseURL}
-	case config.ProviderCanopyWave:
-		return config.DeploymentConfig{APIKey: cfg.CanopyWaveAPIKey, BaseURL: cfg.CanopyWaveBaseURL}
-	case config.ProviderOpenGateway:
-		return config.DeploymentConfig{APIKey: cfg.OpenGatewayAPIKey, BaseURL: cfg.OpenGatewayBaseURL}
-	case config.ProviderPoolside:
-		return config.DeploymentConfig{APIKey: cfg.PoolsideAPIKey, BaseURL: cfg.PoolsideBaseURL}
-	case config.ProviderDeepSeek:
-		return config.DeploymentConfig{APIKey: cfg.DeepSeekAPIKey, BaseURL: cfg.DeepSeekBaseURL}
-	case config.ProviderGroq:
-		return config.DeploymentConfig{APIKey: cfg.GroqAPIKey, BaseURL: cfg.GroqBaseURL}
-	case config.ProviderZAIPayg:
-		return config.DeploymentConfig{APIKey: cfg.ZAIAPIKey, BaseURL: cfg.ZAIBaseURL}
-	case config.ProviderZAICoding:
-		return config.DeploymentConfig{APIKey: cfg.ZAICodingAPIKey, BaseURL: cfg.ZAICodingBaseURL}
-	case config.ProviderOllama:
-		return config.DeploymentConfig{BaseURL: cfg.OllamaBaseURL}
-	case config.ProviderOpenCodeGo:
-		return config.DeploymentConfig{APIKey: cfg.OpenCodeGoAPIKey, BaseURL: cfg.OpenCodeGoBaseURL}
-	case config.ProviderKimi:
-		return config.DeploymentConfig{APIKey: cfg.MoonshotAPIKey, BaseURL: cfg.MoonshotBaseURL}
-	case config.ProviderXiaomiMimoPayg:
-		return config.DeploymentConfig{
-			APIKey:  cfg.XiaomiMimoPaygAPIKey,
-			BaseURL: cfg.XiaomiMimoPaygBaseURL,
-		}
-	case config.ProviderXiaomiMimoTokenPlan:
-		base, _ := config.ResolveXiaomiOpenAIBase(config.ProviderXiaomiMimoTokenPlan, cfg)
-		return config.DeploymentConfig{APIKey: cfg.XiaomiMimoTokenPlanAPIKey, BaseURL: base}
-	case config.ProviderMiniMaxTokenPlan:
-		return config.DeploymentConfig{APIKey: cfg.MiniMaxTokenPlanAPIKey, BaseURL: cfg.MiniMaxTokenPlanBaseURL}
-	case config.ProviderMiniMaxPayg:
-		return config.DeploymentConfig{APIKey: cfg.MiniMaxPaygAPIKey, BaseURL: cfg.MiniMaxPaygBaseURL}
-	default:
-		return config.DeploymentConfig{}
-	}
+// DeploymentConfigFromProviderState reads API keys and base URLs from flat
+// provider.json fields via the provider registry.
+func DeploymentConfigFromProviderState(cfg *config.ProviderConfig, provider string) config.DeploymentConfig {
+	return config.DeploymentConfigFromProviderState(cfg, provider)
 }
 
 // RouterRoutingPolicy converts config routing JSON into router policy.

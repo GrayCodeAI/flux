@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 // ProviderConfig mirrors the Hawk provider.json file.
@@ -252,6 +253,26 @@ var providerFields = map[string]providerFieldMap{
 		Models:  func(c *ProviderConfig) []string { return []string{c.StepFunModel} },
 		BaseURL: func(c *ProviderConfig) string { return c.StepFunBaseURL },
 	},
+	ProviderOpenGateway: {
+		APIKeys: func(c *ProviderConfig) []string { return []string{c.OpenGatewayAPIKey} },
+		Models:  func(c *ProviderConfig) []string { return []string{c.OpenGatewayModel} },
+		BaseURL: func(c *ProviderConfig) string { return c.OpenGatewayBaseURL },
+	},
+	ProviderAgnes: {
+		APIKeys: func(c *ProviderConfig) []string { return []string{c.AgnesAPIKey} },
+		Models:  func(c *ProviderConfig) []string { return []string{c.AgnesModel} },
+		BaseURL: func(c *ProviderConfig) string { return c.AgnesBaseURL },
+	},
+	ProviderMiniMaxTokenPlan: {
+		APIKeys: func(c *ProviderConfig) []string { return []string{c.MiniMaxTokenPlanAPIKey} },
+		Models:  func(c *ProviderConfig) []string { return []string{c.MiniMaxModel} },
+		BaseURL: func(c *ProviderConfig) string { return c.MiniMaxTokenPlanBaseURL },
+	},
+	ProviderMiniMaxPayg: {
+		APIKeys: func(c *ProviderConfig) []string { return []string{c.MiniMaxPaygAPIKey} },
+		Models:  func(c *ProviderConfig) []string { return []string{c.MiniMaxModel} },
+		BaseURL: func(c *ProviderConfig) string { return c.MiniMaxPaygBaseURL },
+	},
 }
 
 func firstNonEmpty(ss ...string) string {
@@ -316,12 +337,28 @@ func GetProviderModel(config *ProviderConfig, provider string) string {
 	return ""
 }
 
-// GetProviderAPIKey returns the configured API key for a provider.
+// GetProviderAPIKey returns the configured API key for a provider. Credential
+// env var names come from the provider registry, so new providers are covered
+// by their registry entry alone.
 func GetProviderAPIKey(config *ProviderConfig, provider string) string {
-	if f, ok := providerFields[provider]; ok {
-		for _, k := range f.APIKeys(config) {
-			if v := AsNonEmptyString(k); v != "" {
-				return v
+	if config == nil {
+		return ""
+	}
+	spec, ok := registry.SpecByProviderID(provider)
+	if !ok {
+		return ""
+	}
+	credentialEnvs := []string{strings.TrimSpace(spec.CredentialEnv)}
+	if runtime := strings.TrimSpace(spec.RuntimeCredentialEnv); runtime != "" {
+		credentialEnvs = append(credentialEnvs, runtime)
+	}
+	for _, env := range credentialEnvs {
+		for _, field := range providerCredentialFields {
+			if field.env != env {
+				continue
+			}
+			if value := AsNonEmptyString(field.value(config)); value != "" {
+				return value
 			}
 		}
 	}

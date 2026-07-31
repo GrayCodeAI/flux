@@ -7,55 +7,58 @@ import (
 	"strings"
 )
 
-// MigrateLegacyEnvFile imports API keys from legacy plaintext credential files
-// (~/.hawk/env, ~/.hawk/.env) into the OS secret store and removes them.
-// It also copies legacy keychain account names (e.g. xiaomi_mimo_api_key → payg).
-func legacyEnvMigrationMarkerPath() string {
+// envFileMigrationMarkerPath is the on-disk marker that env-file import ran
+// once. The marker file name is stable so upgraded installs do not re-import.
+func envFileMigrationMarkerPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".hawk", ".legacy-env-migrated")
 }
 
-func legacyEnvMigrationDone() bool {
-	_, err := os.Stat(legacyEnvMigrationMarkerPath())
+func envFileMigrationDone() bool {
+	_, err := os.Stat(envFileMigrationMarkerPath())
 	return err == nil
 }
 
-func markLegacyEnvMigrationDone() {
-	_ = os.MkdirAll(filepath.Dir(legacyEnvMigrationMarkerPath()), 0o700)
-	_ = os.WriteFile(legacyEnvMigrationMarkerPath(), []byte("ok\n"), 0o600)
+func markEnvFileMigrationDone() {
+	_ = os.MkdirAll(filepath.Dir(envFileMigrationMarkerPath()), 0o700)
+	_ = os.WriteFile(envFileMigrationMarkerPath(), []byte("ok\n"), 0o600)
 }
 
-func MigrateLegacyEnvFile(ctx context.Context) (int, error) {
+// MigrateEnvFileCredentials imports API keys from plaintext credential files
+// (~/.hawk/env, ~/.hawk/.env) into the OS secret store and removes them.
+// It also copies deprecated keychain account names (e.g. xiaomi_mimo_api_key → payg).
+func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if legacyEnvMigrationDone() {
-		n, _ := MigrateLegacyKeychainAccounts(ctx)
+	if envFileMigrationDone() {
+		n, _ := MigrateKeychainAccountAliases(ctx)
 		return n, nil
 	}
 	total := 0
-	for _, path := range []string{legacyEnvPath(), legacyHawkDotEnvPath()} {
-		n, err := migrateLegacyEnvFileAt(ctx, path)
+	for _, path := range []string{hawkEnvPath(), hawkDotEnvPath()} {
+		n, err := migrateEnvFileAt(ctx, path)
 		if err != nil && !os.IsNotExist(err) {
 			return total, err
 		}
 		total += n
 	}
-	n, err := MigrateLegacyKeychainAccounts(ctx)
+	n, err := MigrateKeychainAccountAliases(ctx)
 	if err != nil {
 		return total, err
 	}
 	total += n
-	markLegacyEnvMigrationDone()
+	markEnvFileMigrationDone()
 	return total, nil
 }
 
-var legacyKeychainAccountCopies = []struct{ from, to string }{
+var keychainAccountAliases = []struct{ from, to string }{
 	{"xiaomi_mimo_api_key", "xiaomi_mimo_payg_api_key"},
 }
 
-// MigrateLegacyKeychainAccounts copies secrets from deprecated keychain accounts when the new account is empty.
-func MigrateLegacyKeychainAccounts(ctx context.Context) (int, error) {
+// MigrateKeychainAccountAliases copies secrets from deprecated keychain
+// accounts to their canonical account when the canonical one is empty.
+func MigrateKeychainAccountAliases(ctx context.Context) (int, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -64,16 +67,16 @@ func MigrateLegacyKeychainAccounts(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 	migrated := 0
-	for _, pair := range legacyKeychainAccountCopies {
+	for _, pair := range keychainAccountAliases {
 		existing, err := cs.Keychain.Get(ctx, pair.to)
 		if err == nil && strings.TrimSpace(existing) != "" {
 			continue
 		}
-		legacy, err := cs.Keychain.Get(ctx, pair.from)
-		if err != nil || strings.TrimSpace(legacy) == "" {
+		secret, err := cs.Keychain.Get(ctx, pair.from)
+		if err != nil || strings.TrimSpace(secret) == "" {
 			continue
 		}
-		if err := cs.Keychain.Set(ctx, pair.to, strings.TrimSpace(legacy)); err != nil {
+		if err := cs.Keychain.Set(ctx, pair.to, strings.TrimSpace(secret)); err != nil {
 			continue
 		}
 		migrated++
@@ -81,8 +84,8 @@ func MigrateLegacyKeychainAccounts(ctx context.Context) (int, error) {
 	return migrated, nil
 }
 
-func migrateLegacyEnvFileAt(ctx context.Context, path string) (int, error) {
-	secrets, err := readLegacyEnvFile(path)
+func migrateEnvFileAt(ctx context.Context, path string) (int, error) {
+	secrets, err := readEnvFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return 0, nil
@@ -119,18 +122,18 @@ func migrateLegacyEnvFileAt(ctx context.Context, path string) (int, error) {
 	return migrated, nil
 }
 
-func legacyEnvPath() string {
+func hawkEnvPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".hawk", "env")
 }
 
-func legacyHawkDotEnvPath() string {
+func hawkDotEnvPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".hawk", ".env")
 }
 
-func readLegacyEnvFile(path string) (map[string]string, error) {
-	data, err := os.ReadFile(path) // #nosec G304 -- path is built from os.UserHomeDir() in legacyHawkDotEnvPath, not untrusted input
+func readEnvFile(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path) // #nosec G304 -- path is built from os.UserHomeDir() in hawkDotEnvPath, not untrusted input
 	if err != nil {
 		return nil, err
 	}

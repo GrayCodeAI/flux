@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestReadLegacyEnvFile(t *testing.T) {
+func TestReadEnvFile(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string
@@ -110,7 +110,7 @@ func TestReadLegacyEnvFile(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			got, err := readLegacyEnvFile(path)
+			got, err := readEnvFile(path)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -118,7 +118,7 @@ func TestReadLegacyEnvFile(t *testing.T) {
 				return
 			}
 			if err != nil {
-				t.Fatalf("readLegacyEnvFile error: %v", err)
+				t.Fatalf("readEnvFile error: %v", err)
 			}
 			if len(got) != len(tt.want) {
 				t.Fatalf("got %d entries, want %d: %v", len(got), len(tt.want), got)
@@ -132,16 +132,16 @@ func TestReadLegacyEnvFile(t *testing.T) {
 	}
 }
 
-func TestReadLegacyEnvFile_FileNotFound(t *testing.T) {
-	_, err := readLegacyEnvFile("/nonexistent/path/env")
+func TestReadEnvFile_FileNotFound(t *testing.T) {
+	_, err := readEnvFile("/nonexistent/path/env")
 	if !os.IsNotExist(err) {
 		t.Fatalf("expected os.IsNotExist, got: %v", err)
 	}
 }
 
-func TestMigrateLegacyEnvFileAt_NoFile(t *testing.T) {
+func TestMigrateEnvFileCredentialsAt_NoFile(t *testing.T) {
 	ctx := context.Background()
-	n, err := migrateLegacyEnvFileAt(ctx, "/nonexistent/path/env")
+	n, err := migrateEnvFileAt(ctx, "/nonexistent/path/env")
 	if err != nil {
 		t.Fatalf("expected nil error for missing file, got: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestMigrateLegacyEnvFileAt_NoFile(t *testing.T) {
 	}
 }
 
-func TestMigrateLegacyEnvFileAt_EmptyFile(t *testing.T) {
+func TestMigrateEnvFileCredentialsAt_EmptyFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "env")
 	if err := os.WriteFile(path, []byte(""), 0o600); err != nil {
@@ -158,7 +158,7 @@ func TestMigrateLegacyEnvFileAt_EmptyFile(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	n, err := migrateLegacyEnvFileAt(ctx, path)
+	n, err := migrateEnvFileAt(ctx, path)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -167,11 +167,11 @@ func TestMigrateLegacyEnvFileAt_EmptyFile(t *testing.T) {
 	}
 	// Empty file should be removed.
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatal("empty legacy file should be removed")
+		t.Fatal("empty env file should be removed")
 	}
 }
 
-func TestMigrateLegacyEnvFileAt_OnlyComments(t *testing.T) {
+func TestMigrateEnvFileCredentialsAt_OnlyComments(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "env")
 	if err := os.WriteFile(path, []byte("# just a comment\n"), 0o600); err != nil {
@@ -179,7 +179,7 @@ func TestMigrateLegacyEnvFileAt_OnlyComments(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	n, err := migrateLegacyEnvFileAt(ctx, path)
+	n, err := migrateEnvFileAt(ctx, path)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -188,12 +188,12 @@ func TestMigrateLegacyEnvFileAt_OnlyComments(t *testing.T) {
 	}
 }
 
-func TestMigrateLegacyEnvFile_NilContext(t *testing.T) {
+func TestMigrateEnvFileCredentials_NilContext(t *testing.T) {
 	// Should not panic with nil context.
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 
-	n, err := MigrateLegacyEnvFile(context.Background())
+	n, err := MigrateEnvFileCredentials(context.Background())
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestMigrateLegacyEnvFile_NilContext(t *testing.T) {
 	}
 }
 
-func TestMigrateLegacyEnvFileAt_KeychainSkipsExisting(t *testing.T) {
+func TestMigrateEnvFileCredentialsAt_KeychainSkipsExisting(t *testing.T) {
 	// Use mocked keyring via the global default store.
 	ms := &MapStore{}
 	cs := &CombinedStore{Keychain: ms}
@@ -219,7 +219,7 @@ func TestMigrateLegacyEnvFileAt_KeychainSkipsExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	n, err := migrateLegacyEnvFileAt(ctx, path)
+	n, err := migrateEnvFileAt(ctx, path)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -233,11 +233,11 @@ func TestMigrateLegacyEnvFileAt_KeychainSkipsExisting(t *testing.T) {
 	}
 	// File should be removed.
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatal("legacy file should be removed after migration")
+		t.Fatal("env file should be removed after migration")
 	}
 }
 
-func TestMigrateLegacyEnvFileAt_MultipleKeys(t *testing.T) {
+func TestMigrateEnvFileCredentialsAt_MultipleKeys(t *testing.T) {
 	ms := &MapStore{}
 	cs := &CombinedStore{Keychain: ms}
 	SetDefaultStore(cs)
@@ -251,7 +251,7 @@ func TestMigrateLegacyEnvFileAt_MultipleKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	n, err := migrateLegacyEnvFileAt(ctx, path)
+	n, err := migrateEnvFileAt(ctx, path)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestMigrateLegacyEnvFileAt_MultipleKeys(t *testing.T) {
 	}
 }
 
-func TestMigrateLegacyEnvFile_BothPaths(t *testing.T) {
+func TestMigrateEnvFileCredentials_BothPaths(t *testing.T) {
 	ms := &MapStore{}
 	cs := &CombinedStore{Keychain: ms}
 	SetDefaultStore(cs)
@@ -283,7 +283,7 @@ func TestMigrateLegacyEnvFile_BothPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Write both legacy files.
+	// Write both env files.
 	envPath := filepath.Join(hawkDir, "env")
 	dotEnvPath := filepath.Join(hawkDir, ".env")
 	if err := os.WriteFile(envPath, []byte("ANTHROPIC_API_KEY=sk-from-env\n"), 0o600); err != nil {
@@ -294,7 +294,7 @@ func TestMigrateLegacyEnvFile_BothPaths(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	n, err := MigrateLegacyEnvFile(ctx)
+	n, err := MigrateEnvFileCredentials(ctx)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -311,7 +311,7 @@ func TestMigrateLegacyEnvFile_BothPaths(t *testing.T) {
 	}
 }
 
-func TestMigrateLegacyEnvFileAt_NilKeychain(t *testing.T) {
+func TestMigrateEnvFileCredentialsAt_NilKeychain(t *testing.T) {
 	// When DefaultStore is a CombinedStore with nil Keychain, migration should fail.
 	cs := &CombinedStore{Keychain: nil}
 	SetDefaultStore(cs)
@@ -324,7 +324,7 @@ func TestMigrateLegacyEnvFileAt_NilKeychain(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err := migrateLegacyEnvFileAt(ctx, path)
+	_, err := migrateEnvFileAt(ctx, path)
 	if err == nil {
 		t.Fatal("expected error when keychain is nil")
 	}
@@ -333,17 +333,17 @@ func TestMigrateLegacyEnvFileAt_NilKeychain(t *testing.T) {
 	}
 }
 
-func TestMigrateLegacyKeychainAccounts_XiaomiPayg(t *testing.T) {
+func TestMigrateKeychainAccountAliases_XiaomiPayg(t *testing.T) {
 	ms := &MapStore{}
 	cs := &CombinedStore{Keychain: ms}
 	SetDefaultStore(cs)
 	t.Cleanup(func() { SetDefaultStore(nil) })
 
 	ctx := context.Background()
-	if err := ms.Set(ctx, "xiaomi_mimo_api_key", "sk-legacy-mimo"); err != nil {
+	if err := ms.Set(ctx, "xiaomi_mimo_api_key", "sk-stored-mimo"); err != nil {
 		t.Fatal(err)
 	}
-	n, err := MigrateLegacyKeychainAccounts(ctx)
+	n, err := MigrateKeychainAccountAliases(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,7 +351,7 @@ func TestMigrateLegacyKeychainAccounts_XiaomiPayg(t *testing.T) {
 		t.Fatalf("expected 1 migrated, got %d", n)
 	}
 	got, err := ms.Get(ctx, "xiaomi_mimo_payg_api_key")
-	if err != nil || got != "sk-legacy-mimo" {
+	if err != nil || got != "sk-stored-mimo" {
 		t.Fatalf("payg account = %q err=%v", got, err)
 	}
 }

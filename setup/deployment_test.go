@@ -56,7 +56,7 @@ func TestProviderForDeploymentAnthropicBedrockRequiresCredentials(t *testing.T) 
 	}
 }
 
-func TestDeploymentProviderFromStateRejectsAmbientCredentialsAndLegacyDetection(t *testing.T) {
+func TestDeploymentProviderFromStateRejectsAmbientCredentialsAndFlatConfigDetection(t *testing.T) {
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
@@ -166,11 +166,11 @@ func TestUseDeploymentRouting_WithRouting(t *testing.T) {
 	}
 }
 
-func TestUseDeploymentRouting_LegacyConfig(t *testing.T) {
+func TestUseDeploymentRouting_FlatConfig(t *testing.T) {
 	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
 	cfg := &config.ProviderConfig{ConfigVersion: 0}
 	if UseDeploymentRouting(cfg) {
-		t.Fatal("expected false for legacy config without deployments/routing")
+		t.Fatal("expected false for flat config without deployments/routing")
 	}
 }
 
@@ -340,6 +340,9 @@ func TestDefaultDeploymentForProvider(t *testing.T) {
 		{config.ProviderOpenCodeGo, "opencodego"},
 		{config.ProviderKimi, "kimi-direct"},
 		{config.ProviderXiaomiMimoPayg, "xiaomi_mimo_payg-direct"},
+		{config.ProviderAgnes, "agnes-direct"},
+		{config.ProviderStepFun, "stepfun-direct"},
+		{config.ProviderMiniMaxPayg, "minimax_payg-direct"},
 		{"unknown", ""},
 		{"", ""},
 	}
@@ -353,21 +356,21 @@ func TestDefaultDeploymentForProvider(t *testing.T) {
 	}
 }
 
-// --- LegacyDeploymentConfig ---
+// --- DeploymentConfigFromProviderState ---
 
-func TestLegacyDeploymentConfig_NilConfig(t *testing.T) {
-	got := LegacyDeploymentConfig(nil, config.ProviderAnthropic)
+func TestDeploymentConfigFromProviderState_NilConfig(t *testing.T) {
+	got := DeploymentConfigFromProviderState(nil, config.ProviderAnthropic)
 	if got.APIKey != "" || got.BaseURL != "" {
 		t.Fatalf("expected empty DeploymentConfig for nil config, got %+v", got)
 	}
 }
 
-func TestLegacyDeploymentConfig_Anthropic(t *testing.T) {
+func TestDeploymentConfigFromProviderState_Anthropic(t *testing.T) {
 	cfg := &config.ProviderConfig{
 		AnthropicAPIKey:  "key123",
 		AnthropicBaseURL: "https://custom.api.com",
 	}
-	got := LegacyDeploymentConfig(cfg, config.ProviderAnthropic)
+	got := DeploymentConfigFromProviderState(cfg, config.ProviderAnthropic)
 	if got.APIKey != "key123" {
 		t.Fatalf("APIKey = %q, want key123", got.APIKey)
 	}
@@ -376,42 +379,42 @@ func TestLegacyDeploymentConfig_Anthropic(t *testing.T) {
 	}
 }
 
-func TestLegacyDeploymentConfig_OpenAI(t *testing.T) {
+func TestDeploymentConfigFromProviderState_OpenAI(t *testing.T) {
 	cfg := &config.ProviderConfig{
 		OpenAIAPIKey:  "oai-key",
 		OpenAIBaseURL: "https://api.openai.com/v1",
 	}
-	got := LegacyDeploymentConfig(cfg, config.ProviderOpenAI)
+	got := DeploymentConfigFromProviderState(cfg, config.ProviderOpenAI)
 	if got.APIKey != "oai-key" {
 		t.Fatalf("APIKey = %q, want oai-key", got.APIKey)
 	}
 }
 
-func TestLegacyDeploymentConfig_Grok(t *testing.T) {
+func TestDeploymentConfigFromProviderState_Grok(t *testing.T) {
 	cfg := &config.ProviderConfig{
 		GrokAPIKey: "grok-key",
 	}
-	got := LegacyDeploymentConfig(cfg, config.ProviderGrok)
+	got := DeploymentConfigFromProviderState(cfg, config.ProviderGrok)
 	if got.APIKey != "grok-key" {
 		t.Fatalf("APIKey = %q, want grok-key", got.APIKey)
 	}
 }
 
-func TestLegacyDeploymentConfig_GrokXAIFallback(t *testing.T) {
+func TestDeploymentConfigFromProviderState_GrokXAIFallback(t *testing.T) {
 	cfg := &config.ProviderConfig{
 		XAIAPIKey: "xai-key",
 	}
-	got := LegacyDeploymentConfig(cfg, config.ProviderGrok)
+	got := DeploymentConfigFromProviderState(cfg, config.ProviderGrok)
 	if got.APIKey != "xai-key" {
 		t.Fatalf("APIKey = %q, want xai-key (XAI fallback)", got.APIKey)
 	}
 }
 
-func TestLegacyDeploymentConfig_Ollama(t *testing.T) {
+func TestDeploymentConfigFromProviderState_Ollama(t *testing.T) {
 	cfg := &config.ProviderConfig{
 		OllamaBaseURL: "http://localhost:11434",
 	}
-	got := LegacyDeploymentConfig(cfg, config.ProviderOllama)
+	got := DeploymentConfigFromProviderState(cfg, config.ProviderOllama)
 	if got.BaseURL != "http://localhost:11434" {
 		t.Fatalf("BaseURL = %q, want http://localhost:11434", got.BaseURL)
 	}
@@ -420,9 +423,31 @@ func TestLegacyDeploymentConfig_Ollama(t *testing.T) {
 	}
 }
 
-func TestLegacyDeploymentConfig_Unknown(t *testing.T) {
+func TestDeploymentConfigFromProviderState_AgnesStepFunConcentrate(t *testing.T) {
+	cfg := &config.ProviderConfig{
+		AgnesAPIKey:       "agnes-key",
+		AgnesBaseURL:      "https://apihub.agnes-ai.com/v1",
+		StepFunAPIKey:     "stepfun-key",
+		ConcentrateAPIKey: "concentrate-key",
+	}
+	for provider, wantKey := range map[string]string{
+		config.ProviderAgnes:       "agnes-key",
+		config.ProviderStepFun:     "stepfun-key",
+		config.ProviderConcentrate: "concentrate-key",
+	} {
+		got := DeploymentConfigFromProviderState(cfg, provider)
+		if got.APIKey != wantKey {
+			t.Fatalf("%s APIKey = %q, want %q", provider, got.APIKey, wantKey)
+		}
+	}
+	if got := DeploymentConfigFromProviderState(cfg, config.ProviderAgnes); got.BaseURL != "https://apihub.agnes-ai.com/v1" {
+		t.Fatalf("agnes BaseURL = %q, want agnes base url", got.BaseURL)
+	}
+}
+
+func TestDeploymentConfigFromProviderState_Unknown(t *testing.T) {
 	cfg := &config.ProviderConfig{AnthropicAPIKey: "key"}
-	got := LegacyDeploymentConfig(cfg, "nonexistent")
+	got := DeploymentConfigFromProviderState(cfg, "nonexistent")
 	if got.APIKey != "" {
 		t.Fatalf("expected empty for unknown provider, got %+v", got)
 	}

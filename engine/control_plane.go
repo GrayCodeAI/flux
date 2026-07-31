@@ -65,6 +65,13 @@ func (e *Engine) CredentialProviders(context.Context) []CredentialProvider {
 	return out
 }
 
+// RegisteredGatewayCount returns the first-class provider count from the
+// provider registry. Hosts derive provider counts from Eyrie instead of
+// hard-coding them, so new providers require no host changes.
+func RegisteredGatewayCount() int {
+	return len(registry.CredentialRegistry())
+}
+
 // GatewayDefinitions returns pure registry/custom metadata in setup UI order.
 // It does not read credentials, provider state, or the model catalog.
 func (e *Engine) GatewayDefinitions() []Gateway {

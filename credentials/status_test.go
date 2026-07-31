@@ -35,7 +35,7 @@ func TestFormatStorageReport_ListsStoredKeys(t *testing.T) {
 		t.Fatalf("expected env keys in output, got:\n%s", out)
 	}
 	if strings.Contains(out, "Keys stored:") {
-		t.Fatal("should not show legacy key count line")
+		t.Fatal("should not show stale key count line")
 	}
 }
 

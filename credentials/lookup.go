@@ -40,15 +40,15 @@ func lookupSecretAccount(ctx context.Context, account string) (string, error) {
 	if err == nil && strings.TrimSpace(secret) != "" {
 		return secret, nil
 	}
-	if legacy := legacyKeychainAccountFor(account); legacy != "" {
-		if legacySecret, legacyErr := DefaultStore().Get(ctx, legacy); legacyErr == nil && strings.TrimSpace(legacySecret) != "" {
-			return legacySecret, nil
+	if alias := keychainAccountAliasFor(account); alias != "" {
+		if aliasSecret, aliasErr := DefaultStore().Get(ctx, alias); aliasErr == nil && strings.TrimSpace(aliasSecret) != "" {
+			return aliasSecret, nil
 		}
 	}
 	return secret, err
 }
 
-func legacyKeychainAccountFor(account string) string {
+func keychainAccountAliasFor(account string) string {
 	switch strings.ToLower(strings.TrimSpace(account)) {
 	case "xiaomi_mimo_payg_api_key":
 		return "xiaomi_mimo_api_key"

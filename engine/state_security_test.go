@@ -21,15 +21,15 @@ func TestMigrateProviderSecretsImportsBeforeSanitizing(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := &config.ProviderConfig{
-		OpenAIAPIKey: "sk-legacy-top-level-1234567890",
+		OpenAIAPIKey: "sk-stored-top-level-1234567890",
 		Deployments: map[string]config.DeploymentConfig{
 			"openai-direct": {
-				APIKey:  "sk-legacy-deployment-1234567890",
+				APIKey:  "sk-stored-deployment-1234567890",
 				BaseURL: "https://gateway.example.test/v1",
 			},
 		},
 	}
-	writeLegacyProviderConfigFixture(t, eng.providerConfigPath, cfg)
+	writeProviderConfigFixture(t, eng.providerConfigPath, cfg)
 	if err := eng.MigrateProviderSecretsContext(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestMigrateProviderSecretsImportsBeforeSanitizing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secret != "sk-legacy-deployment-1234567890" {
+	if secret != "sk-stored-deployment-1234567890" {
 		t.Fatalf("imported credential = %q", secret)
 	}
 	saved := config.LoadProviderConfig(eng.providerConfigPath)
@@ -49,15 +49,15 @@ func TestMigrateProviderSecretsImportsBeforeSanitizing(t *testing.T) {
 	}
 }
 
-func TestMigrateProviderStateCanonicalizesLegacyVersionAlias(t *testing.T) {
+func TestMigrateProviderStateCanonicalizesVersionAlias(t *testing.T) {
 	ctx := context.Background()
 	store := &credentials.MapStore{}
 	eng, err := New(Options{SecretStore: store, StateDir: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacy := []byte(`{"version":"1","active_provider":"openai","openai_api_key":"sk-legacy-version-alias-1234567890"}`)
-	if err := os.WriteFile(eng.providerConfigPath, legacy, 0o600); err != nil {
+	oldState := []byte(`{"version":"1","active_provider":"openai","openai_api_key":"sk-stored-version-alias-1234567890"}`)
+	if err := os.WriteFile(eng.providerConfigPath, oldState, 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -65,17 +65,17 @@ func TestMigrateProviderStateCanonicalizesLegacyVersionAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	secret, err := store.Get(ctx, credentials.AccountForEnv("OPENAI_API_KEY"))
-	if err != nil || secret != "sk-legacy-version-alias-1234567890" {
-		t.Fatalf("legacy credential was not imported before rewrite: value=%q err=%v", secret, err)
+	if err != nil || secret != "sk-stored-version-alias-1234567890" {
+		t.Fatalf("credential was not imported before rewrite: value=%q err=%v", secret, err)
 	}
 	persisted, err := os.ReadFile(eng.providerConfigPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bytes.Contains(persisted, []byte(`"version"`)) {
-		t.Fatalf("migration persisted legacy version alias: %s", persisted)
+		t.Fatalf("migration persisted the version alias: %s", persisted)
 	}
-	if !bytes.Contains(persisted, []byte(`"_version"`)) || bytes.Contains(persisted, []byte("sk-legacy-version-alias")) {
+	if !bytes.Contains(persisted, []byte(`"_version"`)) || bytes.Contains(persisted, []byte("sk-stored-version-alias")) {
 		t.Fatalf("migration did not atomically canonicalize and sanitize provider state: %s", persisted)
 	}
 	cfg, err := config.LoadProviderConfigWithError(eng.providerConfigPath)
@@ -92,10 +92,10 @@ func TestMigrateProviderSecretsRollsBackOnStoreFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := &config.ProviderConfig{
-		OpenAIAPIKey:    "sk-openai-legacy-1234567890",
-		AnthropicAPIKey: "sk-ant-legacy-1234567890",
+		OpenAIAPIKey:    "sk-openai-stored-1234567890",
+		AnthropicAPIKey: "sk-ant-stored-1234567890",
 	}
-	writeLegacyProviderConfigFixture(t, eng.providerConfigPath, cfg)
+	writeProviderConfigFixture(t, eng.providerConfigPath, cfg)
 	original, err := os.ReadFile(eng.providerConfigPath)
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestMigrateProviderSecretsRefusesUnmappedCredentialFields(t *testing.T) {
 	cfg := &config.ProviderConfig{Deployments: map[string]config.DeploymentConfig{
 		"future-provider": {APIKey: "future-secret-1234567890", BaseURL: "https://future.example.test/v1"},
 	}}
-	writeLegacyProviderConfigFixture(t, eng.providerConfigPath, cfg)
+	writeProviderConfigFixture(t, eng.providerConfigPath, cfg)
 	original, err := os.ReadFile(eng.providerConfigPath)
 	if err != nil {
 		t.Fatal(err)
@@ -147,21 +147,21 @@ func TestMigrateProviderSecretsRefusesUnmappedCredentialFields(t *testing.T) {
 	}
 }
 
-func TestEngineProviderWritesImportAndSanitizeLegacySecrets(t *testing.T) {
+func TestEngineProviderWritesImportAndSanitizeStoredSecrets(t *testing.T) {
 	ctx := context.Background()
 	store := &credentials.MapStore{}
 	eng, err := New(Options{SecretStore: store, StateDir: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := &config.ProviderConfig{AnthropicAPIKey: "sk-ant-legacy-1234567890"}
-	writeLegacyProviderConfigFixture(t, eng.providerConfigPath, cfg)
+	cfg := &config.ProviderConfig{AnthropicAPIKey: "sk-ant-stored-1234567890"}
+	writeProviderConfigFixture(t, eng.providerConfigPath, cfg)
 	if err := eng.SetActiveProvider(ctx, "anthropic"); err != nil {
 		t.Fatal(err)
 	}
 	secret, err := store.Get(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"))
-	if err != nil || secret != "sk-ant-legacy-1234567890" {
-		t.Fatalf("legacy credential was not safely imported: value=%q err=%v", secret, err)
+	if err != nil || secret != "sk-ant-stored-1234567890" {
+		t.Fatalf("credential was not safely imported: value=%q err=%v", secret, err)
 	}
 	saved := config.LoadProviderConfig(eng.providerConfigPath)
 	if saved == nil || saved.ActiveProvider != "anthropic" || config.ProviderConfigContainsSecrets(*saved) {
@@ -169,9 +169,9 @@ func TestEngineProviderWritesImportAndSanitizeLegacySecrets(t *testing.T) {
 	}
 }
 
-// writeLegacyProviderConfigFixture is deliberately test-only: production
+// writeProviderConfigFixture is deliberately test-only: production
 // SaveProviderConfig refuses plaintext credential fields.
-func writeLegacyProviderConfigFixture(t *testing.T, path string, cfg *config.ProviderConfig) {
+func writeProviderConfigFixture(t *testing.T, path string, cfg *config.ProviderConfig) {
 	t.Helper()
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {

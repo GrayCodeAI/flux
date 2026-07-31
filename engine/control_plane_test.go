@@ -110,14 +110,14 @@ func TestGatewayReadinessRejectsPlaceholderAndDiskSecrets(t *testing.T) {
 	cfg := &config.ProviderConfig{Deployments: map[string]config.DeploymentConfig{
 		"openai-direct": {APIKey: "sk-secret-on-disk"},
 	}}
-	writeLegacyProviderConfigFixture(t, eng.providerConfigPath, cfg)
+	writeProviderConfigFixture(t, eng.providerConfigPath, cfg)
 	for _, gateway := range eng.Gateways(ctx) {
 		if gateway.ID == "openai" && (gateway.CredentialConfigured || gateway.DeploymentConfigured) {
-			t.Fatalf("legacy or placeholder secret counted as ready: %+v", gateway)
+			t.Fatalf("stored or placeholder secret counted as ready: %+v", gateway)
 		}
 	}
 	if selection := eng.EffectiveSelection(ctx, SelectionOptions{}); selection.HasConfiguredDeployment {
-		t.Fatalf("legacy disk secret made selection ready: %+v", selection)
+		t.Fatalf("stored disk secret made selection ready: %+v", selection)
 	}
 }
 
@@ -217,12 +217,12 @@ func TestProviderSecretMigrationStaysInsideEnginePath(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := &config.ProviderConfig{
-		OpenAIAPIKey: "sk-top-level-legacy",
+		OpenAIAPIKey: "sk-top-level-stored",
 		Deployments: map[string]config.DeploymentConfig{
-			"openai-direct": {APIKey: "sk-legacy", BaseURL: "https://example.test"},
+			"openai-direct": {APIKey: "sk-stored", BaseURL: "https://example.test"},
 		},
 	}
-	writeLegacyProviderConfigFixture(t, eng.providerConfigPath, cfg)
+	writeProviderConfigFixture(t, eng.providerConfigPath, cfg)
 	if status := eng.ProviderStateSecurityStatus(); !status.HasSecrets {
 		t.Fatal("expected secret-bearing provider state")
 	}
@@ -234,14 +234,14 @@ func TestProviderSecretMigrationStaysInsideEnginePath(t *testing.T) {
 	}
 	saved := config.LoadProviderConfig(eng.providerConfigPath)
 	if saved.OpenAIAPIKey != "" {
-		t.Fatal("migration retained a top-level legacy credential")
+		t.Fatal("migration retained a top-level stored credential")
 	}
 	if saved.Deployments["openai-direct"].BaseURL != "https://example.test" {
 		t.Fatal("migration lost non-secret routing metadata")
 	}
 	// A marker is an audit artifact, not permission to trust later plaintext.
 	saved.OpenAIAPIKey = "sk-reintroduced"
-	writeLegacyProviderConfigFixture(t, eng.providerConfigPath, saved)
+	writeProviderConfigFixture(t, eng.providerConfigPath, saved)
 	if err := eng.MigrateProviderSecrets(); err != nil {
 		t.Fatal(err)
 	}

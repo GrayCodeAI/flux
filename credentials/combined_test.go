@@ -26,7 +26,7 @@ func TestCombinedStore_WritesKeychainOnly(t *testing.T) {
 	}
 }
 
-func TestMigrateLegacyEnvFile(t *testing.T) {
+func TestMigrateEnvFileCredentials(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	hawkDir := filepath.Join(dir, ".hawk")
@@ -39,7 +39,7 @@ func TestMigrateLegacyEnvFile(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	n, err := MigrateLegacyEnvFile(ctx)
+	n, err := MigrateEnvFileCredentials(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestMigrateLegacyEnvFile(t *testing.T) {
 		t.Fatalf("migrated = %d, want 1", n)
 	}
 	if _, err := os.Stat(envPath); !os.IsNotExist(err) {
-		t.Fatal("legacy ~/.hawk/env should be removed after migration")
+		t.Fatal("old ~/.hawk/env should be removed after migration")
 	}
 	store := NewCombinedStore()
 	got, err := store.Get(ctx, AccountForEnv("ANTHROPIC_API_KEY"))

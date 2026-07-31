@@ -78,8 +78,8 @@ func (e *Engine) StatePaths() StatePaths {
 	return StatePaths{Catalog: e.catalogPath, ProviderConfig: e.providerConfigPath}
 }
 
-func MigrateLegacyCredentials(ctx context.Context) (int, error) {
-	return credentials.MigrateLegacyEnvFile(nonNilContext(ctx))
+func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
+	return credentials.MigrateEnvFileCredentials(nonNilContext(ctx))
 }
 
 // HasCredentialEnv reports presence without exposing the credential value.
@@ -539,8 +539,9 @@ func (e *Engine) ProviderStateSecurityStatus() ProviderStateSecurity {
 	return status
 }
 
-// MigrateProviderSecrets imports historical credential fields into the
-// Engine's secret store, then atomically strips them from provider.json.
+// MigrateProviderSecrets imports credential fields persisted in provider
+// state into the Engine's secret store, then atomically strips them from
+// provider.json.
 func (e *Engine) MigrateProviderSecrets() error {
 	return e.MigrateProviderSecretsContext(context.Background())
 }
@@ -559,9 +560,9 @@ func (e *Engine) MigrateProviderSecretsContext(ctx context.Context) error {
 		return nil
 	}
 	cfg := *cfgState
-	writes, err := e.importLegacyProviderSecrets(ctx, cfg)
+	writes, err := e.importProviderConfigSecrets(ctx, cfg)
 	if err != nil {
-		return &Error{Code: ErrorInternal, Operation: "migrate_provider_secrets", Message: "eyrie engine: could not import legacy credentials", Cause: err}
+		return &Error{Code: ErrorInternal, Operation: "migrate_provider_secrets", Message: "eyrie engine: could not import provider credentials", Cause: err}
 	}
 	sanitized := config.SanitizeProviderConfigForDisk(cfg)
 	if err := writeProviderConfigAtomic(path, &sanitized); err != nil {
