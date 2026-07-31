@@ -159,6 +159,12 @@ func thinkingDisabled() *anthropicThinking {
 }
 
 // resolveThinking builds the thinking config from core.ChatOptions.
+// Explicit ThinkingMode / ThinkingBudgetTokens win. Otherwise ThinkingEnabled
+// maps to Anthropic's documented toggle:
+//   - false → {type:"disabled"}
+//   - true  → {type:"adaptive"} (recommended for current Claude models)
+//
+// See https://platform.claude.com/docs/en/build-with-claude/extended-thinking
 func resolveThinking(opts core.ChatOptions) *anthropicThinking {
 	switch opts.ThinkingMode {
 	case "adaptive":
@@ -172,6 +178,16 @@ func resolveThinking(opts core.ChatOptions) *anthropicThinking {
 		}
 		return thinking
 	default:
+		thinkingEnabled := opts.ThinkingEnabled
+		if thinkingEnabled == nil {
+			thinkingEnabled = opts.GLMThinkingEnabled
+		}
+		if thinkingEnabled != nil {
+			if !*thinkingEnabled {
+				return thinkingDisabled()
+			}
+			return thinkingAdaptive()
+		}
 		// Legacy behavior: if budget > 0, enable with budget
 		return thinkingForBudget(opts.ThinkingBudgetTokens)
 	}

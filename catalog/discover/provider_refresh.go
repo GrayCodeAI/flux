@@ -2,8 +2,8 @@ package discover
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
@@ -97,8 +97,8 @@ func refreshProvider(ctx context.Context, providerID string, opts ProviderRefres
 			ID:                    depID,
 			Name:                  provID,
 			ProviderID:            provID,
-			APIProtocolID:         "openai-chat-completions",
-			AdapterConstructor:    "openai",
+			APIProtocolID:         spec.ProtocolID,
+			AdapterConstructor:    spec.AdapterID,
 			NativeModelIDSource:   catalog.NativeModelIDDiscovered,
 			ModelMappingsRequired: false,
 		}
@@ -114,13 +114,8 @@ func refreshProvider(ctx context.Context, providerID string, opts ProviderRefres
 			name = entryID
 		}
 		canonicalID := entryID
-		var liveMeta map[string]interface{}
-		if json.Unmarshal(entry.RawJSON, &liveMeta) == nil {
-			if inputPrice, ok := liveMeta["input_token_price_per_m"]; ok {
-				if _, ok := inputPrice.(float64); ok {
-					canonicalID = provID + "/" + entryID
-				}
-			}
+		if !strings.Contains(entryID, "/") {
+			canonicalID = provID + "/" + entryID
 		}
 		cat.Models[canonicalID] = catalog.Model{
 			ID:            canonicalID,
@@ -142,11 +137,15 @@ func refreshProvider(ctx context.Context, providerID string, opts ProviderRefres
 		})
 	}
 
+	// Replace the selected deployment's topology as well as its offerings so a
+	// stale cache cannot retain an older adapter or protocol definition.
+	delete(base.Deployments, depID)
 	base = MergeCatalogWithPolicy(base, &cat, MergePolicy{
 		PreferLive:                 true,
 		PreferLiveProviders:        []string{catalog.CanonicalProviderID(spec.ProviderID)},
 		ReplaceDeploymentOfferings: []string{spec.DeploymentID},
 	})
+	catalog.PruneUnreferencedDeployments(base)
 	now := time.Now().UTC().Truncate(time.Second)
 	base.GeneratedAt = now
 	base.StaleAfter = now.Add(catalog.LiveStaleDuration)

@@ -180,15 +180,63 @@ func CapabilitySetFromEntry(e live.Entry) CapabilitySet {
 			set.ServerTools[feat] = CapabilitySupported
 		case "function_calling", "function-calling", "tools":
 			set.FunctionCalling = CapabilitySupported
+		case "thinking:enabled":
+			set.ExplicitThinkingBudget = CapabilitySupported
+			set.ThinkingTypes = appendUniqueString(set.ThinkingTypes, "enabled")
+		case "thinking:adaptive":
+			set.AdaptiveThinking = CapabilitySupported
+			set.ThinkingTypes = appendUniqueString(set.ThinkingTypes, "adaptive")
+		case "effort":
+			set.Effort = CapabilitySupported
+		case "structured_output":
+			set.StructuredOutput = CapabilitySupported
+		case "code_execution":
+			set.CodeExecution = CapabilitySupported
+		case "citations":
+			set.Citations = CapabilitySupported
+		case "pdf_input":
+			set.PDFInput = CapabilitySupported
+		case "image_input", "vision":
+			set.ImageInput = CapabilitySupported
 		}
 	}
 	if len(set.ServerTools) == 0 && len(e.Features) > 0 {
 		for _, feat := range e.Features {
-			set.ServerTools[feat] = CapabilitySupported
+			switch strings.ToLower(strings.TrimSpace(feat)) {
+			case "function_calling", "function-calling", "tools",
+				"thinking:enabled", "thinking:adaptive", "effort",
+				"structured_output", "code_execution", "citations",
+				"pdf_input", "image_input", "vision":
+				continue
+			default:
+				if strings.HasPrefix(strings.ToLower(strings.TrimSpace(feat)), "effort:") {
+					continue
+				}
+				set.ServerTools[feat] = CapabilitySupported
+			}
 		}
 	}
 	if e.MaxOutput > 0 {
 		set.MaxOutputTokens = e.MaxOutput
+	}
+	if e.ContextWindow > 0 {
+		set.MaxInputTokens = e.ContextWindow
+	} else if e.MaxInputTokens > 0 {
+		set.MaxInputTokens = e.MaxInputTokens
+	}
+	if e.ThinkingEnabled {
+		set.ExplicitThinkingBudget = CapabilitySupported
+		set.ThinkingTypes = appendUniqueString(set.ThinkingTypes, "enabled")
+	}
+	if e.ThinkingAdaptive {
+		set.AdaptiveThinking = CapabilitySupported
+		set.ThinkingTypes = appendUniqueString(set.ThinkingTypes, "adaptive")
+	}
+	if e.EffortSupported {
+		set.Effort = CapabilitySupported
+	}
+	if e.EffortLevels != "" {
+		set.EffortLevels = strings.Split(e.EffortLevels, ",")
 	}
 	if e.StructuredOutput {
 		set.StructuredOutput = CapabilitySupported
@@ -196,7 +244,25 @@ func CapabilitySetFromEntry(e live.Entry) CapabilitySet {
 	if e.CodeExecution {
 		set.CodeExecution = CapabilitySupported
 	}
+	if e.CitationsSupported {
+		set.Citations = CapabilitySupported
+	}
+	if e.PDFInput {
+		set.PDFInput = CapabilitySupported
+	}
+	if e.ImageInput {
+		set.ImageInput = CapabilitySupported
+	}
 	return set
+}
+
+func appendUniqueString(slice []string, s string) []string {
+	for _, existing := range slice {
+		if existing == s {
+			return slice
+		}
+	}
+	return append(slice, s)
 }
 
 // PricingFromEntry builds a Pricing from a live entry's per-token rates.

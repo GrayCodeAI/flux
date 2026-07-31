@@ -71,6 +71,8 @@ var Registry = map[string]FetchFunc{
 	"zai_payg":               FetchZAI,
 	"zai_coding":             FetchZAICoding,
 	"concentrate":            FetchConcentrate,
+	"agnes":                  FetchAgnes,
+	"longcat":                FetchLongCat,
 	"canopywave":             FetchCanopyWave,
 	"opencodego":             FetchOpenCodeGo,
 	"kimi":                   FetchKimi,
@@ -102,6 +104,7 @@ type listModelJSON struct {
 	Description          string   `json:"description"`
 	ContextLength        *int     `json:"context_length"`
 	ContextSize          *int     `json:"context_size"`
+	ContextWindow        *int     `json:"context_window"` // LongCat and similar OpenAI-compat APIs
 	MaxCompletionTokens  *int     `json:"max_completion_tokens"`
 	MaxOutputTokens      *int     `json:"max_output_tokens"`
 	MaxInputTokens       *int     `json:"max_input_tokens"`
@@ -256,7 +259,7 @@ func entryFromOpenAICompatJSON(raw json.RawMessage) (Entry, bool) {
 		InputPricePer1M: inPrice, OutputPricePer1M: outPrice,
 		CachedReadPricePer1M:  cachedRead,
 		CachedWritePricePer1M: cachedWrite,
-		ContextWindow:         intOrFirst(0, m.ContextLength, m.ContextSize, m.MaxInputTokens),
+		ContextWindow:         intOrFirst(0, m.ContextLength, m.ContextSize, m.ContextWindow, m.MaxInputTokens),
 		MaxOutput:             intOrFirst(0, m.MaxCompletionTokens, m.MaxOutputTokens, m.MaxTokens),
 		Features:              features,
 		Protocol:              protocol,

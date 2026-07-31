@@ -124,6 +124,7 @@ func run(ctx context.Context, opts Options) (*catalog.RefreshResult, error) {
 		}
 	}
 
+	catalog.PruneUnreferencedDeployments(base)
 	if err := catalog.WriteCatalogCache(opts.CachePath, base); err != nil {
 		return nil, fmt.Errorf("catalog discover: write cache: %w", err)
 	}

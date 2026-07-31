@@ -1,9 +1,6 @@
 // Package zai resolves Z.AI (Zhipu GLM) API base URLs for General (pay-as-you-go)
-// and Coding Plan subscriptions, with full support for both OpenAI-compatible
-// and Anthropic-compatible endpoints, plus International vs China regions.
-//
-// This mirrors the structure of catalog/xiaomi/ for proper plan + region + dual-protocol separation.
-// Official docs document separate "International" and "China" options for both General and Coding Plan.
+// and Coding Plan subscriptions across International vs China regions.
+// Hawk uses the OpenAI-compatible surface only.
 package zai
 
 import (
@@ -34,12 +31,6 @@ const (
 
 	GeneralChinaOpenAIBase = "https://open.bigmodel.cn/api/paas/v4"
 	CodingChinaOpenAIBase  = "https://open.bigmodel.cn/api/coding/paas/v4"
-)
-
-// Anthropic-compatible bases.
-const (
-	InternationalAnthropicBase = "https://api.z.ai/api/anthropic"
-	ChinaAnthropicBase         = "https://open.bigmodel.cn/api/anthropic"
 )
 
 // Provider IDs.
@@ -93,14 +84,6 @@ func ResolveOpenAIBase(plan Plan, region Region, override string) (string, error
 	default:
 		return "", fmt.Errorf("zai: unknown plan %q", plan)
 	}
-}
-
-// ResolveAnthropicBase returns the Anthropic-compat base for the region.
-func ResolveAnthropicBase(region Region) string {
-	if region == RegionChina {
-		return ChinaAnthropicBase
-	}
-	return InternationalAnthropicBase
 }
 
 // KeyMismatchHint (kept for future key prefix detection).

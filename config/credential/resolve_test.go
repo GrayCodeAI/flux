@@ -59,8 +59,8 @@ func TestResolveCredential_ListsAllProviders(t *testing.T) {
 			t.Fatalf("provider %q should not be inferred without gateway selection", p.ProviderID)
 		}
 	}
-	if res.Providers[0].ProviderID != "anthropic" {
-		t.Fatalf("first provider = %q, want anthropic (registry order)", res.Providers[0].ProviderID)
+	if res.Providers[0].ProviderID != "agnes" {
+		t.Fatalf("first provider = %q, want agnes (registry order)", res.Providers[0].ProviderID)
 	}
 }
 

@@ -93,27 +93,6 @@ func TestResolveOpenAIBase(t *testing.T) {
 	}
 }
 
-func TestResolveAnthropicBase(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		region Region
-		want   string
-	}{
-		{"International", RegionInternational, InternationalAnthropicBase},
-		{"China", RegionChina, ChinaAnthropicBase},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ResolveAnthropicBase(tt.region)
-			if got != tt.want {
-				t.Errorf("ResolveAnthropicBase: got=%q, want=%q", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestKeyMismatchHint(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

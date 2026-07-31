@@ -6,26 +6,6 @@ import (
 	"testing"
 )
 
-func TestResolveAnthropicBase_MatchesOfficialPaths(t *testing.T) {
-	t.Parallel()
-	// Payg + token plan bases; AnthropicClient posts to baseURL + "/v1/messages".
-	payg, err := ResolveAnthropicBase(BillingPayAsYouGo, "")
-	if err != nil || payg != PayAsYouGoAnthropicBase {
-		t.Fatalf("payg anthropic = %q err=%v", payg, err)
-	}
-	want := payg + "/v1/messages"
-	if want != "https://api.xiaomimimo.com/anthropic/v1/messages" {
-		t.Fatalf("payg messages URL = %q", want)
-	}
-	cn, err := ResolveAnthropicBase(BillingTokenPlan, RegionCN)
-	if err != nil || cn != TokenPlanCNAnthropicBase {
-		t.Fatalf("cn anthropic = %q err=%v", cn, err)
-	}
-	if cn+"/v1/messages" != "https://token-plan-cn.xiaomimimo.com/anthropic/v1/messages" {
-		t.Fatalf("cn messages URL mismatch")
-	}
-}
-
 func TestResolveOpenAIBase(t *testing.T) {
 	t.Parallel()
 	base, err := ResolveOpenAIBase(BillingPayAsYouGo, "", "")

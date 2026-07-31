@@ -19,7 +19,7 @@ func TestSeedCatalog_ReturnsCatalog(t *testing.T) {
 func TestSeedCatalog_HasProviders(t *testing.T) {
 	t.Parallel()
 	c := SeedCatalog()
-	expected := []string{"anthropic", "openai", "google", "xai", "openrouter", "ollama", "opencodego", "canopywave"}
+	expected := []string{"anthropic", "openai", "google", "xai", "openrouter", "concentrate", "ollama", "opencodego", "canopywave"}
 	for _, id := range expected {
 		if c.Providers[id].ID == "" {
 			t.Errorf("missing provider %q in default catalog", id)
@@ -32,13 +32,31 @@ func TestSeedCatalog_HasDeployments(t *testing.T) {
 	c := SeedCatalog()
 	expected := []string{
 		"anthropic-direct", "openai-direct",
-		"grok-direct", "openrouter", "ollama-local",
+		"grok-direct", "openrouter", "concentrate-payg", "ollama-local",
 		"opencodego", "canopywave",
 	}
 	for _, id := range expected {
 		if c.Deployments[id].ID == "" {
 			t.Errorf("missing deployment %q in default catalog", id)
 		}
+	}
+}
+
+func TestSeedCatalog_ConcentrateIsPayAsYouGo(t *testing.T) {
+	t.Parallel()
+	c := SeedCatalog()
+
+	if got := c.Providers["concentrate"].Name; got != "Concentrate AI (Pay-as-you-go)" {
+		t.Fatalf("Concentrate provider name = %q", got)
+	}
+	if got := c.Deployments["concentrate-payg"].Name; got != "Concentrate AI (Pay-as-you-go)" {
+		t.Fatalf("Concentrate deployment name = %q", got)
+	}
+	if got := c.Deployments["concentrate-payg"].APIProtocolID; got != "openai-responses" {
+		t.Fatalf("Concentrate protocol = %q", got)
+	}
+	if got := c.Deployments["concentrate-payg"].AdapterConstructor; got != "concentrate-responses" {
+		t.Fatalf("Concentrate adapter = %q", got)
 	}
 }
 

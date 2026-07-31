@@ -24,14 +24,10 @@ const (
 )
 
 const (
-	PayAsYouGoOpenAIBase      = "https://api.xiaomimimo.com/v1"
-	PayAsYouGoAnthropicBase   = "https://api.xiaomimimo.com/anthropic"
-	TokenPlanCNOpenAIBase     = "https://token-plan-cn.xiaomimimo.com/v1"         // #nosec G101 -- public API base URL, not a secret value
-	TokenPlanCNAnthropicBase  = "https://token-plan-cn.xiaomimimo.com/anthropic"  // #nosec G101 -- public API base URL, not a secret value
-	TokenPlanSGPOpenAIBase    = "https://token-plan-sgp.xiaomimimo.com/v1"        // #nosec G101 -- public API base URL, not a secret value
-	TokenPlanSGPAnthropicBase = "https://token-plan-sgp.xiaomimimo.com/anthropic" // #nosec G101 -- public API base URL, not a secret value
-	TokenPlanAMSOpenAIBase    = "https://token-plan-ams.xiaomimimo.com/v1"        // #nosec G101 -- public API base URL, not a secret value
-	TokenPlanAMSAnthropicBase = "https://token-plan-ams.xiaomimimo.com/anthropic" // #nosec G101 -- public API base URL, not a secret value
+	PayAsYouGoOpenAIBase   = "https://api.xiaomimimo.com/v1"
+	TokenPlanCNOpenAIBase  = "https://token-plan-cn.xiaomimimo.com/v1"  // #nosec G101 -- public API base URL, not a secret value
+	TokenPlanSGPOpenAIBase = "https://token-plan-sgp.xiaomimimo.com/v1" // #nosec G101 -- public API base URL, not a secret value
+	TokenPlanAMSOpenAIBase = "https://token-plan-ams.xiaomimimo.com/v1" // #nosec G101 -- public API base URL, not a secret value
 )
 
 // ProviderPayAsYouGo is the registry / setup gateway id for pay-as-you-go.
@@ -101,27 +97,6 @@ func ResolveOpenAIBase(billing Billing, region Region, override string) (string,
 			return TokenPlanSGPOpenAIBase, nil
 		case RegionAMS:
 			return TokenPlanAMSOpenAIBase, nil
-		default:
-			return "", fmt.Errorf("xiaomi: token plan region required (cn, sgp, ams)")
-		}
-	default:
-		return "", fmt.Errorf("xiaomi: unknown billing mode")
-	}
-}
-
-// ResolveAnthropicBase returns the Anthropic-compatible base URL (no /v1 suffix).
-func ResolveAnthropicBase(billing Billing, region Region) (string, error) {
-	switch billing {
-	case BillingPayAsYouGo:
-		return PayAsYouGoAnthropicBase, nil
-	case BillingTokenPlan:
-		switch region {
-		case RegionCN:
-			return TokenPlanCNAnthropicBase, nil
-		case RegionSGP:
-			return TokenPlanSGPAnthropicBase, nil
-		case RegionAMS:
-			return TokenPlanAMSAnthropicBase, nil
 		default:
 			return "", fmt.Errorf("xiaomi: token plan region required (cn, sgp, ams)")
 		}

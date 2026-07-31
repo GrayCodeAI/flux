@@ -38,6 +38,7 @@ type ProviderSpec struct {
 	ProbeBaseURL           string
 	LiveFetcherKey         string // key in catalog/live registry
 	LiveCatalogKey         string // legacy provider key in ModelCatalog.Providers map
+	PublicModelCatalog     bool   // live model listing is available without provider credentials
 	ProtocolID             string
 	AdapterID              string
 	RuntimeProfileKey      string

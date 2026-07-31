@@ -8,7 +8,10 @@ When starting any new work (feature, fix, refactor, chore), always create a feat
 
 ## Design Principles
 
-- **Model-agnostic** — single interface for 75+ LLM providers
+- **Model-agnostic** — single interface for 23 registered LLM providers
+- **Plan-accurate provider metadata** — Concentrate AI is pay-as-you-go, uses
+  `concentrate-payg` as its deployment identifier, and uses its native Responses
+  API (`/v1/responses`) without legacy Chat Completions or Messages routing
 - **Host-neutral engine** — Eyrie owns provider routing, transport, caching,
   retry/fallback, and normalized telemetry; hosts own product UX and semantics
 - **Streaming-first** — all responses are streamed; blocking is opt-in

@@ -15,6 +15,7 @@ const (
 	ProviderZAIPayg             APIProvider = "zai_payg"
 	ProviderOpenRouter          APIProvider = "openrouter"
 	ProviderConcentrate         APIProvider = "concentrate"
+	ProviderAgnes               APIProvider = "agnes"
 	ProviderGrok                APIProvider = "grok"
 	ProviderGemini              APIProvider = "gemini"
 	ProviderBedrock             APIProvider = "bedrock"
@@ -254,12 +255,14 @@ const (
 
 // OpenAICompatibleRuntimeProfileOrder is the detection order for runtime profiles.
 var OpenAICompatibleRuntimeProfileOrder = []string{
-	"concentrate", "openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg",
+	"concentrate", "agnes", "longcat", "openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg",
 }
 
 // OpenAICompatibleRuntimeProfiles maps profile key to its runtime profile.
 var OpenAICompatibleRuntimeProfiles = map[string]RuntimeProviderProfile{
 	"concentrate":            ConcentrateRuntimeProfile,
+	"agnes":                  OpenAIRuntimeProfile,
+	"longcat":                OpenAIRuntimeProfile,
 	"anthropic":              AnthropicRuntimeProfile,
 	"grok":                   GrokRuntimeProfile,
 	"gemini":                 GeminiRuntimeProfile,
@@ -284,6 +287,7 @@ var OpenAICompatibleRuntimeProfiles = map[string]RuntimeProviderProfile{
 var RuntimeProviderProfiles = map[string]RuntimeProviderProfile{
 	"anthropic":              AnthropicRuntimeProfile,
 	"openai":                 OpenAIRuntimeProfile,
+	"agnes":                  OpenAIRuntimeProfile,
 	"grok":                   GrokRuntimeProfile,
 	"gemini":                 GeminiRuntimeProfile,
 	"vertex":                 VertexRuntimeProfile,

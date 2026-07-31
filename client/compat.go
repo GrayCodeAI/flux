@@ -8,6 +8,8 @@ type OpenAICompatConfig = adapters.OpenAICompatConfig
 // Per-provider compat configs.
 var (
 	OpenAICompat      = adapters.OpenAICompat
+	AgnesCompat       = adapters.AgnesCompat
+	LongCatCompat     = adapters.LongCatCompat
 	GrokCompat        = adapters.GrokCompat
 	OpenRouterCompat  = adapters.OpenRouterCompat
 	GeminiCompat      = adapters.GeminiCompat
@@ -25,4 +27,5 @@ var (
 	VertexCompat      = adapters.VertexCompat
 	DeepSeekCompat    = adapters.DeepSeekCompat
 	ConcentrateCompat = adapters.ConcentrateCompat
+	MiniMaxCompat     = adapters.MiniMaxCompat
 )

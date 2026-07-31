@@ -459,32 +459,43 @@ func TestBuildAnthropicMessages_LegacyImages(t *testing.T) {
 
 func TestResolveThinking(t *testing.T) {
 	t.Parallel()
+	on := true
+	off := false
 	tests := []struct {
+		name   string
 		mode   string
 		budget int
+		enable *bool
 		want   *AnthropicThinking
 	}{
-		{"adaptive", 0, &AnthropicThinking{Type: "adaptive"}},
-		{"disabled", 0, &AnthropicThinking{Type: "disabled"}},
-		{"enabled", 1000, &AnthropicThinking{Type: "enabled", BudgetTokens: 1000}},
-		{"", 500, &AnthropicThinking{Type: "enabled", BudgetTokens: 500}},
-		{"", 0, nil},
+		{"adaptive", "adaptive", 0, nil, &AnthropicThinking{Type: "adaptive"}},
+		{"disabled", "disabled", 0, nil, &AnthropicThinking{Type: "disabled"}},
+		{"enabled", "enabled", 1000, nil, &AnthropicThinking{Type: "enabled", BudgetTokens: 1000}},
+		{"budget_legacy", "", 500, nil, &AnthropicThinking{Type: "enabled", BudgetTokens: 500}},
+		{"unset", "", 0, nil, nil},
+		{"thinking_enabled_true", "", 0, &on, &AnthropicThinking{Type: "adaptive"}},
+		{"thinking_enabled_false", "", 0, &off, &AnthropicThinking{Type: "disabled"}},
+		{"mode_wins_over_toggle", "disabled", 0, &on, &AnthropicThinking{Type: "disabled"}},
 	}
 	for _, tt := range tests {
-		got := ResolveThinking(core.ChatOptions{ThinkingMode: tt.mode, ThinkingBudgetTokens: tt.budget})
-		if tt.want == nil {
-			if got != nil {
-				t.Errorf("ResolveThinking(%q,%d) = %v, want nil", tt.mode, tt.budget, got)
+		t.Run(tt.name, func(t *testing.T) {
+			got := ResolveThinking(core.ChatOptions{
+				ThinkingMode: tt.mode, ThinkingBudgetTokens: tt.budget, ThinkingEnabled: tt.enable,
+			})
+			if tt.want == nil {
+				if got != nil {
+					t.Errorf("ResolveThinking = %v, want nil", got)
+				}
+				return
 			}
-			continue
-		}
-		if got == nil {
-			t.Errorf("ResolveThinking(%q,%d) = nil, want %+v", tt.mode, tt.budget, *tt.want)
-			continue
-		}
-		if got.Type != tt.want.Type || got.BudgetTokens != tt.want.BudgetTokens {
-			t.Errorf("ResolveThinking(%q,%d) = %+v, want %+v", tt.mode, tt.budget, *got, *tt.want)
-		}
+			if got == nil {
+				t.Errorf("ResolveThinking = nil, want %+v", *tt.want)
+				return
+			}
+			if got.Type != tt.want.Type || got.BudgetTokens != tt.want.BudgetTokens {
+				t.Errorf("ResolveThinking = %+v, want %+v", *got, *tt.want)
+			}
+		})
 	}
 }
 

@@ -9,12 +9,6 @@ import (
 	"testing"
 )
 
-type transportError struct{ msg string }
-
-func (e *transportError) Error() string   { return e.msg }
-func (e *transportError) Timeout() bool   { return false }
-func (e *transportError) Temporary() bool { return true }
-
 func testLogger(t *testing.T) *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

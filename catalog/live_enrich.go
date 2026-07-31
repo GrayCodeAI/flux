@@ -56,8 +56,8 @@ func FetchLiveProviderCatalog(env map[string]string) (Catalog, []LiveProviderEnr
 				ID:                    deploymentID,
 				Name:                  providerID,
 				ProviderID:            providerID,
-				APIProtocolID:         "openai-chat-completions",
-				AdapterConstructor:    "openai",
+				APIProtocolID:         spec.ProtocolID,
+				AdapterConstructor:    spec.AdapterID,
 				NativeModelIDSource:   NativeModelIDDiscovered,
 				ModelMappingsRequired: false,
 			}
@@ -83,7 +83,7 @@ func FetchLiveProviderCatalog(env map[string]string) (Catalog, []LiveProviderEnr
 				} else if hasInputPricing(entry.RawJSON) {
 					canonicalID = providerID + "/" + entryID
 				}
-			} else if hasInputPricing(entry.RawJSON) {
+			} else {
 				canonicalID = providerID + "/" + entryID
 			}
 
@@ -123,7 +123,7 @@ func FetchLiveModelEntriesForProvider(env map[string]string, providerID string) 
 		return nil, fmt.Errorf("catalog: provider %q has no live model list API", providerID)
 	}
 	env = registry.ScopedProviderEnv(spec, env)
-	if !registry.CredentialPresent(spec, env) {
+	if !spec.PublicModelCatalog && !registry.CredentialPresent(spec, env) {
 		return nil, fmt.Errorf("catalog: set %s for %s", spec.CredentialEnv, providerID)
 	}
 	entries, err := live.Fetch(spec.LiveFetcherKey, env)

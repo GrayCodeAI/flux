@@ -44,6 +44,7 @@ func SanitizeProviderConfigForDisk(cfg ProviderConfig) ProviderConfig {
 	cfg.PoolsideAPIKey = ""
 	cfg.GroqAPIKey = ""
 	cfg.ClinePassAPIKey = ""
+	cfg.AgnesAPIKey = ""
 	if cfg.Deployments != nil {
 		deployments := make(map[string]DeploymentConfig, len(cfg.Deployments))
 		for id, deployment := range cfg.Deployments {
@@ -91,6 +92,7 @@ func LegacyProviderSecretsStrict(cfg ProviderConfig) (map[string]string, error) 
 	put("POOLSIDE_API_KEY", cfg.PoolsideAPIKey)
 	put("GROQ_API_KEY", cfg.GroqAPIKey)
 	put("CLINE_API_KEY", cfg.ClinePassAPIKey)
+	put("AGNES_API_KEY", cfg.AgnesAPIKey)
 
 	deploymentIDs := make([]string, 0, len(cfg.Deployments))
 	for id := range cfg.Deployments {
@@ -132,11 +134,14 @@ func legacyDeploymentCredentialEnv(deploymentID string) string {
 		"grok-direct":                   "XAI_API_KEY",
 		"gemini-direct":                 "GEMINI_API_KEY",
 		"openrouter":                    "OPENROUTER_API_KEY",
+		"concentrate-payg":              "CONCENTRATE_API_KEY",
 		"canopywave":                    "CANOPYWAVE_API_KEY",
 		"deepseek-direct":               "DEEPSEEK_API_KEY",
 		"poolside":                      "POOLSIDE_API_KEY",
 		"groq-direct":                   "GROQ_API_KEY",
 		"clinepass":                     "CLINE_API_KEY",
+		"agnes-direct":                  "AGNES_API_KEY",
+		"longcat-direct":                "LONGCAT_API_KEY",
 		"zai_payg-direct":               "ZAI_API_KEY",
 		"zai_coding-direct":             "ZAI_CODING_API_KEY",
 		"opencodego":                    "OPENCODEGO_API_KEY",
@@ -156,7 +161,7 @@ func providerConfigSecrets(cfg ProviderConfig) []string {
 		cfg.OpenRouterAPIKey, cfg.GeminiAPIKey, cfg.OpenCodeGoAPIKey, cfg.MoonshotAPIKey,
 		cfg.XiaomiMimoPaygAPIKey, cfg.XiaomiMimoTokenPlanAPIKey,
 		cfg.MiniMaxTokenPlanAPIKey, cfg.MiniMaxPaygAPIKey,
-		cfg.PoolsideAPIKey, cfg.GroqAPIKey, cfg.ClinePassAPIKey,
+		cfg.PoolsideAPIKey, cfg.GroqAPIKey, cfg.ClinePassAPIKey, cfg.AgnesAPIKey,
 	}
 }
 

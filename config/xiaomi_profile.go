@@ -43,16 +43,6 @@ func ResolveXiaomiOpenAIBase(providerID string, cfg *ProviderConfig) (string, er
 	return xiaomi.ResolveOpenAIBasePreferRegion(billing, region, override)
 }
 
-// ResolveXiaomiAnthropicBase resolves the Anthropic-compat base for a MiMo gateway id.
-func ResolveXiaomiAnthropicBase(providerID string, cfg *ProviderConfig) (string, error) {
-	billing, ok := xiaomi.BillingForProvider(providerID)
-	if !ok {
-		return "", nil
-	}
-	region := XiaomiTokenPlanRegionFromConfig(cfg)
-	return xiaomi.ResolveAnthropicBase(billing, region)
-}
-
 // IsXiaomiMimoProvider reports whether id is a MiMo setup gateway (payg or token plan).
 func IsXiaomiMimoProvider(providerID string) bool {
 	_, ok := xiaomi.BillingForProvider(providerID)

@@ -70,6 +70,9 @@ type ProviderConfig struct {
 	ConcentrateAPIKey          string                      `json:"concentrate_api_key,omitempty"`
 	ConcentrateBaseURL         string                      `json:"concentrate_base_url,omitempty"`
 	ConcentrateModel           string                      `json:"concentrate_model,omitempty"`
+	AgnesAPIKey                string                      `json:"agnes_api_key,omitempty"`
+	AgnesBaseURL               string                      `json:"agnes_base_url,omitempty"`
+	AgnesModel                 string                      `json:"agnes_model,omitempty"`
 	DeepSeekModel              string                      `json:"deepseek_model,omitempty"`
 	ZAIModel                   string                      `json:"zai_model,omitempty"`
 	GrokModel                  string                      `json:"grok_model,omitempty"`

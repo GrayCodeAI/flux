@@ -2,8 +2,6 @@ package adapters
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -27,7 +25,7 @@ func TestOpenCodeGoClientRoutesMiniMaxToAnthropic(t *testing.T) {
 	})
 
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
-	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
+	client.anthropic.httpClient = &http.Client{Transport: transport}
 	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "minimax-m2.5", MaxTokens: 256,
 	})
@@ -60,7 +58,7 @@ func TestOpenCodeGoClientRoutesKimiToOpenAI(t *testing.T) {
 	})
 
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
-	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
+	client.openai.httpClient = &http.Client{Transport: transport}
 	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "kimi-k2.5", MaxTokens: 256,
 	})
@@ -75,7 +73,7 @@ func TestOpenCodeGoClientRoutesKimiToOpenAI(t *testing.T) {
 	}
 }
 
-func TestOpenCodeGoClientQwen401FallsBackToOpenAI(t *testing.T) {
+func TestOpenCodeGoClientQwenUsesAnthropicOnly(t *testing.T) {
 	t.Parallel()
 	var paths []string
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -85,62 +83,22 @@ func TestOpenCodeGoClientQwen401FallsBackToOpenAI(t *testing.T) {
 				"error": map[string]string{"message": "Invalid API key"},
 			}), nil
 		}
-		return jsonResponse(http.StatusOK, map[string]any{
-			"id": "chatcmpl-1", "object": "chat.completion",
-			"choices": []map[string]any{
-				{"message": map[string]string{"role": "assistant", "content": "OK"}, "finish_reason": "stop"},
-			},
-		}), nil
+		t.Fatalf("unexpected OpenAI path %q — no cross-protocol fallback", req.URL.Path)
+		return nil, nil
 	})
 
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
-	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
-	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	client.anthropic.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	client.anthropic.httpClient = &http.Client{Transport: transport}
+	client.openai.httpClient = &http.Client{Transport: transport}
+	_, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "qwen3.7-max", MaxTokens: 256,
 	})
-	if err != nil {
-		t.Fatalf("Chat: %v", err)
+	if err == nil {
+		t.Fatal("expected Anthropic error without OpenAI fallback")
 	}
-	if response.Content != "OK" {
-		t.Fatalf("content = %q, want OK; paths=%v", response.Content, paths)
-	}
-}
-
-func TestOpenCodeGoClientMessagesEmptyFallsBackToOpenAI(t *testing.T) {
-	t.Parallel()
-	var paths []string
-	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		paths = append(paths, req.URL.Path)
-		if strings.HasSuffix(req.URL.Path, "/messages") {
-			return jsonResponse(http.StatusOK, map[string]any{
-				"id": "msg_1", "type": "message", "role": "assistant",
-				"content":     []map[string]string{{"type": "thinking", "thinking": "hmm"}},
-				"stop_reason": "end_turn",
-			}), nil
-		}
-		return jsonResponse(http.StatusOK, map[string]any{
-			"id": "chatcmpl-1", "object": "chat.completion",
-			"choices": []map[string]any{
-				{"message": map[string]string{"role": "assistant", "content": "Hello!"}, "finish_reason": "stop"},
-			},
-		}), nil
-	})
-
-	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
-	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
-	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
-		Model: "minimax-m3", MaxTokens: 256,
-	})
-	if err != nil {
-		t.Fatalf("Chat: %v", err)
-	}
-	if response.Content != "Hello!" {
-		t.Fatalf("content = %q, want Hello!; paths=%v", response.Content, paths)
-	}
-	if len(paths) < 2 {
-		t.Fatalf("expected anthropic then openai, got %v", paths)
+	if len(paths) != 1 || !strings.HasSuffix(paths[0], "/messages") {
+		t.Fatalf("paths = %v, want single /messages call", paths)
 	}
 }
 
@@ -164,7 +122,7 @@ func TestOpenCodeGoClientNormalizesModelID(t *testing.T) {
 		}), nil
 	})
 	client := NewOpenCodeGoClient("key", "https://opencode.example/zen/go/v1")
-	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
+	client.openai.httpClient = &http.Client{Transport: transport}
 	_, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "opencode-go/kimi-k2.6", MaxTokens: 16,
 	})
@@ -173,65 +131,6 @@ func TestOpenCodeGoClientNormalizesModelID(t *testing.T) {
 	}
 	if gotModel != "kimi-k2.6" {
 		t.Fatalf("model = %q, want kimi-k2.6", gotModel)
-	}
-}
-
-func TestOpenCodeGoClientStreamMiniMaxReasoningOnlyFallsBackToChat(t *testing.T) {
-	t.Parallel()
-	var paths []string
-	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		paths = append(paths, req.URL.Path)
-		if strings.HasSuffix(req.URL.Path, "/messages") {
-			body := "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":10}}}\n\n" +
-				"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"thinking\"}}\n\n" +
-				"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"text\":\"hmm\"}}\n\n" +
-				"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n" +
-				"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"}}\n\n" +
-				"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
-				Body:       io.NopCloser(strings.NewReader(body)),
-			}, nil
-		}
-		if strings.HasSuffix(req.URL.Path, "/chat/completions") && req.Header.Get("Accept") == "text/event-stream" {
-			t.Fatal("stream fallback should not run before non-streaming chat fallback")
-		}
-		return jsonResponse(http.StatusOK, map[string]any{
-			"id": "chatcmpl-1", "object": "chat.completion",
-			"choices": []map[string]any{
-				{"message": map[string]string{"role": "assistant", "content": "Hello!"}, "finish_reason": "stop"},
-			},
-		}), nil
-	})
-
-	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
-	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
-	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	result, err := client.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hello how are you?"}}, core.ChatOptions{
-		Model: "minimax-m3", MaxTokens: 256,
-	})
-	if err != nil {
-		t.Fatalf("StreamChat: %v", err)
-	}
-	defer result.Close()
-
-	var content string
-	for event := range result.Events {
-		switch event.Type {
-		case "thinking":
-			t.Fatal("reasoning-only primary stream must not leak thinking before chat fallback")
-		case "content":
-			content += event.Content
-		case "error":
-			t.Fatalf("unexpected stream error: %s", event.Error)
-		}
-	}
-	if content != "Hello!" {
-		t.Fatalf("content = %q, want Hello!; paths=%v", content, paths)
-	}
-	if len(paths) < 2 {
-		t.Fatalf("expected /messages then /chat/completions, got %v", paths)
 	}
 }
 
@@ -249,54 +148,22 @@ func TestOpenCodeGoClient_Ping_Success(t *testing.T) {
 		return jsonResponse(http.StatusOK, map[string]any{}), nil
 	})
 	client := NewOpenCodeGoClient("key", "https://opencode.example/zen/go/v1")
-	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
+	client.openai.httpClient = &http.Client{Transport: transport}
 	if err := client.Ping(context.Background()); err != nil {
 		t.Fatalf("Ping: %v", err)
 	}
 }
 
-func TestOpenCodeGoClient_Ping_FallbackToAnthropic(t *testing.T) {
+func TestOpenCodeGoClient_Ping_OpenAIOnly(t *testing.T) {
 	t.Parallel()
-	callCount := 0
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		callCount++
-		if callCount == 1 {
-			return jsonResponse(http.StatusUnauthorized, map[string]any{}), nil
-		}
-		return jsonResponse(http.StatusOK, map[string]any{}), nil
+		return jsonResponse(http.StatusUnauthorized, map[string]any{}), nil
 	})
 	client := NewOpenCodeGoClient("key", "https://openai.example/v1")
-	client.router.OpenAI.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
-	client.router.Anthropic.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
-	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
-	if err := client.Ping(context.Background()); err != nil {
-		t.Fatalf("Ping: %v", err)
-	}
-}
-
-func TestOACompatUnsupportedError(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name string
-		err  error
-		want bool
-	}{
-		{"nil error", nil, false},
-		{"401 status", fmt.Errorf("status=401"), true},
-		{"http 401", fmt.Errorf("http 401"), true},
-		{"oa-compat", fmt.Errorf("oa-compat unsupported"), true},
-		{"not supported", fmt.Errorf("not supported"), true},
-		{"other error", fmt.Errorf("something else"), false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := OACompatUnsupportedError(tt.err)
-			if got != tt.want {
-				t.Errorf("OACompatUnsupportedError(%v) = %v, want %v", tt.err, got, tt.want)
-			}
-		})
+	client.openai.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	client.openai.httpClient = &http.Client{Transport: transport}
+	if err := client.Ping(context.Background()); err == nil {
+		t.Fatal("expected ping error without Anthropic fallback")
 	}
 }
 

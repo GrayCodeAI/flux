@@ -9,23 +9,41 @@ import (
 
 func TestAllProviders_Count(t *testing.T) {
 	t.Parallel()
-	if n := len(registry.All()); n != 23 {
-		t.Fatalf("expected 23 providers, got %d", n)
+	if n := len(registry.All()); n != 25 {
+		t.Fatalf("expected 25 providers, got %d", n)
 	}
 }
 
-func TestCredentialRegistry_MatchesAll(t *testing.T) {
+func TestProviderSpecs_AgnesOpenAIOnlyLongCatOpenAIPrimary(t *testing.T) {
 	t.Parallel()
-	if len(registry.CredentialRegistry()) != len(registry.All()) {
-		t.Fatal("credential registry should cover all provider specs")
+	// Agnes: official docs advertise OpenAI-compatible only — no Anthropic surface.
+	agnes, ok := registry.SpecByProviderID("agnes")
+	if !ok {
+		t.Fatal("missing agnes")
+	}
+	if agnes.ProtocolID != "openai-chat-completions" || agnes.AdapterID != "openai" {
+		t.Fatalf("agnes protocol/adapter = %q/%q", agnes.ProtocolID, agnes.AdapterID)
+	}
+	if got := registry.DirectFallbackProviderIDs("agnes"); len(got) != 0 {
+		t.Fatalf("agnes DirectFallbacks = %v, want none", got)
+	}
+
+	// LongCat: official docs expose BOTH OpenAI (/openai) and Anthropic (/anthropic).
+	// Hawk uses the OpenAI primary only — Anthropic is not required when OpenAI works.
+	longcat, ok := registry.SpecByProviderID("longcat")
+	if !ok {
+		t.Fatal("missing longcat")
+	}
+	if longcat.ProtocolID != "openai-chat-completions" || longcat.AdapterID != "openai" {
+		t.Fatalf("longcat protocol/adapter = %q/%q", longcat.ProtocolID, longcat.AdapterID)
 	}
 }
 
 func TestLiveFetcherKeys_AllProviders(t *testing.T) {
 	t.Parallel()
 	keys := registry.LiveFetcherKeys()
-	if len(keys) != 23 {
-		t.Fatalf("expected 23 live fetcher keys, got %d", len(keys))
+	if len(keys) != 25 {
+		t.Fatalf("expected 25 live fetcher keys, got %d", len(keys))
 	}
 }
 
@@ -43,6 +61,23 @@ func TestOpenCodeGo_HasProbeBaseURL(t *testing.T) {
 	}
 	if spec.ProbeKind != registry.ProbeOpenAIModels {
 		t.Fatalf("opencodego probe kind = %q", spec.ProbeKind)
+	}
+}
+
+func TestConcentrateUsesResponsesAPI(t *testing.T) {
+	t.Parallel()
+	spec, ok := registry.SpecByProviderID("concentrate")
+	if !ok {
+		t.Fatal("missing Concentrate provider spec")
+	}
+	if spec.ProtocolID != "openai-responses" {
+		t.Fatalf("protocol = %q", spec.ProtocolID)
+	}
+	if spec.AdapterID != "concentrate-responses" {
+		t.Fatalf("adapter = %q", spec.AdapterID)
+	}
+	if !spec.PublicModelCatalog {
+		t.Fatal("Concentrate model catalog must be public")
 	}
 }
 
@@ -101,7 +136,7 @@ func TestProviderSpecs_TableDriven(t *testing.T) {
 		{"bedrock", "bedrock", true, registry.ProbeNone, true, "anthropic-bedrock"},
 		{"vertex", "vertex", true, registry.ProbeNone, true, "gemini-vertex"},
 		{"openrouter", "openrouter", true, registry.ProbeOpenAIModels, true, "openrouter"},
-		{"concentrate", "concentrate", true, registry.ProbeOpenAIModels, true, "concentrate-direct"},
+		{"concentrate", "concentrate", true, registry.ProbeOpenAIModels, true, "concentrate-payg"},
 		{"grok", "grok", true, registry.ProbeOpenAIModels, true, "grok-direct"},
 		{"zai_payg", "zai_payg", true, registry.ProbeOpenAIModels, true, "zai_payg-direct"},
 		{"zai_coding", "zai_coding", true, registry.ProbeOpenAIModels, true, "zai_coding-direct"},

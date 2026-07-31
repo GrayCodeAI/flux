@@ -113,10 +113,21 @@ func TestCompatMatrixThinkingFormatValues(t *testing.T) {
 		{&OpenRouterCompat, "openrouter"},
 		{&ZAICompat, "zai"},
 		{&OpenCodeGoCompat, "openrouter"},
+		{&AgnesCompat, "agnes"},
+		{&LongCatCompat, "longcat"},
+		{&KimiCompat, "kimi"},
+		{&DeepSeekCompat, "deepseek"},
+		{&XiaomiCompat, "xiaomi"},
+		{&MiniMaxCompat, "minimax"},
 	}
 	for _, tc := range tests {
 		if tc.compat.ThinkingFormat != tc.format {
 			t.Errorf("ThinkingFormat = %q, want %q", tc.compat.ThinkingFormat, tc.format)
+		}
+	}
+	for _, c := range []*OpenAICompatConfig{&LongCatCompat, &KimiCompat, &DeepSeekCompat, &XiaomiCompat, &MiniMaxCompat} {
+		if !c.DefaultDisableThinking {
+			t.Fatalf("%q DefaultDisableThinking should be true", c.ThinkingFormat)
 		}
 	}
 
@@ -124,8 +135,7 @@ func TestCompatMatrixThinkingFormatValues(t *testing.T) {
 	noFormat := []*OpenAICompatConfig{
 		&OpenAICompat, &GrokCompat, &GeminiCompat,
 		&CanopyWaveCompat, &OllamaCompat,
-		&KimiCompat, &XiaomiCompat, &AzureCompat,
-		&BedrockCompat, &VertexCompat,
+		&AzureCompat, &BedrockCompat, &VertexCompat,
 	}
 	for _, c := range noFormat {
 		if c.ThinkingFormat != "" {

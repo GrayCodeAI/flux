@@ -28,20 +28,6 @@ func ResolveZAIOpenAIBase(providerID string, cfg *ProviderConfig) (string, error
 	return zai.ResolveOpenAIBase(plan, region, override)
 }
 
-// ResolveZAIAnthropicBase resolves the Anthropic-compat base for Z.AI.
-// Prefers coding region if set, falls back to general region.
-func ResolveZAIAnthropicBase(cfg *ProviderConfig) string {
-	if cfg == nil {
-		return zai.ResolveAnthropicBase(zai.RegionInternational)
-	}
-	regionStr := cfg.ZAICodingRegion
-	if regionStr == "" {
-		regionStr = cfg.ZAIRegion
-	}
-	region, _ := zai.NormalizeRegion(regionStr)
-	return zai.ResolveAnthropicBase(region)
-}
-
 // IsZAIProvider reports whether id is a Z.AI setup gateway (payg or coding).
 func IsZAIProvider(providerID string) bool {
 	_, ok := zai.PlanForProvider(providerID)

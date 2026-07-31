@@ -55,6 +55,26 @@ func TestBuildRoutingPolicyFromDeployments_CanopyWave(t *testing.T) {
 	}
 }
 
+func TestBuildRoutingPolicyFromDeployments_AgnesAndLongCatSingleEndpoint(t *testing.T) {
+	t.Parallel()
+	deployments := map[string]DeploymentConfig{
+		"agnes-direct":     {},
+		"longcat-direct":   {},
+		"anthropic-direct": {},
+		"openrouter":       {},
+	}
+	policy := BuildRoutingPolicyFromDeployments(deployments)
+	for _, provider := range []string{"agnes", "longcat"} {
+		stages := policy.Providers[provider]
+		if len(stages) != 1 {
+			t.Fatalf("%s: want 1 stage, got %+v", provider, stages)
+		}
+		if len(stages[0].Deployments) != 1 || stages[0].Deployments[0].DeploymentID != provider+"-direct" {
+			t.Fatalf("%s: want single %s-direct deployment, got %+v", provider, provider, stages[0].Deployments)
+		}
+	}
+}
+
 func TestSyncProviderConfigFromCatalog(t *testing.T) {
 	t.Parallel()
 	bootstrap := catalog.BootstrapCatalog()

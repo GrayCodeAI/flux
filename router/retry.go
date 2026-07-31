@@ -46,6 +46,8 @@ func ShouldTryNextDeployment(err error) bool {
 	for _, pattern := range []string{
 		"requires more credits", "can only afford", "insufficient credits",
 		"insufficient balance", "payment required", "out of credits", "402",
+		"insufficient_user_quota", "insufficient_quota",
+		"pre-deduct", "pre-deduction", "预扣费",
 	} {
 		if strings.Contains(low, pattern) {
 			return true

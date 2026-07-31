@@ -6,6 +6,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client/adapters"
 	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
 )
@@ -329,7 +330,7 @@ func TestDefaultDeploymentForProvider(t *testing.T) {
 		{config.ProviderGrok, "grok-direct"},
 		{config.ProviderGemini, "gemini-direct"},
 		{config.ProviderOpenRouter, "openrouter"},
-		{config.ProviderConcentrate, "concentrate-direct"},
+		{config.ProviderConcentrate, "concentrate-payg"},
 		{config.ProviderCanopyWave, "canopywave"},
 		{config.ProviderDeepSeek, "deepseek-direct"},
 		{config.ProviderZAIPayg, "zai_payg-direct"},
@@ -507,24 +508,27 @@ func TestProviderForDeployment_OpenRouter(t *testing.T) {
 	}
 }
 
-func TestProviderForDeployment_ConcentrateDirect(t *testing.T) {
-	p, ok := ProviderForDeployment("concentrate-direct", config.DeploymentConfig{APIKey: "test-key"})
+func TestProviderForDeployment_ConcentratePayAsYouGo(t *testing.T) {
+	p, ok := ProviderForDeployment("concentrate-payg", config.DeploymentConfig{APIKey: "test-key"})
 	if !ok {
-		t.Fatal("expected concentrate-direct to be configured")
+		t.Fatal("expected concentrate-payg to be configured")
 	}
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	if _, ok := p.(*adapters.ConcentrateResponsesClient); !ok {
+		t.Fatalf("provider type = %T, want Responses API adapter", p)
+	}
+	if p.Name() != "concentrate" {
+		t.Fatalf("provider name = %q, want concentrate", p.Name())
 	}
 }
 
-func TestProviderForDeployment_ConcentrateDirectRequiresKey(t *testing.T) {
+func TestProviderForDeployment_ConcentratePayAsYouGoRequiresKey(t *testing.T) {
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 	t.Setenv("CONCENTRATE_API_KEY", "")
 
-	if _, ok := ProviderForDeployment("concentrate-direct", config.DeploymentConfig{}); ok {
-		t.Fatal("expected concentrate-direct to be unavailable without key")
+	if _, ok := ProviderForDeployment("concentrate-payg", config.DeploymentConfig{}); ok {
+		t.Fatal("expected concentrate-payg to be unavailable without key")
 	}
 }
 

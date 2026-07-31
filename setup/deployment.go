@@ -11,6 +11,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 	"github.com/GrayCodeAI/eyrie/catalog/zai"
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client/adapters"
 	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/eyrie/router"
@@ -273,12 +274,12 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 			return nil, false
 		}
 		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenRouterOpenAIBaseURL), &client.OpenRouterCompat), true
-	case "concentrate-direct":
+	case "concentrate-payg":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CONCENTRATE_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultConcentrateOpenAIBaseURL), &client.OpenAICompat), true
+		return adapters.NewConcentrateResponsesClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultConcentrateOpenAIBaseURL)), true
 	case "canopywave":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CANOPYWAVE_API_KEY"))
 		if apiKey == "" {
@@ -291,8 +292,7 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 			return nil, false
 		}
 		openBase := FirstNonEmpty(deployment.BaseURL, "https://api.deepseek.com/v1")
-		anthropicBase := "https://api.deepseek.com/anthropic"
-		return client.NewDeepSeekClient(apiKey, openBase, anthropicBase, &client.DeepSeekCompat), true
+		return client.NewDeepSeekClient(apiKey, openBase, &client.DeepSeekCompat), true
 	case "poolside":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("POOLSIDE_API_KEY"))
 		if apiKey == "" {
@@ -339,13 +339,25 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 		if apiKey == "" {
 			return nil, false
 		}
-		return newMiniMaxDualProtocolClient(apiKey, deployment.BaseURL), true
+		return newMiniMaxOpenAIClient(apiKey, deployment.BaseURL), true
+	case "agnes-direct":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("AGNES_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, "https://apihub.agnes-ai.com/v1"), &client.AgnesCompat), true
+	case "longcat-direct":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("LONGCAT_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, "https://api.longcat.chat/openai/v1"), &client.LongCatCompat), true
 	case "minimax_payg-direct":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("MINIMAX_PAYG_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		return newMiniMaxDualProtocolClient(apiKey, deployment.BaseURL), true
+		return newMiniMaxOpenAIClient(apiKey, deployment.BaseURL), true
 	default:
 		return nil, false
 	}
@@ -366,13 +378,11 @@ func newMiMoDeploymentClient(deployment config.DeploymentConfig, providerID, env
 			openBase = override
 		}
 	}
-	anthropicBase, _ := config.ResolveXiaomiAnthropicBase(providerID, cfg)
-	return client.NewMiMoClient(apiKey, openBase, anthropicBase, &client.XiaomiCompat, providerID), true
+	return client.NewMiMoClient(apiKey, openBase, &client.XiaomiCompat, providerID), true
 }
 
-// newZAIDeploymentClient constructs a dual-protocol (OpenAI + Anthropic) Z.AI client
-// for either the general or Coding Plan gateway, resolving the correct bases
-// for the plan + region (international or china) per official docs.
+// newZAIDeploymentClient constructs an OpenAI-compatible Z.AI client for the
+// general or Coding Plan gateway.
 func newZAIDeploymentClient(deployment config.DeploymentConfig, providerID, envKey string, lookup func(...string) string, cfg *config.ProviderConfig) (client.Provider, bool) {
 	apiKey := FirstNonEmpty(deployment.APIKey, lookup(envKey))
 	if apiKey == "" {
@@ -390,9 +400,7 @@ func newZAIDeploymentClient(deployment config.DeploymentConfig, providerID, envK
 		}
 	}
 
-	anthropicBase := resolveZAIAnthropicBaseForDeployment(plan, cfg)
-
-	return client.NewZAIClient(apiKey, openBase, anthropicBase, &client.ZAICompat, providerID), true
+	return client.NewZAIClient(apiKey, openBase, &client.ZAICompat, providerID), true
 }
 
 func resolveZAIOpenAIBaseForDeployment(plan zai.Plan, providerID string, cfg *config.ProviderConfig, override string) (string, error) {
@@ -406,19 +414,6 @@ func resolveZAIOpenAIBaseForDeployment(plan zai.Plan, providerID string, cfg *co
 	}
 	region, _ := zai.NormalizeRegion(regionStr)
 	return zai.ResolveOpenAIBase(plan, region, override)
-}
-
-func resolveZAIAnthropicBaseForDeployment(plan zai.Plan, cfg *config.ProviderConfig) string {
-	// region from general or coding, prefer coding if set
-	regionStr := ""
-	if cfg != nil {
-		regionStr = cfg.ZAICodingRegion
-		if regionStr == "" {
-			regionStr = cfg.ZAIRegion
-		}
-	}
-	region, _ := zai.NormalizeRegion(regionStr)
-	return zai.ResolveAnthropicBase(region)
 }
 
 // DefaultDeploymentForProvider maps a logical provider name to a deployment ID.
@@ -441,7 +436,7 @@ func DefaultDeploymentForProvider(provider string) string {
 	case config.ProviderOpenRouter:
 		return "openrouter"
 	case config.ProviderConcentrate:
-		return "concentrate-direct"
+		return "concentrate-payg"
 	case config.ProviderCanopyWave:
 		return "canopywave"
 	case config.ProviderPoolside:
@@ -573,19 +568,10 @@ func FirstNonEmpty(values ...string) string {
 	return ""
 }
 
-// newMiniMaxDualProtocolClient creates a FallbackProvider that tries OpenAI-compatible
-// endpoint first, then falls back to Anthropic-compatible endpoint. Both use the same API key.
-func newMiniMaxDualProtocolClient(apiKey, baseURL string) client.Provider {
+// newMiniMaxOpenAIClient uses the official OpenAI-compatible MiniMax surface only.
+func newMiniMaxOpenAIClient(apiKey, baseURL string) client.Provider {
 	openaiBase := FirstNonEmpty(baseURL, config.DefaultMiniMaxOpenAIBaseURL)
-	anthropicBase := config.DefaultMiniMaxAnthropicBaseURL
-	openaiClient := client.NewOpenAIClient(apiKey, openaiBase, &client.OpenAICompat)
-	anthropicClient := client.NewAnthropicClient(apiKey, anthropicBase)
-	fp, err := client.NewFallbackProvider(openaiClient, anthropicClient)
-	if err != nil {
-		// Cannot happen with two providers; return the primary as fallback.
-		return openaiClient
-	}
-	return fp
+	return client.NewOpenAIClient(apiKey, openaiBase, &client.MiniMaxCompat)
 }
 
 // CloneStringMap returns a shallow copy of m.

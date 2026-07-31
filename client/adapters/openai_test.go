@@ -214,6 +214,21 @@ func TestBuildRequestBase_MaxCompletionTokens(t *testing.T) {
 	}
 }
 
+func TestBuildRequestBase_OmitMaxTokens(t *testing.T) {
+	t.Parallel()
+	// Agnes AI pre-authorizes the maximum token cost; sending the default 4096
+	// can exceed the account balance and trigger insufficient_user_quota. With
+	// OmitMaxTokens set, neither max_tokens nor max_completion_tokens is sent.
+	compat := &OpenAICompatConfig{MaxTokensField: "max_tokens", OmitMaxTokens: true}
+	req := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "agnes-2.5-pro-alpha", MaxTokens: 0}, false, compat)
+	if req.MaxTokens != nil {
+		t.Errorf("MaxTokens should be nil when OmitMaxTokens is set, got %v", *req.MaxTokens)
+	}
+	if req.MaxCompletionTokens != nil {
+		t.Errorf("MaxCompletionTokens should be nil when OmitMaxTokens is set, got %v", *req.MaxCompletionTokens)
+	}
+}
+
 func TestBuildRequestBase_StreamOptions(t *testing.T) {
 	t.Parallel()
 	req := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256}, true, nil)
@@ -429,6 +444,103 @@ func TestBuildRequestBase_ZAIThinking(t *testing.T) {
 	}, false, compat)
 	if req.Thinking == nil || req.Thinking["type"] != "enabled" {
 		t.Errorf("Thinking = %v", req.Thinking)
+	}
+}
+
+func TestBuildRequestBase_LongCatDefaultsThinkingDisabled(t *testing.T) {
+	t.Parallel()
+	req := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+		Model: "LongCat-2.0", MaxTokens: 256,
+	}, false, &LongCatCompat)
+	if req.Thinking == nil || req.Thinking["type"] != "disabled" {
+		t.Fatalf("LongCat default Thinking = %v, want type=disabled", req.Thinking)
+	}
+	enabled := true
+	reqOn := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+		Model: "LongCat-2.0", MaxTokens: 256,
+		GLMThinkingEnabled: &enabled,
+	}, false, &LongCatCompat)
+	if reqOn.Thinking == nil || reqOn.Thinking["type"] != "enabled" {
+		t.Fatalf("LongCat opt-in Thinking = %v, want type=enabled", reqOn.Thinking)
+	}
+}
+
+func TestBuildRequestBase_AgnesThinking(t *testing.T) {
+	t.Parallel()
+	enabled := true
+	compat := &OpenAICompatConfig{ThinkingFormat: "agnes", OmitMaxTokens: true}
+	req := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+		Model: "agnes-2.0-flash", MaxTokens: 0,
+		GLMThinkingEnabled: &enabled,
+	}, false, compat)
+	if req.ChatTemplateKwargs == nil || req.ChatTemplateKwargs["enable_thinking"] != true {
+		t.Errorf("ChatTemplateKwargs = %v", req.ChatTemplateKwargs)
+	}
+	if req.Thinking != nil {
+		t.Errorf("Agnes OpenAI path should not set thinking object, got %v", req.Thinking)
+	}
+}
+
+func TestBuildRequestBase_OpenRouterReasoning(t *testing.T) {
+	t.Parallel()
+	enabled := true
+	disabled := false
+	reqOn := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+		Model: "openrouter/auto", MaxTokens: 256, ThinkingEnabled: &enabled,
+	}, false, &OpenRouterCompat)
+	if reqOn.Reasoning == nil || reqOn.Reasoning["enabled"] != true {
+		t.Fatalf("OpenRouter on Reasoning = %v", reqOn.Reasoning)
+	}
+	reqOff := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+		Model: "openrouter/auto", MaxTokens: 256, ThinkingEnabled: &disabled,
+	}, false, &OpenRouterCompat)
+	if reqOff.Reasoning == nil || reqOff.Reasoning["effort"] != "none" {
+		t.Fatalf("OpenRouter off Reasoning = %v, want effort=none", reqOff.Reasoning)
+	}
+}
+
+func TestBuildRequestBase_KimiDeepSeekXiaomiThinking(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		compat *OpenAICompatConfig
+	}{
+		{"kimi", &KimiCompat},
+		{"deepseek", &DeepSeekCompat},
+		{"xiaomi", &XiaomiCompat},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+				Model: "m", MaxTokens: 256,
+			}, false, tc.compat)
+			if req.Thinking == nil || req.Thinking["type"] != "disabled" {
+				t.Fatalf("default Thinking = %v, want type=disabled", req.Thinking)
+			}
+			enabled := true
+			reqOn := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+				Model: "m", MaxTokens: 256, ThinkingEnabled: &enabled,
+			}, false, tc.compat)
+			if reqOn.Thinking == nil || reqOn.Thinking["type"] != "enabled" {
+				t.Fatalf("opt-in Thinking = %v, want type=enabled", reqOn.Thinking)
+			}
+		})
+	}
+}
+
+func TestBuildRequestBase_MiniMaxThinkingAdaptive(t *testing.T) {
+	t.Parallel()
+	req := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+		Model: "MiniMax-M3", MaxTokens: 256,
+	}, false, &MiniMaxCompat)
+	if req.Thinking == nil || req.Thinking["type"] != "disabled" {
+		t.Fatalf("default Thinking = %v, want type=disabled", req.Thinking)
+	}
+	enabled := true
+	reqOn := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+		Model: "MiniMax-M3", MaxTokens: 256, ThinkingEnabled: &enabled,
+	}, false, &MiniMaxCompat)
+	if reqOn.Thinking == nil || reqOn.Thinking["type"] != "adaptive" {
+		t.Fatalf("opt-in Thinking = %v, want type=adaptive", reqOn.Thinking)
 	}
 }
 

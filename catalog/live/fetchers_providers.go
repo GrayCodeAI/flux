@@ -590,21 +590,137 @@ func FetchPoolside(env map[string]string) ([]Entry, error) {
 	)
 }
 
-// FetchConcentrate lists models from the Concentrate AI OpenAI-compatible API.
+// FetchAgnes lists models from the Agnes AI OpenAI-compatible API.
+// Agnes exposes no per-token pricing in its /models response (and the Pro
+// model uses a pre-deduction balance hold rather than a simple per-token
+// charge), so the price is marked unknown rather than assumed free. A negative
+// sentinel is the PricingFromEntry convention for PricingUnknown.
+//
+// Official text-model limits/capabilities (OpenAI chat completions only):
+// https://wiki.agnes-ai.com/en/docs/agnes-20-flash.md
+// https://wiki.agnes-ai.com/en/docs/agnes-25-flash.md
+// https://wiki.agnes-ai.com/en/docs/agnes-25-pro-alpha.md
+func FetchAgnes(env map[string]string) ([]Entry, error) {
+	entries, err := fetchOpenAICompatModels(
+		context.Background(),
+		envOr(env, "AGNES_BASE_URL", "https://apihub.agnes-ai.com/v1"),
+		env["AGNES_API_KEY"], "Bearer",
+	)
+	if err != nil {
+		return nil, err
+	}
+	for i := range entries {
+		entries[i].InputPricePer1M = -1
+		entries[i].OutputPricePer1M = -1
+		entries[i] = enrichAgnesEntry(entries[i])
+	}
+	return entries, nil
+}
+
+// Official Agnes text-model reference when /models omits context/capabilities.
+// Image/video models use separate generation endpoints and are left as-is.
+// Pricing from wiki docs (current promotional $0 for flash; pro-alpha is paid).
+var agnesOfficialTextSpecs = map[string]struct {
+	ContextWindow, MaxOutput int
+	Tools, Vision, Thinking  bool
+	InputPrice, OutputPrice  float64 // per 1M tokens; negative = unknown
+}{
+	"agnes-1.5-flash":     {256_000, 65_536, true, true, false, 0, 0},
+	"agnes-2.0-flash":     {512_000, 65_536, true, true, true, 0, 0},
+	"agnes-2.5-flash":     {512_000, 65_536, true, true, true, 0, 0},
+	"agnes-2.5-pro-alpha": {1_048_576, 65_536, true, true, true, 0.45, 0.90},
+}
+
+func enrichAgnesEntry(e Entry) Entry {
+	id := strings.TrimSpace(e.ID)
+	if i := strings.LastIndex(id, "/"); i >= 0 {
+		id = id[i+1:]
+	}
+	spec, ok := agnesOfficialTextSpecs[id]
+	if !ok {
+		return e
+	}
+	if e.ContextWindow <= 0 {
+		e.ContextWindow = spec.ContextWindow
+	}
+	if e.MaxOutput <= 0 {
+		e.MaxOutput = spec.MaxOutput
+	}
+	if spec.Tools {
+		e.Features = appendUnique(e.Features, "tools")
+	}
+	if spec.Vision {
+		e.ImageInput = true
+		e.Features = appendUnique(e.Features, "image_input")
+	}
+	if spec.Thinking {
+		e.ThinkingEnabled = true
+		e.Features = appendUnique(e.Features, "thinking:enabled")
+	}
+	if spec.InputPrice >= 0 && spec.OutputPrice >= 0 {
+		e.InputPricePer1M = spec.InputPrice
+		e.OutputPricePer1M = spec.OutputPrice
+	}
+	return e
+}
+
+// FetchLongCat lists models from the LongCat OpenAI-compatible API only
+// (https://api.longcat.chat/openai/v1). Official docs:
+// https://longcat.chat/platform/docs/api/chat — text-only chat, tools, and
+// thinking={"type":"enabled"|"disabled"}; pricing is not in /models.
+func FetchLongCat(env map[string]string) ([]Entry, error) {
+	entries, err := fetchOpenAICompatModels(
+		context.Background(),
+		envOr(env, "LONGCAT_BASE_URL", "https://api.longcat.chat/openai/v1"),
+		env["LONGCAT_API_KEY"], "Bearer",
+	)
+	if err != nil {
+		return nil, err
+	}
+	for i := range entries {
+		entries[i].InputPricePer1M = -1
+		entries[i].OutputPricePer1M = -1
+		entries[i] = enrichLongCatEntry(entries[i])
+	}
+	return entries, nil
+}
+
+const (
+	longCatDefaultContext = 1_048_576
+	longCatDefaultMaxOut  = 131_072
+)
+
+func enrichLongCatEntry(e Entry) Entry {
+	if e.ContextWindow <= 0 {
+		e.ContextWindow = longCatDefaultContext
+	}
+	if e.MaxOutput <= 0 {
+		e.MaxOutput = longCatDefaultMaxOut
+	}
+	e.Features = appendUnique(e.Features, "tools")
+	e.ThinkingEnabled = true
+	e.Features = appendUnique(e.Features, "thinking:enabled")
+	e.ImageInput = false // official chat API is text-only
+	return e
+}
+
+// FetchConcentrate lists models from the public Concentrate AI model catalog.
 // Concentrate returns a rich format with max_input_tokens, max_tokens, and capabilities.
-// Set CONCENTRATE_FETCH_PRICING=true to fetch pricing from individual model endpoints
-// (slower but more accurate). Pricing is cached to disk for 24 hours.
+// Pricing is fetched from individual model endpoints and cached to disk for 24 hours.
+// Set CONCENTRATE_FETCH_PRICING=false to skip pricing fetch (faster but shows "free").
 //
 // Note: /v1/models does not require authentication per Concentrate docs.
-// CONCENTRATE_API_KEY is only needed when CONCENTRATE_FETCH_PRICING=true.
+// CONCENTRATE_API_KEY is needed for pricing fetch from individual model endpoints.
 func FetchConcentrate(env map[string]string) ([]Entry, error) {
 	apiKey := strings.TrimSpace(env["CONCENTRATE_API_KEY"])
 	isCustomBaseURL := env["CONCENTRATE_BASE_URL"] != ""
-	fetchPricing := strings.EqualFold(env["CONCENTRATE_FETCH_PRICING"], "true")
+	// Default: fetch pricing unless explicitly disabled
+	fetchPricing := !strings.EqualFold(env["CONCENTRATE_FETCH_PRICING"], "false")
 
 	// Pricing fetch requires auth; model listing does not
 	if fetchPricing && apiKey == "" {
-		return nil, fmt.Errorf("concentrate: CONCENTRATE_API_KEY required when CONCENTRATE_FETCH_PRICING=true")
+		// Fall back to no pricing rather than erroring out
+		fetchPricing = false
 	}
 
 	baseURL := strings.TrimRight(envOr(env, "CONCENTRATE_BASE_URL", "https://api.concentrate.ai/v1"), "/")
@@ -687,12 +803,6 @@ func FetchConcentrate(env map[string]string) ([]Entry, error) {
 			OwnedBy: strings.TrimSpace(m.OwnedBy),
 			RawJSON: append(json.RawMessage(nil), raw...),
 		}
-		// Set protocol based on owned_by (anthropic → Messages API, others → Chat Completions)
-		if strings.EqualFold(m.OwnedBy, "anthropic") {
-			entry.Protocol = "anthropic"
-		} else {
-			entry.Protocol = "openai"
-		}
 		// Extract capabilities
 		entry.ThinkingEnabled = m.Capabilities.Thinking.Types.Enabled.Supported
 		entry.ThinkingAdaptive = m.Capabilities.Thinking.Types.Adaptive.Supported
@@ -771,14 +881,14 @@ func FetchConcentrate(env map[string]string) ([]Entry, error) {
 		if entry.ImageInput {
 			entry.Features = append(entry.Features, "image_input")
 		}
+		// Concentrate's current list response exposes general model
+		// capabilities but omits the provider-level supports.tools field.
+		// The Responses API and model-details endpoint advertise function
+		// calling for these routed models, so preserve that capability for
+		// Hawk's tool-enabled coding loop.
+		entry.Features = append(entry.Features, "function_calling")
 		entries = append(entries, entry)
 	}
-	// Update protocol map for dual-protocol routing (anthropic → Messages API, others → Chat Completions).
-	protocolEntries := make([]struct{ ID, Protocol string }, 0, len(entries))
-	for i := range entries {
-		protocolEntries = append(protocolEntries, struct{ ID, Protocol string }{ID: entries[i].ID, Protocol: entries[i].Protocol})
-	}
-	concentrate.UpdateProtocolMap(protocolEntries)
 	// Fetch precise pricing from individual model endpoints if requested (slower but accurate).
 	// Pricing is cached to disk for 24 hours to avoid repeated API calls.
 	if fetchPricing && !isCustomBaseURL {
