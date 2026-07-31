@@ -70,6 +70,7 @@ var Registry = map[string]FetchFunc{
 	"grok":                   FetchGrok,
 	"zai_payg":               FetchZAI,
 	"zai_coding":             FetchZAICoding,
+	"concentrate":            FetchConcentrate,
 	"canopywave":             FetchCanopyWave,
 	"opencodego":             FetchOpenCodeGo,
 	"kimi":                   FetchKimi,
@@ -103,6 +104,8 @@ type listModelJSON struct {
 	ContextSize          *int     `json:"context_size"`
 	MaxCompletionTokens  *int     `json:"max_completion_tokens"`
 	MaxOutputTokens      *int     `json:"max_output_tokens"`
+	MaxInputTokens       *int     `json:"max_input_tokens"`
+	MaxTokens            *int     `json:"max_tokens"`
 	InputTokenPricePerM  *float64 `json:"input_token_price_per_m"`
 	OutputTokenPricePerM *float64 `json:"output_token_price_per_m"`
 	Features             []string `json:"features"`
@@ -253,8 +256,8 @@ func entryFromOpenAICompatJSON(raw json.RawMessage) (Entry, bool) {
 		InputPricePer1M: inPrice, OutputPricePer1M: outPrice,
 		CachedReadPricePer1M:  cachedRead,
 		CachedWritePricePer1M: cachedWrite,
-		ContextWindow:         intOrFirst(0, m.ContextLength, m.ContextSize),
-		MaxOutput:             intOrFirst(0, m.MaxCompletionTokens, m.MaxOutputTokens),
+		ContextWindow:         intOrFirst(0, m.ContextLength, m.ContextSize, m.MaxInputTokens),
+		MaxOutput:             intOrFirst(0, m.MaxCompletionTokens, m.MaxOutputTokens, m.MaxTokens),
 		Features:              features,
 		Protocol:              protocol,
 		RawJSON:               append(json.RawMessage(nil), raw...),

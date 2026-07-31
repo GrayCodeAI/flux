@@ -153,6 +153,10 @@ func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error)
 			p = adapters.NewOpenCodeGoClient(apiKey, baseURL)
 			break
 		}
+		if providerName == "concentrate" {
+			p = adapters.NewConcentrateResponsesClient(apiKey, baseURL)
+			break
+		}
 		if providerName == "poolside" {
 			p = adapters.NewPoolsideClient(apiKey, baseURL)
 			break

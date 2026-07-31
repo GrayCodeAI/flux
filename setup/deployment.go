@@ -273,6 +273,12 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 			return nil, false
 		}
 		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenRouterOpenAIBaseURL), &client.OpenRouterCompat), true
+	case "concentrate-direct":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CONCENTRATE_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultConcentrateOpenAIBaseURL), &client.OpenAICompat), true
 	case "canopywave":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CANOPYWAVE_API_KEY"))
 		if apiKey == "" {
@@ -434,6 +440,8 @@ func DefaultDeploymentForProvider(provider string) string {
 		return "anthropic-bedrock"
 	case config.ProviderOpenRouter:
 		return "openrouter"
+	case config.ProviderConcentrate:
+		return "concentrate-direct"
 	case config.ProviderCanopyWave:
 		return "canopywave"
 	case config.ProviderPoolside:
@@ -481,6 +489,8 @@ func LegacyDeploymentConfig(cfg *config.ProviderConfig, provider string) config.
 		return config.DeploymentConfig{APIKey: cfg.GeminiAPIKey, BaseURL: cfg.GeminiBaseURL}
 	case config.ProviderOpenRouter:
 		return config.DeploymentConfig{APIKey: cfg.OpenRouterAPIKey, BaseURL: cfg.OpenRouterBaseURL}
+	case config.ProviderConcentrate:
+		return config.DeploymentConfig{APIKey: cfg.ConcentrateAPIKey, BaseURL: cfg.ConcentrateBaseURL}
 	case config.ProviderCanopyWave:
 		return config.DeploymentConfig{APIKey: cfg.CanopyWaveAPIKey, BaseURL: cfg.CanopyWaveBaseURL}
 	case config.ProviderPoolside:

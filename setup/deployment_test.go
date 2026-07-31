@@ -329,6 +329,7 @@ func TestDefaultDeploymentForProvider(t *testing.T) {
 		{config.ProviderGrok, "grok-direct"},
 		{config.ProviderGemini, "gemini-direct"},
 		{config.ProviderOpenRouter, "openrouter"},
+		{config.ProviderConcentrate, "concentrate-direct"},
 		{config.ProviderCanopyWave, "canopywave"},
 		{config.ProviderDeepSeek, "deepseek-direct"},
 		{config.ProviderZAIPayg, "zai_payg-direct"},
@@ -503,6 +504,27 @@ func TestProviderForDeployment_OpenRouter(t *testing.T) {
 	}
 	if p.Name() != "openai" {
 		t.Fatalf("provider name = %q, want openai", p.Name())
+	}
+}
+
+func TestProviderForDeployment_ConcentrateDirect(t *testing.T) {
+	p, ok := ProviderForDeployment("concentrate-direct", config.DeploymentConfig{APIKey: "test-key"})
+	if !ok {
+		t.Fatal("expected concentrate-direct to be configured")
+	}
+	if p.Name() != "openai" {
+		t.Fatalf("provider name = %q, want openai", p.Name())
+	}
+}
+
+func TestProviderForDeployment_ConcentrateDirectRequiresKey(t *testing.T) {
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	t.Setenv("CONCENTRATE_API_KEY", "")
+
+	if _, ok := ProviderForDeployment("concentrate-direct", config.DeploymentConfig{}); ok {
+		t.Fatal("expected concentrate-direct to be unavailable without key")
 	}
 }
 

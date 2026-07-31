@@ -88,6 +88,11 @@ var (
 		SupportsUsageInStreaming: true,
 		StripReasoningFromInput:  true,
 	}
+	// ConcentrateCompat: OpenAI-compatible with usage in streaming.
+	ConcentrateCompat = OpenAICompatConfig{
+		MaxTokensField:           "max_tokens",
+		SupportsUsageInStreaming: true,
+	}
 )
 
 func init() {
@@ -152,6 +157,10 @@ func init() {
 	if p, ok := OpenAICompatibleProviders["deepseek"]; ok {
 		p.Compat = &DeepSeekCompat
 		OpenAICompatibleProviders["deepseek"] = p
+	}
+	if p, ok := OpenAICompatibleProviders["concentrate"]; ok {
+		p.Compat = &ConcentrateCompat
+		OpenAICompatibleProviders["concentrate"] = p
 	}
 	if p, ok := CoreProviders["openai"]; ok {
 		p.Compat = &OpenAICompat

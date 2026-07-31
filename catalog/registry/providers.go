@@ -164,6 +164,14 @@ func providerSpecs() []ProviderSpec {
 			LiveFetcherKey: "openrouter", LiveCatalogKey: "openrouter",
 			ProtocolID: "openai-chat-completions", AdapterID: "openrouter", RuntimeProfileKey: "openrouter",
 		},
+		{
+			ProviderID: "concentrate", DisplayName: "Concentrate AI", DeploymentID: "concentrate-direct", SortOrder: 16, ChatPreference: 4,
+			RequiresKey: true, CredentialEnv: "CONCENTRATE_API_KEY",
+			BaseURLEnv: []string{"CONCENTRATE_BASE_URL"},
+			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.concentrate.ai/v1",
+			LiveFetcherKey: "concentrate", LiveCatalogKey: "concentrate",
+			ProtocolID: "openai-chat-completions", AdapterID: "concentrate", RuntimeProfileKey: "concentrate",
+		},
 
 		// ── Niche ─────────────────────────────────────────────────────────
 		{

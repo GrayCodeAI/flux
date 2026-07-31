@@ -9,8 +9,8 @@ import (
 
 func TestAllProviders_Count(t *testing.T) {
 	t.Parallel()
-	if n := len(registry.All()); n != 22 {
-		t.Fatalf("expected 22 providers, got %d", n)
+	if n := len(registry.All()); n != 23 {
+		t.Fatalf("expected 23 providers, got %d", n)
 	}
 }
 
@@ -24,8 +24,8 @@ func TestCredentialRegistry_MatchesAll(t *testing.T) {
 func TestLiveFetcherKeys_AllProviders(t *testing.T) {
 	t.Parallel()
 	keys := registry.LiveFetcherKeys()
-	if len(keys) != 22 {
-		t.Fatalf("expected 22 live fetcher keys, got %d", len(keys))
+	if len(keys) != 23 {
+		t.Fatalf("expected 23 live fetcher keys, got %d", len(keys))
 	}
 }
 
@@ -101,6 +101,7 @@ func TestProviderSpecs_TableDriven(t *testing.T) {
 		{"bedrock", "bedrock", true, registry.ProbeNone, true, "anthropic-bedrock"},
 		{"vertex", "vertex", true, registry.ProbeNone, true, "gemini-vertex"},
 		{"openrouter", "openrouter", true, registry.ProbeOpenAIModels, true, "openrouter"},
+		{"concentrate", "concentrate", true, registry.ProbeOpenAIModels, true, "concentrate-direct"},
 		{"grok", "grok", true, registry.ProbeOpenAIModels, true, "grok-direct"},
 		{"zai_payg", "zai_payg", true, registry.ProbeOpenAIModels, true, "zai_payg-direct"},
 		{"zai_coding", "zai_coding", true, registry.ProbeOpenAIModels, true, "zai_coding-direct"},

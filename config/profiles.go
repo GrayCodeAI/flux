@@ -14,6 +14,7 @@ const (
 	ProviderZAICoding           APIProvider = "zai_coding"
 	ProviderZAIPayg             APIProvider = "zai_payg"
 	ProviderOpenRouter          APIProvider = "openrouter"
+	ProviderConcentrate         APIProvider = "concentrate"
 	ProviderGrok                APIProvider = "grok"
 	ProviderGemini              APIProvider = "gemini"
 	ProviderBedrock             APIProvider = "bedrock"
@@ -104,6 +105,13 @@ var (
 		ModelEnv:     []string{"OPENROUTER_MODEL", "OPENAI_MODEL"},
 		BaseURLEnv:   []string{"OPENROUTER_BASE_URL"},
 		APIKeys:      []APIKeyDef{{Env: "OPENROUTER_API_KEY", Source: "openrouter"}, {Env: "OPENAI_API_KEY", Source: "openai"}},
+	}
+	ConcentrateRuntimeProfile = RuntimeProviderProfile{
+		Mode: "openai", DefaultBaseURL: DefaultConcentrateOpenAIBaseURL,
+		DetectionEnv: []string{"CONCENTRATE_API_KEY"},
+		ModelEnv:     []string{"CONCENTRATE_MODEL", "OPENAI_MODEL"},
+		BaseURLEnv:   []string{"CONCENTRATE_BASE_URL"},
+		APIKeys:      []APIKeyDef{{Env: "CONCENTRATE_API_KEY", Source: "concentrate"}, {Env: "OPENAI_API_KEY", Source: "openai"}},
 	}
 	ZAIPaygRuntimeProfile = RuntimeProviderProfile{
 		Mode: "openai", DefaultBaseURL: DefaultZAIOpenAIBaseURL,
@@ -207,7 +215,7 @@ var (
 
 // APIProviderDetectionOrder is the priority order for provider detection.
 var APIProviderDetectionOrder = []APIProvider{
-	ProviderAnthropic, ProviderOpenRouter, ProviderGrok, ProviderGemini,
+	ProviderAnthropic, ProviderConcentrate, ProviderOpenRouter, ProviderGrok, ProviderGemini,
 	ProviderVertex, ProviderBedrock, ProviderZAICoding, ProviderZAIPayg, ProviderCanopyWave, ProviderDeepSeek, ProviderPoolside, ProviderGroq, ProviderClinePass, ProviderAzure, ProviderOpenAI, ProviderOpenCodeGo,
 	ProviderKimi, ProviderXiaomiMimoPayg, ProviderXiaomiMimoTokenPlan, ProviderMiniMaxTokenPlan, ProviderMiniMaxPayg, ProviderOllama,
 }
@@ -225,6 +233,7 @@ var ProviderModelEnvKeys = map[APIProvider][]string{
 	ProviderZAIPayg:             ZAIPaygRuntimeProfile.ModelEnv,
 	ProviderZAICoding:           ZAICodingRuntimeProfile.ModelEnv,
 	ProviderOpenRouter:          OpenRouterRuntimeProfile.ModelEnv,
+	ProviderConcentrate:         ConcentrateRuntimeProfile.ModelEnv,
 	ProviderGrok:                GrokRuntimeProfile.ModelEnv,
 	ProviderGemini:              GeminiRuntimeProfile.ModelEnv,
 	ProviderBedrock:             BedrockRuntimeProfile.ModelEnv,
@@ -245,11 +254,12 @@ const (
 
 // OpenAICompatibleRuntimeProfileOrder is the detection order for runtime profiles.
 var OpenAICompatibleRuntimeProfileOrder = []string{
-	"openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg",
+	"concentrate", "openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg",
 }
 
 // OpenAICompatibleRuntimeProfiles maps profile key to its runtime profile.
 var OpenAICompatibleRuntimeProfiles = map[string]RuntimeProviderProfile{
+	"concentrate":            ConcentrateRuntimeProfile,
 	"anthropic":              AnthropicRuntimeProfile,
 	"grok":                   GrokRuntimeProfile,
 	"gemini":                 GeminiRuntimeProfile,
@@ -280,6 +290,7 @@ var RuntimeProviderProfiles = map[string]RuntimeProviderProfile{
 	"azure":                  AzureRuntimeProfile,
 	"bedrock":                BedrockRuntimeProfile,
 	"openrouter":             OpenRouterRuntimeProfile,
+	"concentrate":            ConcentrateRuntimeProfile,
 	"zai_payg":               ZAIPaygRuntimeProfile,
 	"zai_coding":             ZAICodingRuntimeProfile,
 	"canopywave":             CanopyWaveRuntimeProfile,

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/eyrie/catalog/concentrate"
 	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 )
@@ -587,6 +588,315 @@ func FetchPoolside(env map[string]string) ([]Entry, error) {
 		envOr(env, "POOLSIDE_BASE_URL", DefaultPoolsideBaseURL),
 		env["POOLSIDE_API_KEY"], "Bearer",
 	)
+}
+
+// FetchConcentrate lists models from the Concentrate AI OpenAI-compatible API.
+// Concentrate returns a rich format with max_input_tokens, max_tokens, and capabilities.
+// Set CONCENTRATE_FETCH_PRICING=true to fetch pricing from individual model endpoints
+// (slower but more accurate). Pricing is cached to disk for 24 hours.
+//
+// Note: /v1/models does not require authentication per Concentrate docs.
+// CONCENTRATE_API_KEY is only needed when CONCENTRATE_FETCH_PRICING=true.
+func FetchConcentrate(env map[string]string) ([]Entry, error) {
+	apiKey := strings.TrimSpace(env["CONCENTRATE_API_KEY"])
+	isCustomBaseURL := env["CONCENTRATE_BASE_URL"] != ""
+	fetchPricing := strings.EqualFold(env["CONCENTRATE_FETCH_PRICING"], "true")
+
+	// Pricing fetch requires auth; model listing does not
+	if fetchPricing && apiKey == "" {
+		return nil, fmt.Errorf("concentrate: CONCENTRATE_API_KEY required when CONCENTRATE_FETCH_PRICING=true")
+	}
+
+	baseURL := strings.TrimRight(envOr(env, "CONCENTRATE_BASE_URL", "https://api.concentrate.ai/v1"), "/")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseURL+"/models", nil)
+	if err != nil {
+		return nil, fmt.Errorf("live: create request: %w", err)
+	}
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("concentrate model fetch failed (%d)", resp.StatusCode)
+	}
+
+	var payload struct {
+		Data []json.RawMessage `json:"data"`
+	}
+	if err := decodeJSONLimited(resp.Body, &payload); err != nil {
+		return nil, err
+	}
+
+	var entries []Entry
+	for _, raw := range payload.Data {
+		var m struct {
+			ID             string `json:"id"`
+			DisplayName    string `json:"display_name"`
+			MaxInputTokens int    `json:"max_input_tokens"`
+			MaxTokens      int    `json:"max_tokens"`
+			OwnedBy        string `json:"owned_by"`
+			Capabilities   struct {
+				Effort struct {
+					Supported bool                     `json:"supported"`
+					Low       struct{ Supported bool } `json:"low"`
+					Medium    struct{ Supported bool } `json:"medium"`
+					High      struct{ Supported bool } `json:"high"`
+					XHigh     struct{ Supported bool } `json:"xhigh"`
+					Max       struct{ Supported bool } `json:"max"`
+				} `json:"effort"`
+				ImageInput        struct{ Supported bool } `json:"image_input"`
+				PDFInput          struct{ Supported bool } `json:"pdf_input"`
+				StructuredOutputs struct{ Supported bool } `json:"structured_outputs"`
+				Thinking          struct {
+					Supported bool `json:"supported"`
+					Types     struct {
+						Enabled  struct{ Supported bool } `json:"enabled"`
+						Adaptive struct{ Supported bool } `json:"adaptive"`
+					} `json:"types"`
+				} `json:"thinking"`
+				CodeExecution     struct{ Supported bool } `json:"code_execution"`
+				Citations         struct{ Supported bool } `json:"citations"`
+				ContextManagement struct {
+					Supported             bool                     `json:"supported"`
+					ClearThinking20251015 struct{ Supported bool } `json:"clear_thinking_20251015"`
+					ClearToolUses20250919 struct{ Supported bool } `json:"clear_tool_uses_20250919"`
+					Compact20260112       struct{ Supported bool } `json:"compact_20260112"`
+				} `json:"context_management"`
+			} `json:"capabilities"`
+		}
+		if err := json.Unmarshal(raw, &m); err != nil {
+			continue
+		}
+		id := strings.TrimSpace(m.ID)
+		if id == "" {
+			continue
+		}
+		label := strings.TrimSpace(m.DisplayName)
+		if label == "" {
+			label = id
+		}
+		entry := Entry{
+			ID: id, DisplayName: label, ContextWindow: m.MaxInputTokens, MaxOutput: m.MaxTokens,
+			OwnedBy: strings.TrimSpace(m.OwnedBy),
+			RawJSON: append(json.RawMessage(nil), raw...),
+		}
+		// Set protocol based on owned_by (anthropic → Messages API, others → Chat Completions)
+		if strings.EqualFold(m.OwnedBy, "anthropic") {
+			entry.Protocol = "anthropic"
+		} else {
+			entry.Protocol = "openai"
+		}
+		// Extract capabilities
+		entry.ThinkingEnabled = m.Capabilities.Thinking.Types.Enabled.Supported
+		entry.ThinkingAdaptive = m.Capabilities.Thinking.Types.Adaptive.Supported
+		if m.Capabilities.Effort.Supported {
+			entry.EffortSupported = true
+			var levels []string
+			for _, lvl := range []string{"low", "medium", "high", "xhigh", "max"} {
+				switch lvl {
+				case "low":
+					if m.Capabilities.Effort.Low.Supported {
+						levels = append(levels, lvl)
+					}
+				case "medium":
+					if m.Capabilities.Effort.Medium.Supported {
+						levels = append(levels, lvl)
+					}
+				case "high":
+					if m.Capabilities.Effort.High.Supported {
+						levels = append(levels, lvl)
+					}
+				case "xhigh":
+					if m.Capabilities.Effort.XHigh.Supported {
+						levels = append(levels, lvl)
+					}
+				case "max":
+					if m.Capabilities.Effort.Max.Supported {
+						levels = append(levels, lvl)
+					}
+				}
+			}
+			entry.EffortLevels = strings.Join(levels, ",")
+		}
+		entry.StructuredOutput = m.Capabilities.StructuredOutputs.Supported
+		entry.CodeExecution = m.Capabilities.CodeExecution.Supported
+		entry.CitationsSupported = m.Capabilities.Citations.Supported
+		entry.PDFInput = m.Capabilities.PDFInput.Supported
+		entry.ImageInput = m.Capabilities.ImageInput.Supported
+		// Context management (Concentrate-specific capability)
+		if m.Capabilities.ContextManagement.Supported {
+			entry.Features = append(entry.Features, "context_management")
+			if m.Capabilities.ContextManagement.ClearThinking20251015.Supported {
+				entry.Features = append(entry.Features, "context_management:clear_thinking")
+			}
+			if m.Capabilities.ContextManagement.ClearToolUses20250919.Supported {
+				entry.Features = append(entry.Features, "context_management:clear_tool_uses")
+			}
+			if m.Capabilities.ContextManagement.Compact20260112.Supported {
+				entry.Features = append(entry.Features, "context_management:compact")
+			}
+		}
+		// Populate Features list for downstream catalog pipeline
+		if entry.ThinkingEnabled {
+			entry.Features = append(entry.Features, "thinking:enabled")
+		}
+		if entry.ThinkingAdaptive {
+			entry.Features = append(entry.Features, "thinking:adaptive")
+		}
+		if entry.EffortSupported {
+			entry.Features = append(entry.Features, "effort")
+			if entry.EffortLevels != "" {
+				entry.Features = append(entry.Features, "effort:"+entry.EffortLevels)
+			}
+		}
+		if entry.StructuredOutput {
+			entry.Features = append(entry.Features, "structured_output")
+		}
+		if entry.CodeExecution {
+			entry.Features = append(entry.Features, "code_execution")
+		}
+		if entry.CitationsSupported {
+			entry.Features = append(entry.Features, "citations")
+		}
+		if entry.PDFInput {
+			entry.Features = append(entry.Features, "pdf_input")
+		}
+		if entry.ImageInput {
+			entry.Features = append(entry.Features, "image_input")
+		}
+		entries = append(entries, entry)
+	}
+	// Update protocol map for dual-protocol routing (anthropic → Messages API, others → Chat Completions).
+	protocolEntries := make([]struct{ ID, Protocol string }, 0, len(entries))
+	for i := range entries {
+		protocolEntries = append(protocolEntries, struct{ ID, Protocol string }{ID: entries[i].ID, Protocol: entries[i].Protocol})
+	}
+	concentrate.UpdateProtocolMap(protocolEntries)
+	// Fetch precise pricing from individual model endpoints if requested (slower but accurate).
+	// Pricing is cached to disk for 24 hours to avoid repeated API calls.
+	if fetchPricing && !isCustomBaseURL {
+		fetchConcentratePricing(context.Background(), baseURL, apiKey, entries)
+	}
+	return entries, nil
+}
+
+// fetchConcentratePricing fetches pricing from individual model endpoints with rate limiting.
+// Pricing is cached to disk for 24 hours to avoid repeated API calls.
+// Captures input, output, reasoning, and tiered pricing per the Concentrate API format.
+func fetchConcentratePricing(ctx context.Context, baseURL, apiKey string, entries []Entry) {
+	for i := range entries {
+		// Check cache first
+		if entry, ok := concentrate.GetPricing(entries[i].ID); ok {
+			entries[i].InputPricePer1M = entry.InputPrice
+			entries[i].OutputPricePer1M = entry.OutputPrice
+			entries[i].TierThreshold = entry.TierThreshold
+			entries[i].TieredInputPricePer1M = entry.TieredInputPrice
+			entries[i].TieredOutputPricePer1M = entry.TieredOutputPrice
+			continue
+		}
+
+		// Build request for individual model pricing
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/models/"+entries[i].ID, nil)
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			continue
+		}
+		var modelResp struct {
+			Providers map[string]struct {
+				Pricing struct {
+					Tokens struct {
+						Input struct {
+							Price struct{ USD float64 }
+							Units float64
+						}
+						Output struct {
+							Price struct{ USD float64 }
+							Units float64
+						}
+						Reasoning struct {
+							Price struct{ USD float64 }
+							Units float64
+						}
+						Tiers []struct {
+							Above int `json:"above"`
+							Input struct {
+								Price struct{ USD float64 }
+								Units float64
+							}
+							Output struct {
+								Price struct{ USD float64 }
+								Units float64
+							}
+						}
+					}
+				}
+			}
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&modelResp)
+		resp.Body.Close()
+
+		// pricePer1M converts a price with units to per-1M-token price.
+		// If units is 1 (per-token), multiply by 1M.
+		// If units is 1000 (per-1K-tokens), multiply by 1000.
+		// If units is 0 or missing, assume per-token.
+		pricePer1M := func(price, units float64) float64 {
+			if units <= 0 {
+				units = 1
+			}
+			return price * (1_000_000 / units)
+		}
+
+		// Use first available provider's pricing (usually "openai" or the primary provider)
+		var cacheEntry concentrate.PricingCacheEntry
+		if len(modelResp.Providers) > 0 {
+			for _, p := range modelResp.Providers {
+				if p.Pricing.Tokens.Input.Price.USD > 0 {
+					cacheEntry.InputPrice = pricePer1M(p.Pricing.Tokens.Input.Price.USD, p.Pricing.Tokens.Input.Units)
+					entries[i].InputPricePer1M = cacheEntry.InputPrice
+				}
+				if p.Pricing.Tokens.Output.Price.USD > 0 {
+					cacheEntry.OutputPrice = pricePer1M(p.Pricing.Tokens.Output.Price.USD, p.Pricing.Tokens.Output.Units)
+					entries[i].OutputPricePer1M = cacheEntry.OutputPrice
+				}
+				if p.Pricing.Tokens.Reasoning.Price.USD > 0 {
+					cacheEntry.ReasoningPrice = pricePer1M(p.Pricing.Tokens.Reasoning.Price.USD, p.Pricing.Tokens.Reasoning.Units)
+				}
+				// Capture tiered pricing if present
+				for _, tier := range p.Pricing.Tokens.Tiers {
+					if tier.Above > 0 && tier.Input.Price.USD > 0 {
+						cacheEntry.TierThreshold = tier.Above
+						cacheEntry.TieredInputPrice = pricePer1M(tier.Input.Price.USD, tier.Input.Units)
+						cacheEntry.TieredOutputPrice = pricePer1M(tier.Output.Price.USD, tier.Output.Units)
+						entries[i].TierThreshold = tier.Above
+						entries[i].TieredInputPricePer1M = cacheEntry.TieredInputPrice
+						entries[i].TieredOutputPricePer1M = cacheEntry.TieredOutputPrice
+						break
+					}
+				}
+				break
+			}
+		}
+
+		// Cache the pricing for future runs
+		concentrate.SetPricing(entries[i].ID, cacheEntry)
+
+		// Small delay to avoid rate limiting
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 // FetchGroq lists models from the Groq OpenAI-compatible API.

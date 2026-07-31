@@ -21,22 +21,23 @@ func VertexGeminiBaseURL(projectID, region string) string {
 
 // Default base URLs for each provider.
 const (
-	DefaultOpenAIBaseURL           = "https://api.openai.com/v1"
-	DefaultOpenRouterOpenAIBaseURL = "https://openrouter.ai/api/v1"
-	DefaultCanopyWaveOpenAIBaseURL = "https://inference.canopywave.io/v1"
-	DefaultZAIOpenAIBaseURL        = "https://api.z.ai/api/paas/v4"
-	DefaultZAICodingOpenAIBaseURL  = "https://api.z.ai/api/coding/paas/v4"
-	DefaultGeminiOpenAIBaseURL     = "https://generativelanguage.googleapis.com/v1beta/openai"
-	DefaultAnthropicOpenAIBaseURL  = "https://api.anthropic.com/v1"
-	DefaultGrokOpenAIBaseURL       = "https://api.x.ai/v1"
-	DefaultOpenCodeGoBaseURL       = opencodego.DefaultBaseURL
-	DefaultKimiOpenAIBaseURL       = "https://api.moonshot.ai/v1"
-	DefaultXiaomiOpenAIBaseURL     = "https://api.xiaomimimo.com/v1"
-	DefaultMiniMaxOpenAIBaseURL    = "https://api.minimax.io/v1"
-	DefaultGroqOpenAIBaseURL       = "https://api.groq.com/openai/v1"
-	DefaultPoolsideOpenAIBaseURL   = "https://inference.poolside.ai/v1"
-	DefaultClinePassOpenAIBaseURL  = "https://api.cline.bot/api/v1" // #nosec G101 -- public API base URL, not a secret value
-	DefaultMiniMaxAnthropicBaseURL = "https://api.minimax.io/anthropic"
+	DefaultOpenAIBaseURL            = "https://api.openai.com/v1"
+	DefaultOpenRouterOpenAIBaseURL  = "https://openrouter.ai/api/v1"
+	DefaultConcentrateOpenAIBaseURL = "https://api.concentrate.ai/v1"
+	DefaultCanopyWaveOpenAIBaseURL  = "https://inference.canopywave.io/v1"
+	DefaultZAIOpenAIBaseURL         = "https://api.z.ai/api/paas/v4"
+	DefaultZAICodingOpenAIBaseURL   = "https://api.z.ai/api/coding/paas/v4"
+	DefaultGeminiOpenAIBaseURL      = "https://generativelanguage.googleapis.com/v1beta/openai"
+	DefaultAnthropicOpenAIBaseURL   = "https://api.anthropic.com/v1"
+	DefaultGrokOpenAIBaseURL        = "https://api.x.ai/v1"
+	DefaultOpenCodeGoBaseURL        = opencodego.DefaultBaseURL
+	DefaultKimiOpenAIBaseURL        = "https://api.moonshot.ai/v1"
+	DefaultXiaomiOpenAIBaseURL      = "https://api.xiaomimimo.com/v1"
+	DefaultMiniMaxOpenAIBaseURL     = "https://api.minimax.io/v1"
+	DefaultGroqOpenAIBaseURL        = "https://api.groq.com/openai/v1"
+	DefaultPoolsideOpenAIBaseURL    = "https://inference.poolside.ai/v1"
+	DefaultClinePassOpenAIBaseURL   = "https://api.cline.bot/api/v1" // #nosec G101 -- public API base URL, not a secret value
+	DefaultMiniMaxAnthropicBaseURL  = "https://api.minimax.io/anthropic"
 )
 
 // ProviderTransport is the transport type for provider requests.

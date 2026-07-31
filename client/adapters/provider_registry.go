@@ -76,19 +76,20 @@ func staticProviderMaps() (map[string]ProviderRegistryConfig, map[string]Provide
 func DetectProvider() string {
 	ctx := context.Background()
 	checks := map[string]func() bool{
-		"anthropic":  func() bool { return credentials.HasSecret(ctx, "ANTHROPIC_API_KEY") },
-		"deepseek":   func() bool { return credentials.HasSecret(ctx, "DEEPSEEK_API_KEY") },
-		"openrouter": func() bool { return credentials.HasSecret(ctx, "OPENROUTER_API_KEY") },
-		"grok":       func() bool { return credentials.HasSecret(ctx, "XAI_API_KEY") },
-		"gemini":     func() bool { return credentials.HasSecret(ctx, "GEMINI_API_KEY") },
-		"zai_payg":   func() bool { return credentials.HasSecret(ctx, "ZAI_API_KEY") },
-		"zai_coding": func() bool { return credentials.HasSecret(ctx, "ZAI_CODING_API_KEY") },
-		"canopywave": func() bool { return credentials.HasSecret(ctx, "CANOPYWAVE_API_KEY") },
-		"poolside":   func() bool { return credentials.HasSecret(ctx, "POOLSIDE_API_KEY") },
-		"groq":       func() bool { return credentials.HasSecret(ctx, "GROQ_API_KEY") },
-		"openai":     func() bool { return credentials.HasSecret(ctx, "OPENAI_API_KEY") },
-		"opencodego": func() bool { return credentials.HasSecret(ctx, "OPENCODEGO_API_KEY") },
-		"kimi":       func() bool { return credentials.HasSecret(ctx, "MOONSHOT_API_KEY") },
+		"anthropic":   func() bool { return credentials.HasSecret(ctx, "ANTHROPIC_API_KEY") },
+		"deepseek":    func() bool { return credentials.HasSecret(ctx, "DEEPSEEK_API_KEY") },
+		"openrouter":  func() bool { return credentials.HasSecret(ctx, "OPENROUTER_API_KEY") },
+		"concentrate": func() bool { return credentials.HasSecret(ctx, "CONCENTRATE_API_KEY") },
+		"grok":        func() bool { return credentials.HasSecret(ctx, "XAI_API_KEY") },
+		"gemini":      func() bool { return credentials.HasSecret(ctx, "GEMINI_API_KEY") },
+		"zai_payg":    func() bool { return credentials.HasSecret(ctx, "ZAI_API_KEY") },
+		"zai_coding":  func() bool { return credentials.HasSecret(ctx, "ZAI_CODING_API_KEY") },
+		"canopywave":  func() bool { return credentials.HasSecret(ctx, "CANOPYWAVE_API_KEY") },
+		"poolside":    func() bool { return credentials.HasSecret(ctx, "POOLSIDE_API_KEY") },
+		"groq":        func() bool { return credentials.HasSecret(ctx, "GROQ_API_KEY") },
+		"openai":      func() bool { return credentials.HasSecret(ctx, "OPENAI_API_KEY") },
+		"opencodego":  func() bool { return credentials.HasSecret(ctx, "OPENCODEGO_API_KEY") },
+		"kimi":        func() bool { return credentials.HasSecret(ctx, "MOONSHOT_API_KEY") },
 		"xiaomi_mimo_payg": func() bool {
 			return credentials.HasSecret(ctx, config.EnvXiaomiPaygAPIKey) || credentials.HasSecret(ctx, "XIAOMI_MIMO_API_KEY")
 		},

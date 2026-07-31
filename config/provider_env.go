@@ -67,6 +67,9 @@ type ProviderConfig struct {
 	AnthropicModel             string                      `json:"anthropic_model,omitempty"`
 	OpenAIModel                string                      `json:"openai_model,omitempty"`
 	CanopyWaveModel            string                      `json:"canopywave_model,omitempty"`
+	ConcentrateAPIKey          string                      `json:"concentrate_api_key,omitempty"`
+	ConcentrateBaseURL         string                      `json:"concentrate_base_url,omitempty"`
+	ConcentrateModel           string                      `json:"concentrate_model,omitempty"`
 	DeepSeekModel              string                      `json:"deepseek_model,omitempty"`
 	ZAIModel                   string                      `json:"zai_model,omitempty"`
 	GrokModel                  string                      `json:"grok_model,omitempty"`
@@ -157,6 +160,11 @@ var providerFields = map[string]providerFieldMap{
 		APIKeys: func(c *ProviderConfig) []string { return []string{c.CanopyWaveAPIKey} },
 		Models:  func(c *ProviderConfig) []string { return []string{c.CanopyWaveModel} },
 		BaseURL: func(c *ProviderConfig) string { return c.CanopyWaveBaseURL },
+	},
+	ProviderConcentrate: {
+		APIKeys: func(c *ProviderConfig) []string { return []string{c.ConcentrateAPIKey} },
+		Models:  func(c *ProviderConfig) []string { return []string{c.ConcentrateModel} },
+		BaseURL: func(c *ProviderConfig) string { return c.ConcentrateBaseURL },
 	},
 	ProviderDeepSeek: {
 		APIKeys: func(c *ProviderConfig) []string { return []string{c.DeepSeekAPIKey} },
@@ -563,6 +571,7 @@ func ClearProviderRuntimeEnv() {
 		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_REGION", "AWS_DEFAULT_REGION", "BEDROCK_MODEL",
 		"VERTEX_ACCESS_TOKEN", "GOOGLE_OAUTH_ACCESS_TOKEN", "VERTEX_PROJECT_ID", "VERTEX_REGION", "VERTEX_MODEL",
 		"OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_BASE_URL",
+		"CONCENTRATE_API_KEY", "CONCENTRATE_MODEL", "CONCENTRATE_BASE_URL",
 		"CANOPYWAVE_API_KEY", "CANOPYWAVE_MODEL", "CANOPYWAVE_BASE_URL",
 		"DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "DEEPSEEK_BASE_URL",
 		"ZAI_API_KEY", "ZAI_CODING_API_KEY", "ZAI_MODEL", "ZAI_BASE_URL", "ZAI_CODING_BASE_URL", "ZAI_API_BASE",
@@ -713,6 +722,14 @@ func ApplyProviderEnv(provider string, config *ProviderConfig, activeModel strin
 			m = catalog.GetProviderDefaultModel("canopywave", cat)
 		}
 		collectOpenAICompatibleProvider(env, "CANOPYWAVE", apiKey, m, base, overwrite)
+	case ProviderConcentrate:
+		apiKey := AsNonEmptyString(config.ConcentrateAPIKey)
+		base := firstNonEmpty(config.ConcentrateBaseURL, DefaultConcentrateOpenAIBaseURL)
+		m := activeModel
+		if m == "" {
+			m = catalog.GetProviderDefaultModel("concentrate", cat)
+		}
+		collectOpenAICompatibleProvider(env, "CONCENTRATE", apiKey, m, base, overwrite)
 	case ProviderDeepSeek:
 		apiKey := AsNonEmptyString(config.DeepSeekAPIKey)
 		base := firstNonEmpty(config.DeepSeekBaseURL, "https://api.deepseek.com/v1")
