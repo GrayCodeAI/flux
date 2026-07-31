@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
@@ -30,5 +31,23 @@ func TestOpenCodeGoAnthropicBase(t *testing.T) {
 	t.Parallel()
 	if got := AnthropicBaseFromOpenAIV1("https://opencode.ai/zen/go/v1"); got != "https://opencode.ai/zen/go" {
 		t.Fatalf("base = %q, want https://opencode.ai/zen/go", got)
+	}
+}
+
+func TestOpenCodeGoOACompatUnsupportedError(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		err  error
+		want bool
+	}{
+		{nil, false},
+		{fmt.Errorf("status=401 unauthorized"), true},
+		{fmt.Errorf("oa-compat not supported"), true},
+		{fmt.Errorf("HTTP 400 bad request"), false},
+	}
+	for _, tc := range tests {
+		if got := oaCompatUnsupportedError(tc.err); got != tc.want {
+			t.Errorf("OACompatUnsupportedError(%v) = %v, want %v", tc.err, got, tc.want)
+		}
 	}
 }

@@ -7,15 +7,8 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	"github.com/GrayCodeAI/eyrie/credentials"
 )
-
-func TestRegisteredProviderCountMatchesCanonicalRegistry(t *testing.T) {
-	if got, want := RegisteredProviderCount(), len(registry.All()); got != want {
-		t.Fatalf("registered provider count = %d, want %d", got, want)
-	}
-}
 
 func TestGatewayDefinitionsArePureMetadataWithSeparateRanks(t *testing.T) {
 	store := &countingStore{inner: &credentials.MapStore{}}

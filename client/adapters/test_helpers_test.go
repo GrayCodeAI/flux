@@ -4,14 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log/slog"
 	"net/http"
-	"testing"
 )
-
-func testLogger(t *testing.T) *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -41,5 +35,3 @@ func jsonDecodeRequest(req *http.Request, value any) error {
 	}
 	return json.Unmarshal(body, value)
 }
-
-func float64Ptr(v float64) *float64 { return &v }

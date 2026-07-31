@@ -278,8 +278,18 @@ type (
 	OpenCodeGoClient = adapters.OpenCodeGoClient
 	// PoolsideClient implements Poolside reasoning-only stream recovery.
 	PoolsideClient = adapters.PoolsideClient
+	// ProtocolRouter routes between OpenAI and Anthropic protocols.
+	ProtocolRouter = adapters.ProtocolRouter
+	// ProtocolStreamConfig controls streaming across two protocols.
+	ProtocolStreamConfig = adapters.ProtocolStreamConfig
 	// TokenCountResult holds token counting results.
 	TokenCountResult = adapters.TokenCountResult
+)
+
+// Adapter protocol constants.
+const (
+	ChatProtocolCompletions = adapters.ChatProtocolCompletions
+	ChatProtocolMessages    = adapters.ChatProtocolMessages
 )
 
 // Adapter constructors.
@@ -311,16 +321,16 @@ func NewVertexClient(projectID, region, token string) *VertexClient {
 	return adapters.NewVertexClient(projectID, region, token)
 }
 
-func NewDeepSeekClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *DeepSeekClient {
-	return adapters.NewDeepSeekClient(apiKey, openAIBase, compat, opts...)
+func NewDeepSeekClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, opts ...ClientOption) *DeepSeekClient {
+	return adapters.NewDeepSeekClient(apiKey, openAIBase, anthropicBase, compat, opts...)
 }
 
-func NewZAIClient(apiKey, openAIBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *ZAIClient {
-	return adapters.NewZAIClient(apiKey, openAIBase, compat, providerID, opts...)
+func NewZAIClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *ZAIClient {
+	return adapters.NewZAIClient(apiKey, openAIBase, anthropicBase, compat, providerID, opts...)
 }
 
-func NewMiMoClient(apiKey, openAIBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *MiMoClient {
-	return adapters.NewMiMoClient(apiKey, openAIBase, compat, providerID, opts...)
+func NewMiMoClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *MiMoClient {
+	return adapters.NewMiMoClient(apiKey, openAIBase, anthropicBase, compat, providerID, opts...)
 }
 
 func NewOpenCodeGoClient(apiKey, baseURL string, opts ...ClientOption) *OpenCodeGoClient {
@@ -371,6 +381,8 @@ var (
 	geminiSharedParserEnvVar    = adapters.GeminiSharedParserEnvVar
 	processGeminiStream         = adapters.ProcessGeminiStream
 	mimoRetryableChatError      = adapters.MimoRetryableChatError
+	mimoFallbackChatError       = adapters.MimoFallbackChatError
+	oaCompatUnsupportedError    = adapters.OACompatUnsupportedError
 	CoreProviders               = adapters.CoreProviders
 	OpenAICompatibleProviders   = adapters.OpenAICompatibleProviders
 	sha256Hex                   = adapters.Sha256Hex

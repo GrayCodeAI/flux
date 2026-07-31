@@ -552,13 +552,7 @@ func offeringSupports(compiled *catalog.CompiledCatalog, modelID string, req Req
 	for _, offering := range offerings {
 		caps := offering.Capabilities
 		if req.Tools && caps.FunctionCalling != catalog.CapabilitySupported {
-			// Treat unknown capability as supported. Providers that don't
-			// report function-calling capability (e.g. free tiers, smaller
-			// gateways) may still support tools. Better to try and fail than
-			// block models from being used. Only skip on explicit unsupported.
-			if caps.FunctionCalling == catalog.CapabilityUnsupported {
-				continue
-			}
+			continue
 		}
 		if req.Vision && caps.ImageInput != catalog.CapabilitySupported {
 			continue

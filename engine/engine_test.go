@@ -212,42 +212,20 @@ func TestSelectCompatibleModelUsesCapabilitiesAndIntent(t *testing.T) {
 		},
 	}
 
-	// vendor/text has unknown capabilities — treated as supporting tools
-	// and selected because it's the cheapest option
 	model, provider := selectCompatibleModel(compiled, SelectionRequest{
 		Requirements: Requirements{Tools: true, MinimumContext: 100_000},
 		Preference:   Preference{Intent: llm.IntentEconomical},
 	})
-	if model != "vendor/text" || provider != "vendor" {
-		t.Fatalf("selected %q via %q, want vendor/text via vendor", model, provider)
+	if model != "vendor/cheap" || provider != "vendor" {
+		t.Fatalf("selected %q via %q, want vendor/cheap via vendor", model, provider)
 	}
 
 	model, _ = selectCompatibleModel(compiled, SelectionRequest{
 		Requirements: Requirements{Tools: true, MinimumContext: 150_000},
 		Preference:   Preference{Intent: llm.IntentReasoning},
 	})
-	// vendor/text selected: unknown capabilities treated as supported, largest context
-	if model != "vendor/text" {
-		t.Fatalf("selected %q, want vendor/text", model)
-	}
-}
-
-func TestSelectCompatibleModel_ConcentrateLegacyCacheAssumesTools(t *testing.T) {
-	compiled := &catalog.CompiledCatalog{
-		ModelsByID: map[string]catalog.Model{
-			"concentrate/deepseek-v4-pro": {ID: "concentrate/deepseek-v4-pro", ProviderID: "concentrate", ContextWindow: 1_040_000},
-		},
-		OfferingsByCanonicalModel: map[string][]catalog.ModelOffering{
-			"concentrate/deepseek-v4-pro": {{CanonicalModelID: "concentrate/deepseek-v4-pro", DeploymentID: "concentrate-payg"}},
-		},
-	}
-
-	model, provider := selectCompatibleModel(compiled, SelectionRequest{
-		Requirements: Requirements{Tools: true},
-		Preference:   Preference{PreferredProvider: "concentrate"},
-	})
-	if model != "concentrate/deepseek-v4-pro" || provider != "concentrate" {
-		t.Fatalf("selected %q via %q, want Concentrate model with tools", model, provider)
+	if model != "vendor/rich" {
+		t.Fatalf("selected %q, want vendor/rich", model)
 	}
 }
 

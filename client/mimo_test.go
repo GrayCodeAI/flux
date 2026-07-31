@@ -30,6 +30,16 @@ func TestMimoRetryableChatError_UsesXiaomiHelper(t *testing.T) {
 	}
 }
 
+func TestMimoFallbackChatError_ParamIncorrect(t *testing.T) {
+	err := errors.New("eyrie: xiaomi_mimo_token_plan API error (request_id=): : Param Incorrect")
+	if !mimoFallbackChatError(err) {
+		t.Fatal("expected Param Incorrect to fallback to Anthropic compatibility")
+	}
+	if mimoFallbackChatError(errors.New("eyrie: openai API error: invalid model")) {
+		t.Fatal("non-MiMo unrelated errors should not trigger fallback")
+	}
+}
+
 func TestGetOrCreateProvider_XiaomiTokenPlanUsesMimoBase(t *testing.T) {
 	t.Setenv("HAWK_CONFIG_DIR", t.TempDir())
 	if err := eyriecfg.SaveProviderConfig(&eyriecfg.ProviderConfig{

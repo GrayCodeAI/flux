@@ -222,9 +222,9 @@ func TestToClientOptions_NoOutputSchemaLeavesResponseFormatNil(t *testing.T) {
 func TestToClientOptions_ClonesSlicesAndMaps(t *testing.T) {
 	// Verify that mutating the request after conversion does not affect the options.
 	req := llm.GenerateRequest{
-		Tools:        []llm.EyrieTool{{Name: "a"}, {Name: "b"}},
-		Options:      llm.GenerationOptions{StopSequences: []string{"x", "y"}},
-		OutputSchema: "orig",
+		Tools:          []llm.EyrieTool{{Name: "a"}, {Name: "b"}},
+		Options:        llm.GenerationOptions{StopSequences: []string{"x", "y"}},
+		OutputSchema:   "orig",
 	}
 	route := Route{Provider: "test", Model: "test/model"}
 	opts := toClientOptions(req, route, false)

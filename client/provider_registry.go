@@ -132,7 +132,8 @@ func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error)
 			if err != nil {
 				return nil, err
 			}
-			p = adapters.NewZAIClient(apiKey, openAIBase, info.Compat, providerName)
+			anthropicBase := config.ResolveZAIAnthropicBase(providerCfg)
+			p = adapters.NewZAIClient(apiKey, openAIBase, anthropicBase, info.Compat, providerName)
 			break
 		}
 		if config.IsXiaomiMimoProvider(providerName) {
@@ -141,15 +142,15 @@ func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error)
 			if err != nil {
 				return nil, err
 			}
-			p = adapters.NewMiMoClient(apiKey, openAIBase, info.Compat, providerName)
+			anthropicBase, err := config.ResolveXiaomiAnthropicBase(providerName, providerCfg)
+			if err != nil {
+				return nil, err
+			}
+			p = adapters.NewMiMoClient(apiKey, openAIBase, anthropicBase, info.Compat, providerName)
 			break
 		}
 		if providerName == "opencodego" {
 			p = adapters.NewOpenCodeGoClient(apiKey, baseURL)
-			break
-		}
-		if providerName == "concentrate" {
-			p = adapters.NewConcentrateResponsesClient(apiKey, baseURL)
 			break
 		}
 		if providerName == "poolside" {

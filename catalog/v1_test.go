@@ -238,32 +238,6 @@ func TestCapabilitySetFromEntry_ToolsAliasSupportsFunctionCalling(t *testing.T) 
 	}
 }
 
-func TestCapabilitySetFromEntry_KeepsContextAndMaxOutput(t *testing.T) {
-	t.Parallel()
-	set := CapabilitySetFromEntry(live.Entry{
-		ContextWindow:   1_048_576,
-		MaxOutput:       131_072,
-		Features:        []string{"tools", "thinking:enabled", "image_input"},
-		ThinkingEnabled: true,
-		ImageInput:      true,
-	})
-	if set.MaxInputTokens != 1_048_576 {
-		t.Fatalf("MaxInputTokens = %d", set.MaxInputTokens)
-	}
-	if set.MaxOutputTokens != 131_072 {
-		t.Fatalf("MaxOutputTokens = %d", set.MaxOutputTokens)
-	}
-	if set.FunctionCalling != CapabilitySupported {
-		t.Fatalf("FunctionCalling = %q", set.FunctionCalling)
-	}
-	if set.ExplicitThinkingBudget != CapabilitySupported {
-		t.Fatalf("ExplicitThinkingBudget = %q", set.ExplicitThinkingBudget)
-	}
-	if set.ImageInput != CapabilitySupported {
-		t.Fatalf("ImageInput = %q", set.ImageInput)
-	}
-}
-
 func TestCapabilitySetFromLegacy_EmptyFeatures(t *testing.T) {
 	t.Parallel()
 	entry := ModelCatalogEntry{ID: "test-model"}

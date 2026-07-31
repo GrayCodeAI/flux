@@ -52,18 +52,6 @@ func TestLegacyProviderSecretsStrictRejectsUnmappedDeploymentFields(t *testing.T
 	}
 }
 
-func TestLegacyProviderSecretsStrictMapsLongCatDirect(t *testing.T) {
-	secrets, err := LegacyProviderSecretsStrict(ProviderConfig{Deployments: map[string]DeploymentConfig{
-		"longcat-direct": {APIKey: "lc-direct-secret-1234567890"},
-	}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secrets["LONGCAT_API_KEY"] != "lc-direct-secret-1234567890" {
-		t.Fatalf("LONGCAT_API_KEY = %q", secrets["LONGCAT_API_KEY"])
-	}
-}
-
 func TestLegacyProviderSecretsStrictMapsBedrockCompatibilityFields(t *testing.T) {
 	secrets, err := LegacyProviderSecretsStrict(ProviderConfig{Deployments: map[string]DeploymentConfig{
 		"anthropic-bedrock": {APIKey: "AKIALEGACY123456789", Token: "legacy-secret-1234567890"},

@@ -25,14 +25,7 @@ func toClientOptions(req GenerateRequest, route Route, stream bool) client.ChatO
 	opts.ThinkingBudgetTokens = advanced.ThinkingBudgetTokens
 	opts.ThinkingMode = advanced.ThinkingMode
 	opts.ThinkingDisplay = advanced.ThinkingDisplay
-	opts.ThinkingEnabled = advanced.ThinkingEnabled
 	opts.GLMThinkingEnabled = advanced.GLMThinkingEnabled
-	if opts.ThinkingEnabled == nil && opts.GLMThinkingEnabled != nil {
-		opts.ThinkingEnabled = opts.GLMThinkingEnabled
-	}
-	if opts.GLMThinkingEnabled == nil && opts.ThinkingEnabled != nil {
-		opts.GLMThinkingEnabled = opts.ThinkingEnabled
-	}
 	opts.VirtualKeyID = advanced.VirtualKeyID
 	opts.KimiContextCacheID = advanced.KimiContextCacheID
 	opts.KimiCacheResetTTL = advanced.KimiCacheResetTTL
