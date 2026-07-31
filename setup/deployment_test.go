@@ -331,6 +331,7 @@ func TestDefaultDeploymentForProvider(t *testing.T) {
 		{config.ProviderGemini, "gemini-direct"},
 		{config.ProviderOpenRouter, "openrouter"},
 		{config.ProviderConcentrate, "concentrate-payg"},
+		{config.ProviderOpenGateway, "opengateway-payg"},
 		{config.ProviderCanopyWave, "canopywave"},
 		{config.ProviderDeepSeek, "deepseek-direct"},
 		{config.ProviderZAIPayg, "zai_payg-direct"},
@@ -529,6 +530,24 @@ func TestProviderForDeployment_ConcentratePayAsYouGoRequiresKey(t *testing.T) {
 
 	if _, ok := ProviderForDeployment("concentrate-payg", config.DeploymentConfig{}); ok {
 		t.Fatal("expected concentrate-payg to be unavailable without key")
+	}
+}
+
+func TestProviderForDeployment_OpenGateway(t *testing.T) {
+	p, ok := ProviderForDeployment("opengateway-payg", config.DeploymentConfig{APIKey: "ogw_live_test"})
+	if !ok {
+		t.Fatal("expected opengateway-payg to be configured")
+	}
+	if p.Name() != "openai" {
+		t.Fatalf("provider name = %q, want openai", p.Name())
+	}
+}
+
+func TestProviderForDeployment_OpenGatewayRequiresKey(t *testing.T) {
+	t.Setenv("OPENGATEWAY_API_KEY", "")
+
+	if _, ok := ProviderForDeployment("opengateway-payg", config.DeploymentConfig{}); ok {
+		t.Fatal("expected opengateway-payg to be unavailable without key")
 	}
 }
 

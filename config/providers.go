@@ -24,6 +24,7 @@ const (
 	DefaultOpenAIBaseURL            = "https://api.openai.com/v1"
 	DefaultOpenRouterOpenAIBaseURL  = "https://openrouter.ai/api/v1"
 	DefaultConcentrateOpenAIBaseURL = "https://api.concentrate.ai/v1"
+	DefaultOpenGatewayOpenAIBaseURL = "https://opengateway.gitlawb.com/v1"
 	DefaultCanopyWaveOpenAIBaseURL  = "https://inference.canopywave.io/v1"
 	DefaultZAIOpenAIBaseURL         = "https://api.z.ai/api/paas/v4"
 	DefaultZAICodingOpenAIBaseURL   = "https://api.z.ai/api/coding/paas/v4"

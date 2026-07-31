@@ -73,6 +73,9 @@ type ProviderConfig struct {
 	ConcentrateAPIKey          string                      `json:"concentrate_api_key,omitempty"`
 	ConcentrateBaseURL         string                      `json:"concentrate_base_url,omitempty"`
 	ConcentrateModel           string                      `json:"concentrate_model,omitempty"`
+	OpenGatewayAPIKey          string                      `json:"opengateway_api_key,omitempty"`
+	OpenGatewayBaseURL         string                      `json:"opengateway_base_url,omitempty"`
+	OpenGatewayModel           string                      `json:"opengateway_model,omitempty"`
 	AgnesAPIKey                string                      `json:"agnes_api_key,omitempty"`
 	AgnesBaseURL               string                      `json:"agnes_base_url,omitempty"`
 	AgnesModel                 string                      `json:"agnes_model,omitempty"`
@@ -583,6 +586,7 @@ func ClearProviderRuntimeEnv() {
 		"VERTEX_ACCESS_TOKEN", "GOOGLE_OAUTH_ACCESS_TOKEN", "VERTEX_PROJECT_ID", "VERTEX_REGION", "VERTEX_MODEL",
 		"OPENROUTER_API_KEY", "OPENROUTER_MODEL", "OPENROUTER_BASE_URL",
 		"CONCENTRATE_API_KEY", "CONCENTRATE_MODEL", "CONCENTRATE_BASE_URL",
+		"OPENGATEWAY_API_KEY", "OPENGATEWAY_MODEL", "OPENGATEWAY_BASE_URL",
 		"CANOPYWAVE_API_KEY", "CANOPYWAVE_MODEL", "CANOPYWAVE_BASE_URL",
 		"DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "DEEPSEEK_BASE_URL",
 		"ZAI_API_KEY", "ZAI_CODING_API_KEY", "ZAI_MODEL", "ZAI_BASE_URL", "ZAI_CODING_BASE_URL", "ZAI_API_BASE",
@@ -742,6 +746,14 @@ func ApplyProviderEnv(provider string, config *ProviderConfig, activeModel strin
 			m = catalog.GetProviderDefaultModel("concentrate", cat)
 		}
 		collectOpenAICompatibleProvider(env, "CONCENTRATE", apiKey, m, base, overwrite)
+	case ProviderOpenGateway:
+		apiKey := AsNonEmptyString(config.OpenGatewayAPIKey)
+		base := firstNonEmpty(config.OpenGatewayBaseURL, DefaultOpenGatewayOpenAIBaseURL)
+		m := activeModel
+		if m == "" {
+			m = catalog.GetProviderDefaultModel("opengateway", cat)
+		}
+		collectOpenAICompatibleProvider(env, "OPENGATEWAY", apiKey, m, base, overwrite)
 	case ProviderDeepSeek:
 		apiKey := AsNonEmptyString(config.DeepSeekAPIKey)
 		base := firstNonEmpty(config.DeepSeekBaseURL, "https://api.deepseek.com/v1")

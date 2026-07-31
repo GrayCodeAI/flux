@@ -55,6 +55,10 @@ var (
 	CanopyWaveCompat = OpenAICompatConfig{
 		MaxTokensField: "max_tokens",
 	}
+	OpenGatewayCompat = OpenAICompatConfig{
+		MaxTokensField:           "max_tokens",
+		SupportsUsageInStreaming: true,
+	}
 	OllamaCompat = OpenAICompatConfig{
 		MaxTokensField: "max_tokens",
 	}

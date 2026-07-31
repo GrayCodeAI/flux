@@ -9,8 +9,8 @@ import (
 
 func TestAllProviders_Count(t *testing.T) {
 	t.Parallel()
-	if n := len(registry.All()); n != 26 {
-		t.Fatalf("expected 26 providers, got %d", n)
+	if n := len(registry.All()); n != 27 {
+		t.Fatalf("expected 27 providers, got %d", n)
 	}
 }
 
@@ -42,8 +42,8 @@ func TestProviderSpecs_AgnesOpenAIOnlyLongCatOpenAIPrimary(t *testing.T) {
 func TestLiveFetcherKeys_AllProviders(t *testing.T) {
 	t.Parallel()
 	keys := registry.LiveFetcherKeys()
-	if len(keys) != 26 {
-		t.Fatalf("expected 26 live fetcher keys, got %d", len(keys))
+	if len(keys) != 27 {
+		t.Fatalf("expected 27 live fetcher keys, got %d", len(keys))
 	}
 }
 
@@ -78,6 +78,29 @@ func TestConcentrateUsesResponsesAPI(t *testing.T) {
 	}
 	if !spec.PublicModelCatalog {
 		t.Fatal("Concentrate model catalog must be public")
+	}
+}
+
+func TestOpenGatewaySpec(t *testing.T) {
+	t.Parallel()
+	spec, ok := registry.SpecByProviderID("opengateway")
+	if !ok {
+		t.Fatal("missing OpenGateway provider spec")
+	}
+	if spec.ProtocolID != "openai-chat-completions" {
+		t.Fatalf("protocol = %q, want openai-chat-completions", spec.ProtocolID)
+	}
+	if spec.AdapterID != "openai" {
+		t.Fatalf("adapter = %q, want openai", spec.AdapterID)
+	}
+	if !spec.PublicModelCatalog {
+		t.Fatal("OpenGateway model catalog must be public")
+	}
+	if !spec.RequiresKey {
+		t.Fatal("OpenGateway should require a key for inference (OPENGATEWAY_API_KEY)")
+	}
+	if spec.LiveFetcherKey != "opengateway" {
+		t.Fatalf("fetcher = %q", spec.LiveFetcherKey)
 	}
 }
 

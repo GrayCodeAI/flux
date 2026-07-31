@@ -174,6 +174,15 @@ func providerSpecs() []ProviderSpec {
 			ProtocolID:         "openai-responses", AdapterID: "concentrate-responses", RuntimeProfileKey: "concentrate",
 		},
 		{
+			ProviderID: "opengateway", DisplayName: "OpenGateway (Pay-as-you-go)", DeploymentID: "opengateway-payg", SortOrder: 27, ChatPreference: 28,
+			RequiresKey: true, CredentialEnv: "OPENGATEWAY_API_KEY",
+			BaseURLEnv: []string{"OPENGATEWAY_BASE_URL"},
+			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://opengateway.gitlawb.com/v1",
+			LiveFetcherKey: "opengateway", LiveCatalogKey: "opengateway",
+			PublicModelCatalog: true,
+			ProtocolID:         "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "opengateway",
+		},
+		{
 			ProviderID: "stepfun", DisplayName: "StepFun", DeploymentID: "stepfun-direct", SortOrder: 26, ChatPreference: 27,
 			RequiresKey: true, CredentialEnv: "STEP_API_KEY",
 			BaseURLEnv: []string{"STEP_BASE_URL"},

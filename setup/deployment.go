@@ -279,6 +279,12 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 			return nil, false
 		}
 		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultCanopyWaveOpenAIBaseURL), &client.CanopyWaveCompat), true
+	case "opengateway-payg":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("OPENGATEWAY_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenGatewayOpenAIBaseURL), &client.OpenGatewayCompat), true
 	case "deepseek-direct":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("DEEPSEEK_API_KEY"))
 		if apiKey == "" {
@@ -469,6 +475,8 @@ func DefaultDeploymentForProvider(provider string) string {
 		return "minimax_payg-direct"
 	case config.ProviderConcentrate:
 		return "concentrate-payg"
+	case config.ProviderOpenGateway:
+		return "opengateway-payg"
 	default:
 		return ""
 	}
@@ -492,6 +500,8 @@ func LegacyDeploymentConfig(cfg *config.ProviderConfig, provider string) config.
 		return config.DeploymentConfig{APIKey: cfg.OpenRouterAPIKey, BaseURL: cfg.OpenRouterBaseURL}
 	case config.ProviderCanopyWave:
 		return config.DeploymentConfig{APIKey: cfg.CanopyWaveAPIKey, BaseURL: cfg.CanopyWaveBaseURL}
+	case config.ProviderOpenGateway:
+		return config.DeploymentConfig{APIKey: cfg.OpenGatewayAPIKey, BaseURL: cfg.OpenGatewayBaseURL}
 	case config.ProviderPoolside:
 		return config.DeploymentConfig{APIKey: cfg.PoolsideAPIKey, BaseURL: cfg.PoolsideBaseURL}
 	case config.ProviderDeepSeek:

@@ -71,6 +71,7 @@ var Registry = map[string]FetchFunc{
 	"zai_payg":               FetchZAI,
 	"zai_coding":             FetchZAICoding,
 	"concentrate":            FetchConcentrate,
+	"opengateway":            FetchOpenGateway,
 	"agnes":                  FetchAgnes,
 	"longcat":                FetchLongCat,
 	"canopywave":             FetchCanopyWave,

@@ -15,6 +15,7 @@ const (
 	ProviderZAIPayg             APIProvider = "zai_payg"
 	ProviderOpenRouter          APIProvider = "openrouter"
 	ProviderConcentrate         APIProvider = "concentrate"
+	ProviderOpenGateway         APIProvider = "opengateway"
 	ProviderAgnes               APIProvider = "agnes"
 	ProviderGrok                APIProvider = "grok"
 	ProviderGemini              APIProvider = "gemini"
@@ -114,6 +115,13 @@ var (
 		ModelEnv:     []string{"CONCENTRATE_MODEL", "OPENAI_MODEL"},
 		BaseURLEnv:   []string{"CONCENTRATE_BASE_URL"},
 		APIKeys:      []APIKeyDef{{Env: "CONCENTRATE_API_KEY", Source: "concentrate"}, {Env: "OPENAI_API_KEY", Source: "openai"}},
+	}
+	OpenGatewayRuntimeProfile = RuntimeProviderProfile{
+		Mode: "openai", DefaultBaseURL: DefaultOpenGatewayOpenAIBaseURL,
+		DetectionEnv: []string{"OPENGATEWAY_API_KEY"},
+		ModelEnv:     []string{"OPENGATEWAY_MODEL", "OPENAI_MODEL"},
+		BaseURLEnv:   []string{"OPENGATEWAY_BASE_URL"},
+		APIKeys:      []APIKeyDef{{Env: "OPENGATEWAY_API_KEY", Source: "opengateway"}, {Env: "OPENAI_API_KEY", Source: "openai"}},
 	}
 	ZAIPaygRuntimeProfile = RuntimeProviderProfile{
 		Mode: "openai", DefaultBaseURL: DefaultZAIOpenAIBaseURL,
@@ -226,7 +234,7 @@ var (
 var APIProviderDetectionOrder = []APIProvider{
 	ProviderAnthropic, ProviderConcentrate, ProviderOpenRouter, ProviderGrok, ProviderGemini,
 	ProviderVertex, ProviderBedrock, ProviderZAICoding, ProviderZAIPayg, ProviderCanopyWave, ProviderDeepSeek, ProviderPoolside, ProviderGroq, ProviderClinePass, ProviderAzure, ProviderOpenAI, ProviderOpenCodeGo,
-	ProviderKimi, ProviderXiaomiMimoPayg, ProviderXiaomiMimoTokenPlan, ProviderMiniMaxTokenPlan, ProviderMiniMaxPayg, ProviderOllama, ProviderStepFun,
+	ProviderKimi, ProviderXiaomiMimoPayg, ProviderXiaomiMimoTokenPlan, ProviderMiniMaxTokenPlan, ProviderMiniMaxPayg, ProviderOllama, ProviderStepFun, ProviderOpenGateway,
 }
 
 // ProviderModelEnvKeys maps each provider to its model env var keys.
@@ -255,6 +263,7 @@ var ProviderModelEnvKeys = map[APIProvider][]string{
 	ProviderMiniMaxTokenPlan:    {"MINIMAX_TOKEN_PLAN_MODEL", "MINIMAX_MODEL", "OPENAI_MODEL"},
 	ProviderMiniMaxPayg:         {"MINIMAX_PAYG_MODEL", "MINIMAX_MODEL", "OPENAI_MODEL"},
 	ProviderStepFun:             StepFunRuntimeProfile.ModelEnv,
+	ProviderOpenGateway:         OpenGatewayRuntimeProfile.ModelEnv,
 }
 
 const (
@@ -264,12 +273,13 @@ const (
 
 // OpenAICompatibleRuntimeProfileOrder is the detection order for runtime profiles.
 var OpenAICompatibleRuntimeProfileOrder = []string{
-	"concentrate", "agnes", "longcat", "openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg", "stepfun",
+	"concentrate", "agnes", "longcat", "openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg", "stepfun", "opengateway",
 }
 
 // OpenAICompatibleRuntimeProfiles maps profile key to its runtime profile.
 var OpenAICompatibleRuntimeProfiles = map[string]RuntimeProviderProfile{
 	"concentrate":            ConcentrateRuntimeProfile,
+	"opengateway":            OpenGatewayRuntimeProfile,
 	"agnes":                  OpenAIRuntimeProfile,
 	"longcat":                OpenAIRuntimeProfile,
 	"anthropic":              AnthropicRuntimeProfile,
@@ -305,6 +315,7 @@ var RuntimeProviderProfiles = map[string]RuntimeProviderProfile{
 	"bedrock":                BedrockRuntimeProfile,
 	"openrouter":             OpenRouterRuntimeProfile,
 	"concentrate":            ConcentrateRuntimeProfile,
+	"opengateway":            OpenGatewayRuntimeProfile,
 	"zai_payg":               ZAIPaygRuntimeProfile,
 	"zai_coding":             ZAICodingRuntimeProfile,
 	"canopywave":             CanopyWaveRuntimeProfile,
