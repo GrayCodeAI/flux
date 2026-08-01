@@ -290,31 +290,39 @@ func TestCoalesceStats(t *testing.T) {
 		}()
 	}
 
-	// Small delay, should see one inflight request
-	time.Sleep(10 * time.Millisecond)
-	stats = coalescer.Stats()
-	if stats.InflightRequests != 1 {
-		t.Errorf("Expected 1 inflight request, got %d", stats.InflightRequests)
-	}
-	// One waiter is the executing goroutine, two more should be waiting
-	if stats.TotalWaiters != 3 {
-		t.Errorf("Expected 3 total waiters, got %d", stats.TotalWaiters)
-	}
+	// Small delay, should see one inflight request with all three waiters
+	waitForStats(t, coalescer, func(s InflightStats) bool {
+		return s.InflightRequests == 1 && s.TotalWaiters == 3
+	})
 
 	wg.Wait()
 
 	// After completion, should still have one cached entry
-	time.Sleep(10 * time.Millisecond)
-	stats = coalescer.Stats()
-	if stats.InflightRequests != 1 {
-		t.Errorf("Expected 1 cached request after completion, got %d", stats.InflightRequests)
-	}
+	waitForStats(t, coalescer, func(s InflightStats) bool {
+		return s.InflightRequests == 1
+	})
 
 	// After TTL expires, entry should be cleaned up
-	time.Sleep(200 * time.Millisecond)
-	stats = coalescer.Stats()
-	if stats.InflightRequests != 0 {
-		t.Errorf("Expected 0 inflight requests after TTL, got %d", stats.InflightRequests)
+	waitForStats(t, coalescer, func(s InflightStats) bool {
+		return s.InflightRequests == 0
+	})
+}
+
+// waitForStats polls the coalescer until pred is satisfied or the deadline
+// elapses. Avoids wall-clock timing flakiness under the race detector and
+// heavily loaded CI runners.
+func waitForStats(t *testing.T, c *Coalescer, pred func(InflightStats) bool) InflightStats {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		s := c.Stats()
+		if pred(s) {
+			return s
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for coalescing stats, last=%+v", s)
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 

@@ -13,10 +13,13 @@ type OpenAICompatConfig struct {
 	RequiresAssistantAfterToolResult bool   `json:"requires_assistant_after_tool_result,omitempty"`
 	RequiresThinkingAsText           bool   `json:"requires_thinking_as_text,omitempty"`
 	ThinkingFormat                   string `json:"thinking_format,omitempty"` // "openai", "zai", "qwen", "openrouter"
-	// StripReasoningFromInput instructs buildRequestBase to omit the reasoning_content
-	// field from assistant messages. DeepSeek (and compatible providers) return HTTP 400
-	// if reasoning_content appears in the input context of a multi-turn conversation.
-	StripReasoningFromInput bool `json:"strip_reasoning_from_input,omitempty"`
+	// RequiresReasoningPassback instructs buildRequestBase to forward the
+	// reasoning_content captured from a prior assistant turn (core.EyrieMessage.Thinking)
+	// back into the request's assistant messages. DeepSeek requires the assistant's
+	// reasoning_content to be passed back whenever that turn performed a tool call,
+	// otherwise the API returns HTTP 400. When no tool call happened the field is
+	// ignored by the provider, so forwarding is always safe for compliant providers.
+	RequiresReasoningPassback bool `json:"requires_reasoning_passback,omitempty"`
 	// SupportsCacheRole enables Kimi/Moonshot context-cache injection: when
 	// core.ChatOptions.KimiContextCacheID is non-empty, buildRequestBase prepends a
 	// {"role":"cache","content":<id>} message per the MoonshotAI-Cookbook spec.
@@ -66,7 +69,6 @@ var (
 		MaxTokensField:           "max_tokens",
 		SupportsUsageInStreaming: true,
 		ThinkingFormat:           "openrouter",
-		StripReasoningFromInput:  true,
 	}
 	PoolsideCompat = OpenAICompatConfig{
 		MaxTokensField: "max_tokens",
@@ -104,10 +106,9 @@ var (
 	}
 	// LongCatCompat: OpenAI-compatible; enables thinking by default, so disable it.
 	LongCatCompat = OpenAICompatConfig{
-		MaxTokensField:          "max_tokens",
-		ThinkingFormat:          "longcat",
-		DefaultDisableThinking:  true,
-		StripReasoningFromInput: true,
+		MaxTokensField:         "max_tokens",
+		ThinkingFormat:         "longcat",
+		DefaultDisableThinking: true,
 	}
 	// MiniMaxCompat: OpenAI-compatible; enables thinking by default, so disable it.
 	MiniMaxCompat = OpenAICompatConfig{
@@ -116,14 +117,22 @@ var (
 		DefaultDisableThinking: true,
 	}
 	// DeepSeekCompat: OpenAI-compatible with usage in streaming.
-	// The provider rejects reasoning_content in input messages with HTTP 400, so we strip it.
+	// DeepSeek requires the assistant's reasoning_content to be passed back whenever
+	// that turn performed a tool call (HTTP 400 otherwise), so we forward it.
 	// Enables thinking by default, so disable it.
 	DeepSeekCompat = OpenAICompatConfig{
+		MaxTokensField:            "max_tokens",
+		SupportsUsageInStreaming:  true,
+		RequiresReasoningPassback: true,
+		ThinkingFormat:            "deepseek",
+		DefaultDisableThinking:    true,
+	}
+	ConcentrateCompat = OpenAICompatConfig{
 		MaxTokensField:           "max_tokens",
 		SupportsUsageInStreaming: true,
-		StripReasoningFromInput:  true,
-		ThinkingFormat:           "deepseek",
-		DefaultDisableThinking:   true,
+	}
+	StepFunCompat = OpenAICompatConfig{
+		MaxTokensField: "max_tokens",
 	}
 )
 
@@ -189,6 +198,32 @@ func init() {
 	if p, ok := OpenAICompatibleProviders["deepseek"]; ok {
 		p.Compat = &DeepSeekCompat
 		OpenAICompatibleProviders["deepseek"] = p
+	}
+	if p, ok := OpenAICompatibleProviders["opengateway"]; ok {
+		p.Compat = &OpenGatewayCompat
+		OpenAICompatibleProviders["opengateway"] = p
+	}
+	if p, ok := OpenAICompatibleProviders["longcat"]; ok {
+		p.Compat = &LongCatCompat
+		OpenAICompatibleProviders["longcat"] = p
+	}
+	for _, id := range []string{"minimax_token_plan", "minimax_payg"} {
+		if p, ok := OpenAICompatibleProviders[id]; ok {
+			p.Compat = &MiniMaxCompat
+			OpenAICompatibleProviders[id] = p
+		}
+	}
+	if p, ok := OpenAICompatibleProviders["stepfun"]; ok {
+		p.Compat = &StepFunCompat
+		OpenAICompatibleProviders["stepfun"] = p
+	}
+	if p, ok := OpenAICompatibleProviders["concentrate"]; ok {
+		p.Compat = &ConcentrateCompat
+		OpenAICompatibleProviders["concentrate"] = p
+	}
+	if p, ok := OpenAICompatibleProviders["agnes"]; ok {
+		p.Compat = &AgnesCompat
+		OpenAICompatibleProviders["agnes"] = p
 	}
 	if p, ok := CoreProviders["openai"]; ok {
 		p.Compat = &OpenAICompat

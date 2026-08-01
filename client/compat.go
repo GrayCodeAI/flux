@@ -27,5 +27,6 @@ var (
 	DeepSeekCompat    = adapters.DeepSeekCompat
 	AgnesCompat       = adapters.AgnesCompat
 	LongCatCompat     = adapters.LongCatCompat
+	StepFunCompat     = adapters.StepFunCompat
 	MiniMaxCompat     = adapters.MiniMaxCompat
 )

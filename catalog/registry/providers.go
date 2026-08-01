@@ -25,7 +25,8 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:         ProbeAnthropic,
 			LiveFetcherKey:    "anthropic", LiveCatalogKey: "anthropic",
 			ProtocolID: "anthropic-messages", AdapterID: "anthropic", RuntimeProfileKey: "anthropic",
-			DirectFallbacks: []string{"openai"},
+			DNSHost:                 "api.anthropic.com",
+			ThinkingToggleSupported: true,
 		},
 		{
 			ProviderID: "openai", DisplayName: "OpenAI", DeploymentID: "openai-direct", SortOrder: 15, ChatPreference: 1,
@@ -35,7 +36,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.openai.com/v1",
 			LiveFetcherKey: "openai", LiveCatalogKey: "openai",
 			ProtocolID: "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "openai",
-			DirectFallbacks: []string{"anthropic"},
+			DNSHost: "api.openai.com",
 		},
 		{
 			ProviderID: "gemini", DisplayName: "Gemini API", DeploymentID: "gemini-direct", SortOrder: 9, ChatPreference: 5,
@@ -46,14 +47,18 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:         ProbeGemini,
 			LiveFetcherKey:    "gemini", LiveCatalogKey: "gemini",
 			ProtocolID: "gemini-generate-content", AdapterID: "gemini", RuntimeProfileKey: "gemini",
+			DNSHost: "generativelanguage.googleapis.com",
 		},
 		{
 			ProviderID: "deepseek", DisplayName: "DeepSeek", DeploymentID: "deepseek-direct", SortOrder: 8, ChatPreference: 11,
 			RequiresKey: true, CredentialEnv: "DEEPSEEK_API_KEY",
 			BaseURLEnv: []string{"DEEPSEEK_BASE_URL"},
-			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.deepseek.com/v1",
+			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.deepseek.com",
 			LiveFetcherKey: "deepseek", LiveCatalogKey: "deepseek",
 			ProtocolID: "openai-chat-completions", AdapterID: "deepseek", RuntimeProfileKey: "deepseek",
+			DNSHost:                 "api.deepseek.com",
+			ThinkingToggleSupported: true,
+			DefaultThinkingDisabled: true,
 		},
 		{
 			ProviderID: "grok", DisplayName: "xAI", DeploymentID: "grok-direct", SortOrder: 21, ChatPreference: 4,
@@ -62,6 +67,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.x.ai/v1",
 			LiveFetcherKey: "grok", LiveCatalogKey: "grok",
 			ProtocolID: "openai-chat-completions", AdapterID: "grok", RuntimeProfileKey: "grok",
+			DNSHost: "api.x.ai",
 		},
 		{
 			ProviderID: "kimi", DisplayName: "Kimi", DeploymentID: "kimi-direct", SortOrder: 11, ChatPreference: 14,
@@ -70,6 +76,9 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.moonshot.ai/v1",
 			LiveFetcherKey: "kimi", LiveCatalogKey: "kimi",
 			ProtocolID: "openai-chat-completions", AdapterID: "kimi", RuntimeProfileKey: "kimi",
+			DNSHost:                 "api.moonshot.ai",
+			ThinkingToggleSupported: true,
+			DefaultThinkingDisabled: true,
 		},
 		{
 			ProviderID: "zai_coding", DisplayName: "Z.AI — Coding Plan", DeploymentID: "zai_coding-direct", SortOrder: 24, ChatPreference: 8,
@@ -78,7 +87,13 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.z.ai/api/coding/paas/v4",
 			LiveFetcherKey: "zai_coding", LiveCatalogKey: "zai_coding",
 			ProtocolID: "openai-chat-completions", AdapterID: "zai_coding", RuntimeProfileKey: "zai_coding",
-			PrepareCredentialEnv: true,
+			PrepareCredentialEnv:    true,
+			DNSHost:                 "api.z.ai",
+			ThinkingToggleSupported: true,
+			RegionOptions: []RegionOption{
+				{Value: "international", DisplayName: "International (api.z.ai)", Endpoint: "https://api.z.ai/api/coding/paas/v4"},
+				{Value: "cn", DisplayName: "China (open.bigmodel.cn)", Endpoint: "https://open.bigmodel.cn/api/coding/paas/v4"},
+			},
 		},
 		{
 			ProviderID: "zai_payg", DisplayName: "Z.AI — Pay-as-you-go", DeploymentID: "zai_payg-direct", SortOrder: 25, ChatPreference: 9,
@@ -87,7 +102,13 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.z.ai/api/paas/v4",
 			LiveFetcherKey: "zai_payg", LiveCatalogKey: "zai_payg",
 			ProtocolID: "openai-chat-completions", AdapterID: "zai_payg", RuntimeProfileKey: "zai_payg",
-			PrepareCredentialEnv: true,
+			PrepareCredentialEnv:    true,
+			DNSHost:                 "api.z.ai",
+			ThinkingToggleSupported: true,
+			RegionOptions: []RegionOption{
+				{Value: "international", DisplayName: "International (api.z.ai)", Endpoint: "https://api.z.ai/api/paas/v4"},
+				{Value: "cn", DisplayName: "China (open.bigmodel.cn)", Endpoint: "https://open.bigmodel.cn/api/paas/v4"},
+			},
 		},
 		{
 			ProviderID: "xiaomi_mimo_token_plan", DisplayName: "Xiaomi MiMo — Token Plan", DeploymentID: "xiaomi_mimo_token_plan-direct", SortOrder: 23, ChatPreference: 16,
@@ -96,16 +117,26 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "",
 			LiveFetcherKey: "xiaomi_mimo_token_plan", LiveCatalogKey: "xiaomi_mimo_token_plan",
 			ProtocolID: "openai-chat-completions", AdapterID: "xiaomi_mimo", RuntimeProfileKey: "xiaomi_mimo_token_plan",
-			PrepareCredentialEnv: true,
+			PrepareCredentialEnv:    true,
+			DNSHost:                 "api.xiaomimimo.com",
+			ThinkingToggleSupported: true,
+			DefaultThinkingDisabled: true,
+			RegionOptions: []RegionOption{
+				{Value: "cn", DisplayName: "China (cn)"},
+				{Value: "sgp", DisplayName: "Singapore (sgp)"},
+				{Value: "ams", DisplayName: "Amsterdam (ams)"},
+			},
 		},
 		{
 			ProviderID: "xiaomi_mimo_payg", DisplayName: "Xiaomi MiMo — Pay-as-you-go", DeploymentID: "xiaomi_mimo_payg-direct", SortOrder: 22, ChatPreference: 15,
 			RequiresKey: true, CredentialEnv: "XIAOMI_MIMO_PAYG_API_KEY",
-			CredentialAliases: []string{"XIAOMI_MIMO_API_KEY"},
-			BaseURLEnv:        []string{"XIAOMI_MIMO_PAYG_BASE_URL", "XIAOMI_BASE_URL"},
-			ProbeKind:         ProbeOpenAIModels, ProbeBaseURL: "https://api.xiaomimimo.com/v1",
+			BaseURLEnv: []string{"XIAOMI_MIMO_PAYG_BASE_URL", "XIAOMI_BASE_URL"},
+			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.xiaomimimo.com/v1",
 			LiveFetcherKey: "xiaomi_mimo_payg", LiveCatalogKey: "xiaomi_mimo_payg",
 			ProtocolID: "openai-chat-completions", AdapterID: "xiaomi_mimo", RuntimeProfileKey: "xiaomi_mimo_payg",
+			DNSHost:                 "api.xiaomimimo.com",
+			ThinkingToggleSupported: true,
+			DefaultThinkingDisabled: true,
 		},
 		{
 			ProviderID: "minimax_token_plan", DisplayName: "MiniMax — Token Plan", DeploymentID: "minimax_token_plan-direct", SortOrder: 14, ChatPreference: 17,
@@ -114,6 +145,9 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.minimax.io/v1",
 			LiveFetcherKey: "minimax_token_plan", LiveCatalogKey: "minimax_token_plan",
 			ProtocolID: "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "minimax_token_plan",
+			DNSHost:                 "api.minimax.io",
+			ThinkingToggleSupported: true,
+			DefaultThinkingDisabled: true,
 		},
 		{
 			ProviderID: "minimax_payg", DisplayName: "MiniMax — Pay-as-you-go", DeploymentID: "minimax_payg-direct", SortOrder: 13, ChatPreference: 18,
@@ -122,6 +156,9 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.minimax.io/v1",
 			LiveFetcherKey: "minimax_payg", LiveCatalogKey: "minimax_payg",
 			ProtocolID: "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "minimax_payg",
+			DNSHost:                 "api.minimax.io",
+			ThinkingToggleSupported: true,
+			DefaultThinkingDisabled: true,
 		},
 
 		// ── Cloud platform providers ──────────────────────────────────────
@@ -133,6 +170,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:      ProbeNone,
 			LiveFetcherKey: "azure", LiveCatalogKey: "azure",
 			ProtocolID: "openai-chat-completions", AdapterID: "openai-azure", RuntimeProfileKey: "azure",
+			DNSHost: "",
 		},
 		{
 			ProviderID: "bedrock", DisplayName: "Amazon Bedrock", DeploymentID: "anthropic-bedrock", SortOrder: 2, ChatPreference: 7,
@@ -143,6 +181,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:              ProbeNone,
 			LiveFetcherKey:         "bedrock", LiveCatalogKey: "bedrock",
 			ProtocolID: "anthropic-messages", AdapterID: "anthropic-bedrock", RuntimeProfileKey: "bedrock",
+			DNSHost: "",
 		},
 		{
 			ProviderID: "vertex", DisplayName: "Vertex AI", DeploymentID: "gemini-vertex", SortOrder: 20, ChatPreference: 6,
@@ -153,6 +192,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:              ProbeNone,
 			LiveFetcherKey:         "vertex", LiveCatalogKey: "vertex",
 			ProtocolID: "gemini-generate-content", AdapterID: "gemini-vertex", RuntimeProfileKey: "vertex",
+			DNSHost: "",
 		},
 
 		// ── Aggregators ───────────────────────────────────────────────────
@@ -163,6 +203,8 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://openrouter.ai/api/v1",
 			LiveFetcherKey: "openrouter", LiveCatalogKey: "openrouter",
 			ProtocolID: "openai-chat-completions", AdapterID: "openrouter", RuntimeProfileKey: "openrouter",
+			DNSHost:                 "openrouter.ai",
+			ThinkingToggleSupported: true,
 		},
 		{
 			ProviderID: "concentrate", DisplayName: "Concentrate AI (Pay-as-you-go)", DeploymentID: "concentrate-payg", SortOrder: 7, ChatPreference: 4,
@@ -172,6 +214,7 @@ func providerSpecs() []ProviderSpec {
 			LiveFetcherKey: "concentrate", LiveCatalogKey: "concentrate",
 			PublicModelCatalog: true,
 			ProtocolID:         "openai-responses", AdapterID: "concentrate-responses", RuntimeProfileKey: "concentrate",
+			DNSHost: "api.concentrate.ai",
 		},
 		{
 			ProviderID: "opengateway", DisplayName: "OpenGateway (Pay-as-you-go)", DeploymentID: "opengateway-payg", SortOrder: 27, ChatPreference: 28,
@@ -181,6 +224,7 @@ func providerSpecs() []ProviderSpec {
 			LiveFetcherKey: "opengateway", LiveCatalogKey: "opengateway",
 			PublicModelCatalog: true,
 			ProtocolID:         "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "opengateway",
+			DNSHost: "opengateway.gitlawb.com",
 		},
 		{
 			ProviderID: "stepfun", DisplayName: "StepFun", DeploymentID: "stepfun-direct", SortOrder: 26, ChatPreference: 27,
@@ -189,6 +233,11 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.stepfun.ai/v1",
 			LiveFetcherKey: "stepfun", LiveCatalogKey: "stepfun",
 			ProtocolID: "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "stepfun",
+			DNSHost: "api.stepfun.ai",
+			RegionOptions: []RegionOption{
+				{Value: "global", DisplayName: "Global (api.stepfun.ai)", Endpoint: "https://api.stepfun.ai/v1"},
+				{Value: "cn", DisplayName: "China (api.stepfun.com)", Endpoint: "https://api.stepfun.com/v1"},
+			},
 		},
 		{
 			ProviderID: "agnes", DisplayName: "Agnes AI", DeploymentID: "agnes-direct", SortOrder: 1, ChatPreference: 25,
@@ -197,6 +246,8 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://apihub.agnes-ai.com/v1",
 			LiveFetcherKey: "agnes", LiveCatalogKey: "agnes",
 			ProtocolID: "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "agnes",
+			DNSHost:                 "apihub.agnes-ai.com",
+			ThinkingToggleSupported: true,
 		},
 		{
 			ProviderID: "longcat", DisplayName: "LongCat", DeploymentID: "longcat-direct", SortOrder: 12, ChatPreference: 26,
@@ -205,6 +256,9 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.longcat.chat/openai/v1",
 			LiveFetcherKey: "longcat", LiveCatalogKey: "longcat",
 			ProtocolID: "openai-chat-completions", AdapterID: "openai", RuntimeProfileKey: "longcat",
+			DNSHost:                 "api.longcat.chat",
+			ThinkingToggleSupported: true,
+			DefaultThinkingDisabled: true,
 		},
 
 		// ── Niche ─────────────────────────────────────────────────────────
@@ -215,6 +269,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://inference.canopywave.io/v1",
 			LiveFetcherKey: "canopywave", LiveCatalogKey: "canopywave",
 			ProtocolID: "openai-chat-completions", AdapterID: "canopywave", RuntimeProfileKey: "canopywave",
+			DNSHost: "inference.canopywave.io",
 		},
 		{
 			ProviderID: "poolside", DisplayName: "Poolside", DeploymentID: "poolside", SortOrder: 19, ChatPreference: 20,
@@ -223,6 +278,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://inference.poolside.ai/v1",
 			LiveFetcherKey: "poolside", LiveCatalogKey: "poolside",
 			ProtocolID: "openai-chat-completions", AdapterID: "poolside", RuntimeProfileKey: "poolside",
+			DNSHost: "inference.poolside.ai",
 		},
 		{
 			ProviderID: "groq", DisplayName: "Groq", DeploymentID: "groq-direct", SortOrder: 10, ChatPreference: 21,
@@ -231,6 +287,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.groq.com/openai/v1",
 			LiveFetcherKey: "groq", LiveCatalogKey: "groq",
 			ProtocolID: "openai-chat-completions", AdapterID: "groq", RuntimeProfileKey: "groq",
+			DNSHost: "api.groq.com",
 		},
 		{
 			ProviderID: "clinepass", DisplayName: "ClinePass", DeploymentID: "clinepass", SortOrder: 6, ChatPreference: 22,
@@ -240,6 +297,7 @@ func providerSpecs() []ProviderSpec {
 			ProbeKind:      ProbeNone,
 			LiveFetcherKey: "clinepass", LiveCatalogKey: "clinepass",
 			ProtocolID: "openai-chat-completions", AdapterID: "clinepass", RuntimeProfileKey: "clinepass",
+			DNSHost: "api.cline.bot",
 		},
 		{
 			ProviderID: "opencodego", DisplayName: "OpenCode Go", DeploymentID: "opencodego", SortOrder: 16, ChatPreference: 13,
@@ -249,6 +307,8 @@ func providerSpecs() []ProviderSpec {
 			ProbeBaseURL:   opencodego.DefaultBaseURL,
 			LiveFetcherKey: "opencodego", LiveCatalogKey: "opencodego",
 			ProtocolID: "openai-chat-completions", AdapterID: "opencodego", RuntimeProfileKey: "opencodego",
+			DNSHost:                 "",
+			ThinkingToggleSupported: true,
 		},
 
 		// ── Local ─────────────────────────────────────────────────────────
@@ -267,6 +327,7 @@ func providerSpecs() []ProviderSpec {
 				RetryOnCodes: []int{500, 503},
 				AbortOnCodes: []int{400},
 			},
+			DNSHost: "localhost",
 		},
 	}
 }

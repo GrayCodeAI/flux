@@ -21,6 +21,13 @@ type RetryConfig struct {
 	AbortOnCodes      []int   `json:"abort_on_codes,omitempty"`
 }
 
+// RegionOption describes one selectable region for a regional gateway.
+type RegionOption struct {
+	Value       string
+	DisplayName string
+	Endpoint    string
+}
+
 // ProviderSpec is the single source of truth for setup providers.
 // Every registered provider discovers models via its live list API only (no remote bootstrap).
 type ProviderSpec struct {
@@ -42,7 +49,6 @@ type ProviderSpec struct {
 	ProtocolID             string
 	AdapterID              string
 	RuntimeProfileKey      string
-	DirectFallbacks        []string
 	PrepareCredentialEnv   bool
 	RetryConfig            *RetryConfig
 	IsLocal                bool
@@ -54,6 +60,17 @@ type ProviderSpec struct {
 	// describes a non-secret value, as with Ollama's base URL.
 	RuntimeBaseURL       string
 	RuntimeCredentialEnv string
+	// RegionOptions lists selectable regions for regional gateways.
+	// Populated at registration time; nil for non-regional providers.
+	RegionOptions []RegionOption
+	// DNSHost is the primary DNS hostname for connectivity preflight checks.
+	DNSHost string
+	// ThinkingToggleSupported indicates the provider's wire protocol honors
+	// the ThinkingEnabled toggle parameter.
+	ThinkingToggleSupported bool
+	// DefaultThinkingDisabled means the provider defaults thinking OFF when
+	// no explicit preference is set (e.g. longcat, kimi, deepseek).
+	DefaultThinkingDisabled bool
 }
 
 // EnvFallback describes one deployment env_fallback row.

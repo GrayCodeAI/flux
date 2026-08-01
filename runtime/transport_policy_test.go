@@ -62,7 +62,7 @@ func TestEffectiveSelection_InfersProviderFromModelOverride(t *testing.T) {
 	}
 }
 
-func TestResolveChatTransport_DirectOpenAIFallsBackToAnthropic(t *testing.T) {
+func TestResolveChatTransport_DirectOpenAISingleProvider(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
@@ -93,8 +93,8 @@ func TestResolveChatTransport_DirectOpenAIFallsBackToAnthropic(t *testing.T) {
 	if transport.Provider == nil {
 		t.Fatal("expected transport provider")
 	}
-	if got := transport.Provider.Name(); got != "fallback(openai->anthropic)" {
-		t.Fatalf("provider name = %q, want fallback(openai->anthropic)", got)
+	if got := transport.Provider.Name(); got != "openai" {
+		t.Fatalf("provider name = %q, want openai (no fallback chain)", got)
 	}
 	if transport.Selection.Provider != "openai" {
 		t.Fatalf("selection provider = %q, want openai", transport.Selection.Provider)

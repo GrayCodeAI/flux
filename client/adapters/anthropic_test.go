@@ -470,7 +470,7 @@ func TestResolveThinking(t *testing.T) {
 	}{
 		{"adaptive", "adaptive", 0, nil, &AnthropicThinking{Type: "adaptive"}},
 		{"disabled", "disabled", 0, nil, &AnthropicThinking{Type: "disabled"}},
-		{"enabled", "enabled", 1000, nil, &AnthropicThinking{Type: "enabled", BudgetTokens: 1000}},
+		{"enabled", "enabled", 1000, nil, &AnthropicThinking{Type: "adaptive"}},
 		{"budget_legacy", "", 500, nil, &AnthropicThinking{Type: "enabled", BudgetTokens: 500}},
 		{"unset", "", 0, nil, nil},
 		{"thinking_enabled_true", "", 0, &on, &AnthropicThinking{Type: "adaptive"}},

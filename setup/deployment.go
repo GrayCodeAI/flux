@@ -253,13 +253,13 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultGrokOpenAIBaseURL), &client.GrokCompat), true
+		return client.NewGrokClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultGrokOpenAIBaseURL), &client.GrokCompat), true
 	case "gemini-direct":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("GEMINI_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultGeminiOpenAIBaseURL), &client.GeminiCompat), true
+		return client.NewGeminiOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultGeminiOpenAIBaseURL), &client.GeminiCompat), true
 	case "gemini-vertex":
 		projectID := FirstNonEmpty(deployment.ProjectID, getenv("VERTEX_PROJECT_ID"))
 		region := FirstNonEmpty(deployment.Region, getenv("VERTEX_REGION"))
@@ -273,27 +273,26 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenRouterOpenAIBaseURL), &client.OpenRouterCompat), true
+		return client.NewOpenRouterClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenRouterOpenAIBaseURL), &client.OpenRouterCompat), true
 	case "canopywave":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CANOPYWAVE_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultCanopyWaveOpenAIBaseURL), &client.CanopyWaveCompat), true
+		return client.NewCanopyWaveClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultCanopyWaveOpenAIBaseURL), &client.CanopyWaveCompat), true
 	case "opengateway-payg":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("OPENGATEWAY_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenGatewayOpenAIBaseURL), &client.OpenGatewayCompat), true
+		return client.NewOpenGatewayClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenGatewayOpenAIBaseURL), &client.OpenGatewayCompat), true
 	case "deepseek-direct":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("DEEPSEEK_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		openBase := FirstNonEmpty(deployment.BaseURL, "https://api.deepseek.com/v1")
-		anthropicBase := "https://api.deepseek.com/anthropic"
-		return client.NewDeepSeekClient(apiKey, openBase, anthropicBase, &client.DeepSeekCompat), true
+		openBase := FirstNonEmpty(deployment.BaseURL, "https://api.deepseek.com")
+		return client.NewDeepSeekClient(apiKey, openBase, &client.DeepSeekCompat), true
 	case "poolside":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("POOLSIDE_API_KEY"))
 		if apiKey == "" {
@@ -305,20 +304,20 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultGroqOpenAIBaseURL), &client.GroqCompat), true
+		return client.NewGroqClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultGroqOpenAIBaseURL), &client.GroqCompat), true
 	case "clinepass":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CLINE_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultClinePassOpenAIBaseURL), &client.ClinePassCompat), true
+		return client.NewClinePassClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultClinePassOpenAIBaseURL), &client.ClinePassCompat), true
 	case "zai_payg-direct":
 		return newZAIDeploymentClient(deployment, "zai_payg", "ZAI_API_KEY", lookup, cfg)
 	case "zai_coding-direct":
 		return newZAIDeploymentClient(deployment, "zai_coding", "ZAI_CODING_API_KEY", lookup, cfg)
 	case "ollama-local":
 		baseURL := config.NormalizeOllamaOpenAIBaseURL(FirstNonEmpty(deployment.BaseURL, getenv("OLLAMA_BASE_URL"), config.OllamaDefaultBaseURL))
-		return client.NewOpenAIClient(FirstNonEmpty(deployment.APIKey, lookup("OLLAMA_API_KEY")), baseURL, &client.OllamaCompat), true
+		return client.NewOllamaClient(FirstNonEmpty(deployment.APIKey, lookup("OLLAMA_API_KEY")), baseURL, &client.OllamaCompat), true
 	case "opencodego":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("OPENCODEGO_API_KEY"))
 		if apiKey == "" {
@@ -330,7 +329,25 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 		if apiKey == "" {
 			return nil, false
 		}
-		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultKimiOpenAIBaseURL), &client.KimiCompat), true
+		return client.NewKimiClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultKimiOpenAIBaseURL), &client.KimiCompat), true
+	case "agnes-direct":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("AGNES_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewAgnesClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultAgnesOpenAIBaseURL), &client.AgnesCompat), true
+	case "longcat-direct":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("LONGCAT_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewLongCatClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultLongCatOpenAIBaseURL), config.DefaultLongCatAnthropicBaseURL, &client.LongCatCompat), true
+	case "stepfun-direct":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("STEP_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewStepFunClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultStepFunOpenAIBaseURL), &client.StepFunCompat), true
 	case "xiaomi_mimo_payg-direct":
 		return newMiMoDeploymentClient(deployment, config.ProviderXiaomiMimoPayg, "XIAOMI_MIMO_PAYG_API_KEY", lookup, cfg)
 	case "xiaomi_mimo_token_plan-direct":
@@ -340,13 +357,13 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 		if apiKey == "" {
 			return nil, false
 		}
-		return newMiniMaxDualProtocolClient(apiKey, deployment.BaseURL), true
+		return client.NewMiniMaxClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultMiniMaxOpenAIBaseURL), &client.MiniMaxCompat), true
 	case "minimax_payg-direct":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("MINIMAX_PAYG_API_KEY"))
 		if apiKey == "" {
 			return nil, false
 		}
-		return newMiniMaxDualProtocolClient(apiKey, deployment.BaseURL), true
+		return client.NewMiniMaxClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultMiniMaxOpenAIBaseURL), &client.MiniMaxCompat), true
 	case "concentrate-payg":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CONCENTRATE_API_KEY"))
 		if apiKey == "" {
@@ -374,8 +391,7 @@ func newMiMoDeploymentClient(deployment config.DeploymentConfig, providerID, env
 			openBase = override
 		}
 	}
-	anthropicBase, _ := config.ResolveXiaomiAnthropicBase(providerID, cfg)
-	return client.NewMiMoClient(apiKey, openBase, anthropicBase, &client.XiaomiCompat, providerID), true
+	return client.NewMiMoClient(apiKey, openBase, &client.XiaomiCompat, providerID), true
 }
 
 // newZAIDeploymentClient constructs a dual-protocol (OpenAI + Anthropic) Z.AI client
@@ -490,21 +506,6 @@ func FirstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
-}
-
-// newMiniMaxDualProtocolClient creates a FallbackProvider that tries OpenAI-compatible
-// endpoint first, then falls back to Anthropic-compatible endpoint. Both use the same API key.
-func newMiniMaxDualProtocolClient(apiKey, baseURL string) client.Provider {
-	openaiBase := FirstNonEmpty(baseURL, config.DefaultMiniMaxOpenAIBaseURL)
-	anthropicBase := config.DefaultMiniMaxAnthropicBaseURL
-	openaiClient := client.NewOpenAIClient(apiKey, openaiBase, &client.OpenAICompat)
-	anthropicClient := client.NewAnthropicClient(apiKey, anthropicBase)
-	fp, err := client.NewFallbackProvider(openaiClient, anthropicClient)
-	if err != nil {
-		// Cannot happen with two providers; return the primary as fallback.
-		return openaiClient
-	}
-	return fp
 }
 
 // CloneStringMap returns a shallow copy of m.

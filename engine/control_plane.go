@@ -10,6 +10,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
+	llm "github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 // ResolveCredential validates credential input and returns safe provider
@@ -72,6 +73,28 @@ func RegisteredGatewayCount() int {
 	return len(registry.CredentialRegistry())
 }
 
+// DefaultThinkingDisabled reports whether a provider defaults thinking OFF when unset.
+func (e *Engine) DefaultThinkingDisabled(providerID string) bool {
+	return DefaultThinkingDisabled(providerID)
+}
+
+// ThinkingToggleSupported reports whether a provider's wire protocol honors thinking toggles.
+func (e *Engine) ThinkingToggleSupported(providerID string) bool {
+	return ThinkingToggleSupported(providerID)
+}
+
+// DefaultThinkingDisabled reports whether a provider defaults thinking OFF when unset.
+func DefaultThinkingDisabled(providerID string) bool {
+	spec, ok := registry.SpecByProviderID(providerID)
+	return ok && spec.DefaultThinkingDisabled
+}
+
+// ThinkingToggleSupported reports whether a provider's wire protocol honors thinking toggles.
+func ThinkingToggleSupported(providerID string) bool {
+	spec, ok := registry.SpecByProviderID(providerID)
+	return ok && spec.ThinkingToggleSupported
+}
+
 // GatewayDefinitions returns pure registry/custom metadata in setup UI order.
 // It does not read credentials, provider state, or the model catalog.
 func (e *Engine) GatewayDefinitions() []Gateway {
@@ -79,12 +102,20 @@ func (e *Engine) GatewayDefinitions() []Gateway {
 	out := make([]Gateway, 0, len(specs)+len(e.customGateways))
 	for _, spec := range specs {
 		providerSpec, _ := registry.SpecByProviderID(spec.ProviderID)
-		out = append(out, Gateway{
+		gw := Gateway{
 			ID: spec.ProviderID, DisplayName: spec.DisplayName,
 			DeploymentID: spec.DeploymentID, CredentialEnv: spec.EnvVar,
 			RequiresKey: spec.RequiresKey, SortOrder: spec.SortOrder, ChatPreference: providerSpec.ChatPreference,
 			SupportsLiveDiscovery: strings.TrimSpace(providerSpec.LiveFetcherKey) != "",
-		})
+			DNSHost:               providerSpec.DNSHost,
+		}
+		if len(providerSpec.RegionOptions) > 0 {
+			gw.RegionOptions = make([]llm.GatewayRegionOption, len(providerSpec.RegionOptions))
+			for i, ro := range providerSpec.RegionOptions {
+				gw.RegionOptions[i] = llm.GatewayRegionOption{Value: ro.Value, DisplayName: ro.DisplayName, Endpoint: ro.Endpoint}
+			}
+		}
+		out = append(out, gw)
 	}
 	for _, gateway := range e.customGateways {
 		out = append(out, Gateway{

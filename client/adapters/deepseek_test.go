@@ -15,8 +15,8 @@ import (
 
 func TestNewDeepSeekClient_OpenAIOnly(t *testing.T) {
 	t.Parallel()
-	client := NewDeepSeekClient("ds-key", "https://api.deepseek.com/v1", "", &DeepSeekCompat)
-	if client == nil || client.router.OpenAI == nil {
+	client := NewDeepSeekClient("ds-key", "https://api.deepseek.com", &DeepSeekCompat)
+	if client == nil || client.openAI == nil {
 		t.Fatal("expected OpenAI client")
 	}
 	if client.Name() != "deepseek" {
@@ -38,7 +38,7 @@ func TestDeepSeekClient_ChatUsesOpenAIPath(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewDeepSeekClient("key", server.URL, "", &DeepSeekCompat, core.WithRetry(core.NewRetryConfig(0, 0, 0)))
+	client := NewDeepSeekClient("key", server.URL, &DeepSeekCompat, core.WithRetry(core.NewRetryConfig(0, 0, 0)))
 	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "deepseek-v4-flash", MaxTokens: 16})
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestDeepSeekClient_Ping(t *testing.T) {
 		_, _ = io.WriteString(w, `{"data":[]}`)
 	}))
 	defer server.Close()
-	client := NewDeepSeekClient("key", server.URL, "", &DeepSeekCompat, core.WithTimeout(2*time.Second))
+	client := NewDeepSeekClient("key", server.URL, &DeepSeekCompat, core.WithTimeout(2*time.Second))
 	if err := client.Ping(context.Background()); err != nil {
 		t.Fatal(err)
 	}

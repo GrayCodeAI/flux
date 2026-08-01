@@ -1,5 +1,5 @@
-github.com/GrayCodeAI/hawk-core-contracts v0.1.11 h1:qv6zIoi4InxYxAwgFZrmoberjvEBdB50nSKTd4qVyBE=
-github.com/GrayCodeAI/hawk-core-contracts v0.1.11/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
+github.com/GrayCodeAI/hawk-core-contracts v0.1.12 h1:percfsd771JLmO9gMkrQtENEPBA9ZN3dG1Nc1moN3ZQ=
+github.com/GrayCodeAI/hawk-core-contracts v0.1.12/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/danieljoos/wincred v1.2.3 h1:v7dZC2x32Ut3nEfRH+vhoZGvN72+dQ/snVXo/vMFLdQ=

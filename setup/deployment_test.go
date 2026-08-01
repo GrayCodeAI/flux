@@ -2,6 +2,7 @@ package setup
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
@@ -508,9 +509,9 @@ func TestProviderForDeployment_GrokDirect(t *testing.T) {
 	if !ok {
 		t.Fatal("expected grok-direct to be configured")
 	}
-	// Grok uses OpenAIClient which reports "openai" as its name.
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	// Grok uses a dedicated GrokClient.
+	if p.Name() != "grok" {
+		t.Fatalf("provider name = %q, want grok", p.Name())
 	}
 }
 
@@ -519,8 +520,11 @@ func TestProviderForDeployment_GeminiDirect(t *testing.T) {
 	if !ok {
 		t.Fatal("expected gemini-direct to be configured")
 	}
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	if _, ok := p.(*client.GeminiOpenAIClient); !ok {
+		t.Fatalf("provider type = %T, want *client.GeminiOpenAIClient", p)
+	}
+	if p.Name() != "gemini" {
+		t.Fatalf("provider name = %q, want gemini", p.Name())
 	}
 }
 
@@ -529,8 +533,8 @@ func TestProviderForDeployment_OpenRouter(t *testing.T) {
 	if !ok {
 		t.Fatal("expected openrouter to be configured")
 	}
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	if p.Name() != "openrouter" {
+		t.Fatalf("provider name = %q, want openrouter", p.Name())
 	}
 }
 
@@ -563,8 +567,8 @@ func TestProviderForDeployment_OpenGateway(t *testing.T) {
 	if !ok {
 		t.Fatal("expected opengateway-payg to be configured")
 	}
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	if p.Name() != "opengateway" {
+		t.Fatalf("provider name = %q, want opengateway", p.Name())
 	}
 }
 
@@ -581,8 +585,8 @@ func TestProviderForDeployment_CanopyWave(t *testing.T) {
 	if !ok {
 		t.Fatal("expected canopywave to be configured")
 	}
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	if p.Name() != "canopywave" {
+		t.Fatalf("provider name = %q, want canopywave", p.Name())
 	}
 }
 
@@ -611,9 +615,9 @@ func TestProviderForDeployment_OllamaLocal(t *testing.T) {
 	if !ok {
 		t.Fatal("expected ollama-local to always be configured (no key needed)")
 	}
-	// Ollama uses OpenAIClient which reports "openai" as its name.
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	// Ollama uses a dedicated OllamaClient.
+	if p.Name() != "ollama" {
+		t.Fatalf("provider name = %q, want ollama", p.Name())
 	}
 }
 
@@ -685,9 +689,46 @@ func TestProviderForDeployment_KimiDirect(t *testing.T) {
 	if !ok {
 		t.Fatal("expected kimi-direct to be configured")
 	}
-	// Kimi uses OpenAIClient which reports "openai" as its name.
-	if p.Name() != "openai" {
-		t.Fatalf("provider name = %q, want openai", p.Name())
+	// Kimi uses a dedicated KimiClient.
+	if p.Name() != "kimi" {
+		t.Fatalf("provider name = %q, want kimi", p.Name())
+	}
+}
+
+func TestProviderForDeployment_AgnesLongCatStepFunDirect(t *testing.T) {
+	tests := []struct {
+		deploymentID string
+		apiKey       string
+		wantName     string
+		wantType     any
+	}{
+		{"agnes-direct", "agnes-key", "agnes", (*client.AgnesClient)(nil)},
+		{"longcat-direct", "longcat-key", "longcat", (*client.LongCatClient)(nil)},
+		{"stepfun-direct", "stepfun-key", "stepfun", (*client.StepFunClient)(nil)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.deploymentID, func(t *testing.T) {
+			p, ok := ProviderForDeployment(tt.deploymentID, config.DeploymentConfig{APIKey: tt.apiKey})
+			if !ok {
+				t.Fatalf("expected %s to be configured", tt.deploymentID)
+			}
+			if p.Name() != tt.wantName {
+				t.Fatalf("provider name = %q, want %q", p.Name(), tt.wantName)
+			}
+			if reflect.TypeOf(p) != reflect.TypeOf(tt.wantType) {
+				t.Fatalf("provider type = %T, want %T", p, tt.wantType)
+			}
+		})
+	}
+}
+
+func TestProviderForDeployment_AgnesLongCatStepFunRequiresKey(t *testing.T) {
+	for _, deploymentID := range []string{"agnes-direct", "longcat-direct", "stepfun-direct"} {
+		t.Run(deploymentID, func(t *testing.T) {
+			if _, ok := ProviderForDeployment(deploymentID, config.DeploymentConfig{}); ok {
+				t.Fatalf("expected %s to be unavailable without key", deploymentID)
+			}
+		})
 	}
 }
 

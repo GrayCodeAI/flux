@@ -118,7 +118,7 @@ func snapshotFromCompiled(compiled *catalog.CompiledCatalog) CatalogSnapshot {
 			inputPrice = offering.Pricing.RatesPer1M["input_tokens"]
 			outputPrice = offering.Pricing.RatesPer1M["output_tokens"]
 		}
-		snapshot.Models = append(snapshot.Models, Model{
+		m := Model{
 			ID: id, CanonicalID: id, DisplayName: catalog.DisplayModelLabel(id, model.Name),
 			Description: model.Name,
 			Owner:       catalog.DisplayModelOwner(model.ProviderID, id), ProviderID: model.ProviderID,
@@ -128,7 +128,9 @@ func snapshotFromCompiled(compiled *catalog.CompiledCatalog) CatalogSnapshot {
 			PriceKnown:   modelPriceKnown(id, model.Name, inputPrice, outputPrice, model.ContextWindow),
 			Capabilities: capabilityNames(offering.Capabilities), Source: "catalog",
 			LiveMetadata: append([]byte(nil), offering.LiveMetadata...),
-		})
+		}
+		applyProviderThinkingDefaults(&m)
+		snapshot.Models = append(snapshot.Models, m)
 	}
 	if compiled.Catalog != nil && !compiled.Catalog.StaleAfter.IsZero() {
 		snapshot.Stale = time.Now().UTC().After(compiled.Catalog.StaleAfter)
@@ -185,14 +187,16 @@ func listPublicModels(ctx context.Context, providerID, catalogURL string) ([]Mod
 	out := make([]Model, 0, len(ids))
 	for _, id := range ids {
 		model := index[id]
-		out = append(out, Model{
+		m := Model{
 			ID: id, CanonicalID: id, DisplayName: model.Name, Description: model.Description,
 			Owner: "Xiaomi", ProviderID: "xiaomi", GatewayID: gatewayID,
 			ContextWindow: model.ContextLength, MaxOutputTokens: model.MaxOutputLength,
 			InputPricePer1M: model.InputPricePer1M, OutputPricePer1M: model.OutputPricePer1M,
 			PriceKnown: model.InputPricePer1M > 0 || model.OutputPricePer1M > 0,
 			Source:     "public", LiveMetadata: append([]byte(nil), model.Raw...),
-		})
+		}
+		applyProviderThinkingDefaults(&m)
+		out = append(out, m)
 	}
 	return out, nil
 }
@@ -222,4 +226,25 @@ func capabilityNames(caps catalog.CapabilitySet) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// applyProviderThinkingDefaults enriches a Model with thinking metadata
+// from the provider's registry spec. This lets hosts read Model fields
+// instead of maintaining hardcoded provider-name switches.
+func applyProviderThinkingDefaults(m *Model) {
+	providerID := NormalizeProviderID(m.ProviderID)
+	if providerID == "" {
+		providerID = NormalizeProviderID(m.GatewayID)
+	}
+	spec, ok := registry.SpecByProviderID(providerID)
+	if !ok {
+		return
+	}
+	if spec.ThinkingToggleSupported {
+		m.SupportsThinkingToggle = true
+	}
+	if spec.DefaultThinkingDisabled {
+		disabled := false
+		m.DefaultThinkingEnabled = &disabled
+	}
 }

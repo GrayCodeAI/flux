@@ -1,5 +1,9 @@
 package config
 
+import (
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
+)
+
 // BuildRoutingPolicyFromDeployments builds deployment routing from configured deployments.
 // Hawk should not author routing rules — consume this JSON from eyrie only.
 func BuildRoutingPolicyFromDeployments(deployments map[string]DeploymentConfig) *RoutingPolicy {
@@ -64,9 +68,6 @@ func openAIProviderStages(deployments map[string]DeploymentConfig) []RoutingStag
 	default:
 		return nil
 	}
-	if _, ok := deployments["openrouter"]; ok {
-		stages = append(stages, openRouterFallbackStage()...)
-	}
 	return stages
 }
 
@@ -92,9 +93,6 @@ func anthropicProviderStages(deployments map[string]DeploymentConfig) []RoutingS
 	if len(stages) == 0 {
 		return nil
 	}
-	if _, ok := deployments["openrouter"]; ok {
-		stages = append(stages, openRouterFallbackStage()...)
-	}
 	return stages
 }
 
@@ -117,11 +115,7 @@ func longcatProviderStages(deployments map[string]DeploymentConfig) []RoutingSta
 
 func googleProviderStages(deployments map[string]DeploymentConfig) []RoutingStage {
 	if _, ok := deployments["gemini-direct"]; ok {
-		stages := singleDeploymentStages("gemini-direct", 1)
-		if _, ok := deployments["openrouter"]; ok {
-			stages = append(stages, openRouterFallbackStage()...)
-		}
-		return stages
+		return singleDeploymentStages("gemini-direct", 1)
 	}
 	if _, ok := deployments["gemini-vertex"]; ok {
 		return singleDeploymentStages("gemini-vertex", 1)
@@ -136,13 +130,6 @@ func grokProviderStages(deployments map[string]DeploymentConfig) []RoutingStage 
 	return nil
 }
 
-func openRouterFallbackStage() []RoutingStage {
-	return []RoutingStage{{
-		Deployments: []DeploymentChoice{{DeploymentID: "openrouter", Weight: 100}},
-		Retries:     1,
-	}}
-}
-
 func deploymentOwnerProviderID(deploymentID string) string {
 	switch deploymentID {
 	case "anthropic-direct", "anthropic-bedrock", "anthropic-vertex":
@@ -153,35 +140,12 @@ func deploymentOwnerProviderID(deploymentID string) string {
 		return "google"
 	case "grok-direct":
 		return "xai"
-	case "longcat-direct":
-		return "longcat"
-	case "agnes-direct":
-		return "agnes"
-	case "openrouter":
-		return "openrouter"
-	case "canopywave":
-		return "canopywave"
-	case "poolside":
-		return "poolside"
-	case "groq-direct":
-		return "groq"
-	case "clinepass":
-		return "clinepass"
-	case "zai_payg-direct":
-		return "zai_payg"
-	case "zai_coding-direct":
-		return "zai_coding"
-	case "ollama-local":
-		return "ollama"
-	case "opencodego":
-		return "opencodego"
-	case "kimi-direct":
-		return "kimi"
 	case "xiaomi_mimo_payg-direct", "xiaomi_mimo-direct":
 		return "xiaomi_mimo_payg"
-	case "xiaomi_mimo_token_plan-direct":
-		return "xiaomi_mimo_token_plan"
 	default:
+		if spec, ok := registry.SpecByDeploymentID(deploymentID); ok {
+			return spec.ProviderID
+		}
 		return ""
 	}
 }

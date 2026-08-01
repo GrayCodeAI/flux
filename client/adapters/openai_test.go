@@ -494,8 +494,8 @@ func TestBuildRequestBase_OpenRouterReasoning(t *testing.T) {
 	reqOff := BuildRequestBase([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
 		Model: "openrouter/auto", MaxTokens: 256, ThinkingEnabled: &disabled,
 	}, false, &OpenRouterCompat)
-	if reqOff.Reasoning == nil || reqOff.Reasoning["effort"] != "none" {
-		t.Fatalf("OpenRouter off Reasoning = %v, want effort=none", reqOff.Reasoning)
+	if reqOff.Reasoning == nil || reqOff.Reasoning["enabled"] != false {
+		t.Fatalf("OpenRouter off Reasoning = %v, want enabled=false", reqOff.Reasoning)
 	}
 }
 

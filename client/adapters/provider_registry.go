@@ -90,7 +90,7 @@ func DetectProvider() string {
 		"opencodego": func() bool { return credentials.HasSecret(ctx, "OPENCODEGO_API_KEY") },
 		"kimi":       func() bool { return credentials.HasSecret(ctx, "MOONSHOT_API_KEY") },
 		"xiaomi_mimo_payg": func() bool {
-			return credentials.HasSecret(ctx, config.EnvXiaomiPaygAPIKey) || credentials.HasSecret(ctx, "XIAOMI_MIMO_API_KEY")
+			return credentials.HasSecret(ctx, config.EnvXiaomiPaygAPIKey)
 		},
 		"xiaomi_mimo_token_plan": func() bool {
 			return credentials.HasSecret(ctx, config.EnvXiaomiTokenPlanAPIKey)

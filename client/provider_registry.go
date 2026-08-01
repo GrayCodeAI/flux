@@ -142,11 +142,7 @@ func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error)
 			if err != nil {
 				return nil, err
 			}
-			anthropicBase, err := config.ResolveXiaomiAnthropicBase(providerName, providerCfg)
-			if err != nil {
-				return nil, err
-			}
-			p = adapters.NewMiMoClient(apiKey, openAIBase, anthropicBase, info.Compat, providerName)
+			p = adapters.NewMiMoClient(apiKey, openAIBase, info.Compat, providerName)
 			break
 		}
 		if providerName == "opencodego" {

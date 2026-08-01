@@ -793,7 +793,7 @@ func ApplyProviderEnv(provider string, config *ProviderConfig, activeModel strin
 		collectOpenAICompatibleProvider(env, "OPENGATEWAY", apiKey, m, base, overwrite)
 	case ProviderDeepSeek:
 		apiKey := AsNonEmptyString(config.DeepSeekAPIKey)
-		base := firstNonEmpty(config.DeepSeekBaseURL, "https://api.deepseek.com/v1")
+		base := firstNonEmpty(config.DeepSeekBaseURL, "https://api.deepseek.com")
 		m := activeModel
 		if m == "" {
 			m = catalog.GetProviderDefaultModel("deepseek", cat)

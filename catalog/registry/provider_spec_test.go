@@ -24,9 +24,6 @@ func TestProviderSpecs_AgnesOpenAIOnlyLongCatOpenAIPrimary(t *testing.T) {
 	if agnes.ProtocolID != "openai-chat-completions" || agnes.AdapterID != "openai" {
 		t.Fatalf("agnes protocol/adapter = %q/%q", agnes.ProtocolID, agnes.AdapterID)
 	}
-	if got := registry.DirectFallbackProviderIDs("agnes"); len(got) != 0 {
-		t.Fatalf("agnes DirectFallbacks = %v, want none", got)
-	}
 
 	// LongCat: official docs expose BOTH OpenAI (/openai) and Anthropic (/anthropic).
 	// Hawk uses the OpenAI primary only — Anthropic is not required when OpenAI works.
@@ -113,13 +110,6 @@ func TestProviderRuntimePolicy_Metadata(t *testing.T) {
 	}
 	if order[0] != "openai" || order[1] != "anthropic" || order[2] != "openrouter" {
 		t.Fatalf("unexpected runtime preference prefix: %v", order[:3])
-	}
-
-	if got := registry.DirectFallbackProviderIDs("openai"); len(got) != 1 || got[0] != "anthropic" {
-		t.Fatalf("openai direct fallbacks = %v, want [anthropic]", got)
-	}
-	if got := registry.DirectFallbackProviderIDs("anthropic"); len(got) != 1 || got[0] != "openai" {
-		t.Fatalf("anthropic direct fallbacks = %v, want [openai]", got)
 	}
 
 	if got := registry.CredentialAliases("anthropic"); len(got) != 1 || got[0] != "CLAUDE_API_KEY" {

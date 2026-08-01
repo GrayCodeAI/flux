@@ -17,7 +17,7 @@ import (
 //	minimax                                    → thinking={"type":"adaptive"|"disabled"}
 //	agnes                                      → chat_template_kwargs.enable_thinking
 //	qwen                                       → enable_thinking (top-level)
-//	openrouter                                 → reasoning={enabled|effort:"none"}
+//	openrouter                                 → reasoning={enabled: true|false}
 const (
 	ThinkingFormatNone       = ""
 	ThinkingFormatZAI        = "zai"

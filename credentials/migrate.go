@@ -26,14 +26,12 @@ func markEnvFileMigrationDone() {
 
 // MigrateEnvFileCredentials imports API keys from plaintext credential files
 // (~/.hawk/env, ~/.hawk/.env) into the OS secret store and removes them.
-// It also copies deprecated keychain account names (e.g. xiaomi_mimo_api_key → payg).
 func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if envFileMigrationDone() {
-		n, _ := MigrateKeychainAccountAliases(ctx)
-		return n, nil
+		return 0, nil
 	}
 	total := 0
 	for _, path := range []string{hawkEnvPath(), hawkDotEnvPath()} {
@@ -43,45 +41,8 @@ func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
 		}
 		total += n
 	}
-	n, err := MigrateKeychainAccountAliases(ctx)
-	if err != nil {
-		return total, err
-	}
-	total += n
 	markEnvFileMigrationDone()
 	return total, nil
-}
-
-var keychainAccountAliases = []struct{ from, to string }{
-	{"xiaomi_mimo_api_key", "xiaomi_mimo_payg_api_key"},
-}
-
-// MigrateKeychainAccountAliases copies secrets from deprecated keychain
-// accounts to their canonical account when the canonical one is empty.
-func MigrateKeychainAccountAliases(ctx context.Context) (int, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	cs, ok := DefaultStore().(*CombinedStore)
-	if !ok || cs.Keychain == nil {
-		return 0, nil
-	}
-	migrated := 0
-	for _, pair := range keychainAccountAliases {
-		existing, err := cs.Keychain.Get(ctx, pair.to)
-		if err == nil && strings.TrimSpace(existing) != "" {
-			continue
-		}
-		secret, err := cs.Keychain.Get(ctx, pair.from)
-		if err != nil || strings.TrimSpace(secret) == "" {
-			continue
-		}
-		if err := cs.Keychain.Set(ctx, pair.to, strings.TrimSpace(secret)); err != nil {
-			continue
-		}
-		migrated++
-	}
-	return migrated, nil
 }
 
 func migrateEnvFileAt(ctx context.Context, path string) (int, error) {

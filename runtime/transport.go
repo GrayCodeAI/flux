@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	"github.com/GrayCodeAI/eyrie/client"
 )
 
@@ -59,35 +58,10 @@ func resolveChatTransportSelection(ctx context.Context, selection SelectionState
 	return transport, nil
 }
 
-func directChatProvider(ctx context.Context, primary string) client.Provider {
+func directChatProvider(_ context.Context, primary string) client.Provider {
 	primary = NormalizeProviderID(primary)
 	if primary == "" {
 		return nil
 	}
-	providers := []client.Provider{
-		client.NewLazyProvider(&client.EyrieConfig{Provider: primary}),
-	}
-	for _, providerID := range directFallbackProviderIDs(ctx, primary) {
-		providers = append(providers, client.NewLazyProvider(&client.EyrieConfig{Provider: providerID}))
-	}
-	if len(providers) == 1 {
-		return providers[0]
-	}
-	fp, err := client.NewFallbackProvider(providers...)
-	if err != nil {
-		// Cannot happen: providers has at least 2 elements here.
-		return providers[0]
-	}
-	return fp
-}
-
-func directFallbackProviderIDs(ctx context.Context, primary string) []string {
-	primary = NormalizeProviderID(primary)
-	var out []string
-	for _, providerID := range registry.DirectFallbackProviderIDs(primary) {
-		if providerConfigured(ctx, providerID) {
-			out = append(out, providerID)
-		}
-	}
-	return out
+	return client.NewLazyProvider(&client.EyrieConfig{Provider: primary})
 }

@@ -244,11 +244,13 @@ func (e *Engine) customGatewayForModel(modelID string) (CustomGateway, bool) {
 }
 
 func customGatewayModel(gateway CustomGateway) Model {
-	return Model{
+	m := Model{
 		ID: gateway.DefaultModel, CanonicalID: gateway.DefaultModel, DisplayName: gateway.DefaultModel,
 		Owner: gateway.DisplayName, ProviderID: gateway.ID, GatewayID: gateway.ID,
 		ContextWindow: gateway.ContextWindow, Capabilities: customGatewayCapabilityNames(gateway), Source: "custom",
 	}
+	applyProviderThinkingDefaults(&m)
+	return m
 }
 
 func catalogTier(class ModelClass) catalog.ModelTier {

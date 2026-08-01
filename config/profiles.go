@@ -145,7 +145,7 @@ var (
 		APIKeys:      []APIKeyDef{{Env: "CANOPYWAVE_API_KEY", Source: "canopywave"}, {Env: "OPENAI_API_KEY", Source: "openai"}},
 	}
 	DeepSeekRuntimeProfile = RuntimeProviderProfile{
-		Mode: "openai", DefaultBaseURL: "https://api.deepseek.com/v1",
+		Mode: "openai", DefaultBaseURL: "https://api.deepseek.com",
 		DetectionEnv: []string{"DEEPSEEK_API_KEY"},
 		ModelEnv:     []string{"DEEPSEEK_MODEL", "OPENAI_MODEL"},
 		BaseURLEnv:   []string{"DEEPSEEK_BASE_URL"},

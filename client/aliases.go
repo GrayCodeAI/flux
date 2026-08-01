@@ -229,7 +229,6 @@ var (
 	emit             = core.Emit
 	parseImageString = core.ParseImageString
 	applyGuardrails  = core.ApplyGuardrails
-	isRetriableError = core.IsRetriableError
 )
 
 // NewStreamResult creates a StreamResult with a cancel function for resource
@@ -262,6 +261,8 @@ type (
 	OpenAIClient = adapters.OpenAIClient
 	// GeminiClient implements Provider for the Google Gemini API.
 	GeminiClient = adapters.GeminiClient
+	// GeminiOpenAIClient implements Provider for the OpenAI-compatible Gemini endpoint.
+	GeminiOpenAIClient = adapters.GeminiOpenAIClient
 	// AzureClient implements Provider for the Azure OpenAI API.
 	AzureClient = adapters.AzureClient
 	// BedrockClient implements Provider for the AWS Bedrock API.
@@ -274,6 +275,30 @@ type (
 	ZAIClient = adapters.ZAIClient
 	// MiMoClient implements Provider for the Xiaomi MiMo API.
 	MiMoClient = adapters.MiMoClient
+	// AgnesClient implements Provider for the Agnes AI API.
+	AgnesClient = adapters.AgnesClient
+	// StepFunClient implements Provider for the StepFun API.
+	StepFunClient = adapters.StepFunClient
+	// LongCatClient implements Provider for the LongCat API.
+	LongCatClient = adapters.LongCatClient
+	// GrokClient implements Provider for the xAI (Grok) API.
+	GrokClient = adapters.GrokClient
+	// OpenRouterClient implements Provider for the OpenRouter API.
+	OpenRouterClient = adapters.OpenRouterClient
+	// CanopyWaveClient implements Provider for the CanopyWave API.
+	CanopyWaveClient = adapters.CanopyWaveClient
+	// OpenGatewayClient implements Provider for the OpenGateway API.
+	OpenGatewayClient = adapters.OpenGatewayClient
+	// GroqClient implements Provider for the Groq API.
+	GroqClient = adapters.GroqClient
+	// ClinePassClient implements Provider for the ClinePass API.
+	ClinePassClient = adapters.ClinePassClient
+	// OllamaClient implements Provider for the Ollama API.
+	OllamaClient = adapters.OllamaClient
+	// KimiClient implements Provider for the Kimi (Moonshot) API.
+	KimiClient = adapters.KimiClient
+	// MiniMaxClient implements Provider for the MiniMax API.
+	MiniMaxClient = adapters.MiniMaxClient
 	// ConcentrateResponsesClient implements Provider for the Concentrate Responses API.
 	ConcentrateResponsesClient = adapters.ConcentrateResponsesClient
 	// OpenCodeGoClient implements Provider for the OpenCode Go API.
@@ -311,6 +336,10 @@ func NewGeminiClient(apiKey, baseURL string) *GeminiClient {
 	return adapters.NewGeminiClient(apiKey, baseURL)
 }
 
+func NewGeminiOpenAIClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *GeminiOpenAIClient {
+	return adapters.NewGeminiOpenAIClient(apiKey, openAIBase, compat, opts...)
+}
+
 func NewAzureClient(apiKey, endpoint, apiVersion string) *AzureClient {
 	return adapters.NewAzureClient(apiKey, endpoint, apiVersion)
 }
@@ -323,16 +352,64 @@ func NewVertexClient(projectID, region, token string) *VertexClient {
 	return adapters.NewVertexClient(projectID, region, token)
 }
 
-func NewDeepSeekClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, opts ...ClientOption) *DeepSeekClient {
-	return adapters.NewDeepSeekClient(apiKey, openAIBase, anthropicBase, compat, opts...)
+func NewDeepSeekClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *DeepSeekClient {
+	return adapters.NewDeepSeekClient(apiKey, openAIBase, compat, opts...)
 }
 
 func NewZAIClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *ZAIClient {
 	return adapters.NewZAIClient(apiKey, openAIBase, anthropicBase, compat, providerID, opts...)
 }
 
-func NewMiMoClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *MiMoClient {
-	return adapters.NewMiMoClient(apiKey, openAIBase, anthropicBase, compat, providerID, opts...)
+func NewMiMoClient(apiKey, openAIBase string, compat *OpenAICompatConfig, providerID string, opts ...ClientOption) *MiMoClient {
+	return adapters.NewMiMoClient(apiKey, openAIBase, compat, providerID, opts...)
+}
+
+func NewAgnesClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *AgnesClient {
+	return adapters.NewAgnesClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewStepFunClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *StepFunClient {
+	return adapters.NewStepFunClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewLongCatClient(apiKey, openAIBase, anthropicBase string, compat *OpenAICompatConfig, opts ...ClientOption) *LongCatClient {
+	return adapters.NewLongCatClient(apiKey, openAIBase, anthropicBase, compat, opts...)
+}
+
+func NewGrokClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *GrokClient {
+	return adapters.NewGrokClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewOpenRouterClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *OpenRouterClient {
+	return adapters.NewOpenRouterClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewCanopyWaveClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *CanopyWaveClient {
+	return adapters.NewCanopyWaveClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewOpenGatewayClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *OpenGatewayClient {
+	return adapters.NewOpenGatewayClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewGroqClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *GroqClient {
+	return adapters.NewGroqClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewClinePassClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *ClinePassClient {
+	return adapters.NewClinePassClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewOllamaClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *OllamaClient {
+	return adapters.NewOllamaClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewKimiClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *KimiClient {
+	return adapters.NewKimiClient(apiKey, openAIBase, compat, opts...)
+}
+
+func NewMiniMaxClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts ...ClientOption) *MiniMaxClient {
+	return adapters.NewMiniMaxClient(apiKey, openAIBase, compat, opts...)
 }
 
 func NewConcentrateResponsesClient(apiKey, baseURL string, opts ...ClientOption) *ConcentrateResponsesClient {
@@ -386,8 +463,6 @@ var (
 	dynamicProviderEnvVar       = adapters.DynamicProviderEnvVar
 	geminiSharedParserEnvVar    = adapters.GeminiSharedParserEnvVar
 	processGeminiStream         = adapters.ProcessGeminiStream
-	mimoRetryableChatError      = adapters.MimoRetryableChatError
-	mimoFallbackChatError       = adapters.MimoFallbackChatError
 	oaCompatUnsupportedError    = adapters.OACompatUnsupportedError
 	CoreProviders               = adapters.CoreProviders
 	OpenAICompatibleProviders   = adapters.OpenAICompatibleProviders

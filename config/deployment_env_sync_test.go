@@ -14,8 +14,8 @@ func TestBuildRoutingPolicyFromDeployments_OpenAI(t *testing.T) {
 		"openrouter":    {APIKey: "or-test"},
 	}
 	policy := BuildRoutingPolicyFromDeployments(deployments)
-	if len(policy.Providers["openai"]) < 2 {
-		t.Fatalf("expected openai stages with openrouter fallback, got %+v", policy.Providers["openai"])
+	if len(policy.Providers["openai"]) != 1 {
+		t.Fatalf("expected single weighted openai stage, got %+v", policy.Providers["openai"])
 	}
 	primary := policy.Providers["openai"][0]
 	if len(primary.Deployments) != 2 {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/GrayCodeAI/eyrie/client/core"
 	"github.com/GrayCodeAI/hawk-core-contracts/llm"
@@ -206,8 +207,10 @@ func openAIToolChoice(tc *core.ToolChoiceOption) interface{} {
 
 // buildRequestBase builds an OpenAI-compatible request body.
 // When compat is non-nil, MaxTokensField and SupportsUsageInStreaming overrides are applied.
-// core.EyrieMessage.Thinking (reasoning_content from prior responses) is never forwarded into
-// the wire format — providers like DeepSeek return HTTP 400 if it appears in input messages.
+// For providers with RequiresReasoningPassback set, the reasoning_content captured from
+// a prior assistant turn (core.EyrieMessage.Thinking) is forwarded back into assistant
+// messages. DeepSeek requires this whenever that turn performed a tool call, otherwise
+// it returns HTTP 400. For all other providers reasoning_content is not transmitted.
 func buildRequestBase(messages []core.EyrieMessage, opts core.ChatOptions, stream bool, compat *OpenAICompatConfig) openaiRequest {
 	var msgs []map[string]interface{}
 	for _, m := range messages {
@@ -226,6 +229,12 @@ func buildRequestBase(messages []core.EyrieMessage, opts core.ChatOptions, strea
 			continue
 		}
 		msg := map[string]interface{}{"role": m.Role, "content": m.Content}
+		// Forward the prior assistant turn's reasoning_content back to providers
+		// that require it (DeepSeek tool-call round-trips), as an assistant field.
+		if compat != nil && compat.RequiresReasoningPassback &&
+			m.Role == "assistant" && strings.TrimSpace(m.Thinking) != "" {
+			msg["reasoning_content"] = m.Thinking
+		}
 		// Handle ContentParts (multi-modal): takes precedence over Content/Images
 		if len(m.ContentParts) > 0 {
 			content := make([]map[string]interface{}, 0, len(m.ContentParts))
@@ -449,14 +458,11 @@ func buildRequestBase(messages []core.EyrieMessage, opts core.ChatOptions, strea
 				v := *thinkingEnabled
 				req.EnableThinking = &v
 			case "openrouter":
-				// OpenRouter unified reasoning object
-				// (https://openrouter.ai/docs/guides/best-practices/reasoning-tokens).
-				if *thinkingEnabled {
-					req.Reasoning = map[string]interface{}{"enabled": true}
-				} else {
-					// effort "none" is the documented OpenAI-style disable.
-					req.Reasoning = map[string]interface{}{"effort": "none"}
-				}
+				// OpenRouter unified reasoning object. On/off is controlled with the
+				// boolean "enabled" field; the docs warn NOT to send effort:"none"
+				// to disable because models with mandatory reasoning reject it.
+				// (https://openrouter.ai/docs/guides/best-practices/reasoning-tokens)
+				req.Reasoning = map[string]interface{}{"enabled": *thinkingEnabled}
 			}
 		}
 	}

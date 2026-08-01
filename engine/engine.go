@@ -305,7 +305,7 @@ func modelsFromCatalogEntries(compiled *catalog.CompiledCatalog, requestedProvid
 		if metadataMarksLive && len(entry.LiveMetadata) > 0 {
 			source = "live"
 		}
-		out = append(out, Model{
+		m := Model{
 			ID: entry.ID, CanonicalID: canonicalID, DisplayName: entry.DisplayName, Description: entry.Description,
 			Owner: entry.Owner, ProviderID: owner, GatewayID: gatewayID,
 			ContextWindow: entry.ContextWindow, MaxOutputTokens: entry.MaxOutput,
@@ -313,7 +313,9 @@ func modelsFromCatalogEntries(compiled *catalog.CompiledCatalog, requestedProvid
 			PriceKnown:   modelPriceKnown(entry.ID, entry.DisplayName, entry.InputPricePer1M, entry.OutputPricePer1M, entry.ContextWindow),
 			Capabilities: capabilities, Source: source,
 			LiveMetadata: append([]byte(nil), entry.LiveMetadata...),
-		})
+		}
+		applyProviderThinkingDefaults(&m)
+		out = append(out, m)
 	}
 	return out
 }

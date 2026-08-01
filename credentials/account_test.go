@@ -72,7 +72,7 @@ func TestAccountForEnv_EnvForAccount_RoundTrip(t *testing.T) {
 	canonical := []string{
 		"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY",
 		"GEMINI_API_KEY", "ZAI_API_KEY", "CANOPYWAVE_API_KEY",
-		"OPENCODEGO_API_KEY", "XAI_API_KEY", "MOONSHOT_API_KEY", "XIAOMI_MIMO_API_KEY", "OLLAMA_BASE_URL",
+		"OPENCODEGO_API_KEY", "XAI_API_KEY", "MOONSHOT_API_KEY", "OLLAMA_BASE_URL",
 	}
 	for _, envKey := range canonical {
 		t.Run(envKey, func(t *testing.T) {

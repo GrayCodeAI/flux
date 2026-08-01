@@ -134,6 +134,12 @@ func (e *Engine) GatewayRegion(providerID string) (label string, required bool) 
 
 func gatewayRegionFromConfig(providerID string, cfg *config.ProviderConfig) (label string, required bool) {
 	providerID = NormalizeProviderID(providerID)
+	// Check registry: any provider with RegionOptions is regional.
+	spec, hasSpec := registry.SpecByProviderID(providerID)
+	if !hasSpec || len(spec.RegionOptions) == 0 {
+		return "", false
+	}
+	// Provider is regional. Delegate to provider-specific config readers.
 	switch providerID {
 	case runtime.GatewayXiaomiTokenPlan:
 		if cfg == nil {
@@ -147,8 +153,16 @@ func gatewayRegionFromConfig(providerID string, cfg *config.ProviderConfig) (lab
 		}
 		region, err := zai.NormalizeRegion(cfg.ZAICodingRegion)
 		return string(region), err != nil
+	case "zai_payg":
+		if cfg == nil {
+			return "", true
+		}
+		region, err := zai.NormalizeRegion(cfg.ZAIRegion)
+		return string(region), err != nil
 	default:
-		return "", false
+		// Future regional providers: default to required with no label when
+		// no config reader exists yet.
+		return "", true
 	}
 }
 

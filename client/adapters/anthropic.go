@@ -166,11 +166,13 @@ func resolveThinking(opts core.ChatOptions) *anthropicThinking {
 	case "disabled":
 		return thinkingDisabled()
 	case "enabled":
-		thinking := thinkingForBudget(opts.ThinkingBudgetTokens)
-		if thinking != nil && opts.ThinkingDisplay != "" {
-			thinking.Display = opts.ThinkingDisplay
-		}
-		return thinking
+		// The legacy type:"enabled" with a fixed budget_tokens is deprecated on
+		// Claude 4.6 and rejected on Claude 4.7+ (docs recommend migrating to
+		// adaptive). Use adaptive so an explicit "enabled" request stays
+		// compatible across model generations while keeping thinking on. A
+		// caller-provided fixed budget is still honored via the legacy no-mode
+		// path below (thinkingForBudget).
+		return thinkingAdaptive()
 	default:
 		// Legacy behavior: ThinkingEnabled toggle wins, else budget > 0 enables with budget.
 		if opts.ThinkingEnabled != nil {
@@ -179,7 +181,11 @@ func resolveThinking(opts core.ChatOptions) *anthropicThinking {
 			}
 			return thinkingDisabled()
 		}
-		return thinkingForBudget(opts.ThinkingBudgetTokens)
+		thinking := thinkingForBudget(opts.ThinkingBudgetTokens)
+		if thinking != nil && opts.ThinkingDisplay != "" {
+			thinking.Display = opts.ThinkingDisplay
+		}
+		return thinking
 	}
 }
 

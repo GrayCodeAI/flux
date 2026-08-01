@@ -220,39 +220,6 @@ func TestAnthropicToolCallParsing(t *testing.T) {
 	}
 }
 
-func TestFallbackProviderIntegration(t *testing.T) {
-	t.Parallel()
-	// First provider always fails
-	failServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(500)
-		fmt.Fprint(w, `{"error":{"type":"server_error","message":"down"}}`)
-	}))
-	defer failServer.Close()
-
-	// Second provider succeeds
-	okServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"id": "msg_ok", "content": []map[string]interface{}{{"type": "text", "text": "from fallback"}},
-			"stop_reason": "end_turn", "usage": map[string]int{"input_tokens": 1, "output_tokens": 1},
-		})
-	}))
-	defer okServer.Close()
-
-	primary := NewAnthropicClient("key1", failServer.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	secondary := NewAnthropicClient("key2", okServer.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	fb, _ := NewFallbackProvider(primary, secondary)
-
-	resp, err := fb.Chat(context.Background(), []EyrieMessage{
-		{Role: "user", Content: "Hi"},
-	}, ChatOptions{Model: "claude-sonnet-4-6"})
-	if err != nil {
-		t.Fatalf("expected fallback to succeed, got: %v", err)
-	}
-	if resp.Content != "from fallback" {
-		t.Errorf("expected 'from fallback', got %s", resp.Content)
-	}
-}
-
 func TestStreamParsingEdgeCases(t *testing.T) {
 	t.Parallel()
 	t.Run("empty events ignored", func(t *testing.T) {

@@ -113,7 +113,6 @@ func TestCredentialAliasesDriveStatusDiscoveryAndRemoval(t *testing.T) {
 	}{
 		{provider: "anthropic", primary: "ANTHROPIC_API_KEY", alias: "CLAUDE_API_KEY"},
 		{provider: "gemini", primary: "GEMINI_API_KEY", alias: "GOOGLE_API_KEY"},
-		{provider: "xiaomi_mimo_payg", primary: "XIAOMI_MIMO_PAYG_API_KEY", alias: "XIAOMI_MIMO_API_KEY"},
 	} {
 		t.Run(test.provider, func(t *testing.T) {
 			dir := t.TempDir()

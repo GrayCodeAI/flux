@@ -52,7 +52,7 @@ const (
 type FetchFunc func(env map[string]string) ([]Entry, error)
 
 const (
-	DefaultDeepSeekBaseURL  = "https://api.deepseek.com/v1"
+	DefaultDeepSeekBaseURL  = "https://api.deepseek.com"
 	DefaultPoolsideBaseURL  = "https://inference.poolside.ai/v1"
 	DefaultGroqBaseURL      = "https://api.groq.com/openai/v1"
 	DefaultClinePassBaseURL = "https://api.cline.bot/api/v1" // #nosec G101 -- public API base URL, not a secret value

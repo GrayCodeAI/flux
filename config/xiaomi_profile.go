@@ -1,8 +1,6 @@
 package config
 
 import (
-	"strings"
-
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 )
 
@@ -43,16 +41,6 @@ func ResolveXiaomiOpenAIBase(providerID string, cfg *ProviderConfig) (string, er
 		}
 	}
 	return xiaomi.ResolveOpenAIBasePreferRegion(billing, region, override)
-}
-
-// ResolveXiaomiAnthropicBase resolves the Anthropic-compat base for a MiMo gateway id.
-func ResolveXiaomiAnthropicBase(providerID string, cfg *ProviderConfig) (string, error) {
-	openAIBase, err := ResolveXiaomiOpenAIBase(providerID, cfg)
-	if err != nil {
-		return "", err
-	}
-	// Anthropic base strips the /v1 suffix; same host, different protocol path.
-	return strings.TrimSuffix(strings.TrimRight(openAIBase, "/"), "/v1"), nil
 }
 
 // IsXiaomiMimoProvider reports whether id is a MiMo setup gateway (payg or token plan).

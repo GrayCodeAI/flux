@@ -516,8 +516,10 @@ func TestResolveThinking_Modes(t *testing.T) {
 	}{
 		{"adaptive", ChatOptions{ThinkingMode: "adaptive"}, "adaptive", false},
 		{"disabled", ChatOptions{ThinkingMode: "disabled"}, "disabled", false},
-		{"enabled with budget", ChatOptions{ThinkingMode: "enabled", ThinkingBudgetTokens: 10000}, "enabled", false},
-		{"enabled zero budget", ChatOptions{ThinkingMode: "enabled"}, "", true},
+		// Explicit "enabled" maps to adaptive (type:enabled+budget_tokens is
+		// deprecated on Claude 4.6 and rejected on 4.7+).
+		{"enabled with budget", ChatOptions{ThinkingMode: "enabled", ThinkingBudgetTokens: 10000}, "adaptive", false},
+		{"enabled zero budget", ChatOptions{ThinkingMode: "enabled"}, "adaptive", false},
 		{"legacy budget", ChatOptions{ThinkingBudgetTokens: 5000}, "enabled", false},
 		{"legacy zero", ChatOptions{}, "", true},
 	}
@@ -542,9 +544,11 @@ func TestResolveThinking_Modes(t *testing.T) {
 
 func TestResolveThinking_Display(t *testing.T) {
 	t.Parallel()
-	got := resolveThinking(ChatOptions{ThinkingMode: "enabled", ThinkingBudgetTokens: 5000, ThinkingDisplay: "omitted"})
-	if got == nil || got.Display != "omitted" {
-		t.Fatalf("expected display=omitted, got %+v", got)
+	// Display is honored on the legacy fixed-budget path (type:enabled with
+	// budget_tokens), which is the only path still carrying a fixed budget.
+	got := resolveThinking(ChatOptions{ThinkingBudgetTokens: 5000, ThinkingDisplay: "omitted"})
+	if got == nil || got.Type != "enabled" || got.Display != "omitted" {
+		t.Fatalf("expected enabled with display=omitted, got %+v", got)
 	}
 }
 
