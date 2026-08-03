@@ -181,3 +181,43 @@ func TestParseBraceMatch_NoJSONInText(t *testing.T) {
 		t.Errorf("clean = %q, want original text", clean)
 	}
 }
+
+func TestParseBraceMatch_JSONExampleInProseNotExecuted(t *testing.T) {
+	t.Parallel()
+	// A tool-call-shaped JSON snippet embedded mid-sentence as an example
+	// must NOT be executed as a tool call (false-positive guard).
+	text := `The user asked me to look up data. {"name":"search","arguments":{"q":"x"}} is the format I would use.`
+	clean, calls := ParseInlineToolCalls(text)
+	if len(calls) != 0 {
+		t.Errorf("expected 0 calls for JSON example in prose, got %d: %+v", len(calls), calls)
+	}
+	if clean != text {
+		t.Errorf("clean = %q, want original text verbatim", clean)
+	}
+}
+
+func TestParseBraceMatch_FencedJSONExampleNotExecuted(t *testing.T) {
+	t.Parallel()
+	// A JSON example inside a code fence must not be executed.
+	text := "Call tools like this:\n```json\n{\"name\":\"Bash\",\"arguments\":{\"command\":\"ls\"}}\n```"
+	clean, calls := ParseInlineToolCalls(text)
+	if len(calls) != 0 {
+		t.Errorf("expected 0 calls for fenced JSON example, got %d: %+v", len(calls), calls)
+	}
+	if clean != text {
+		t.Errorf("clean = %q, want original text verbatim", clean)
+	}
+}
+
+func TestParseBraceMatch_TrailingWhitespaceStillParsed(t *testing.T) {
+	t.Parallel()
+	// A bare JSON call with trailing whitespace/newlines is a real call.
+	text := "{\"name\":\"search\",\"arguments\":{\"q\":\"golang\"}}\n\n"
+	clean, calls := ParseInlineToolCalls(text)
+	if len(calls) != 1 || calls[0].Name != "search" {
+		t.Fatalf("expected 1 call named search, got %+v", calls)
+	}
+	if clean != "" {
+		t.Errorf("clean = %q, want empty", clean)
+	}
+}

@@ -769,6 +769,14 @@ func parseBraceMatchToolCall(text string) (cleanText string, toolCalls []ToolCal
 	if end <= start {
 		return text, nil
 	}
+	// The JSON object must run to the end of the response. Trailing prose
+	// after a JSON-shaped snippet is a strong signal the snippet is an
+	// example or explanation (e.g. inside a code fence, or mid-sentence),
+	// not an actual tool call — executing such a false positive would be
+	// surprising and potentially destructive.
+	if strings.TrimSpace(text[end+1:]) != "" {
+		return text, nil
+	}
 	candidate := text[start : end+1]
 	if tc, ok := parseHermesCall(candidate, 0); ok {
 		return strings.TrimSpace(text[:start]), []ToolCall{tc}
