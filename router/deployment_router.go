@@ -146,8 +146,12 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.EyrieMess
 		if attempts < 1 {
 			attempts = 1
 		}
+		// Track the deployment that just failed this stage so the next attempt
+		// prefers a different deployment when one is available, instead of
+		// re-selecting the same dead endpoint up to stage.Retries times.
+		recentlyFailed := ""
 		for attempt := 0; attempt < attempts; attempt++ {
-			choice := selectDeploymentChoice(choices)
+			choice := selectDeploymentChoice(choices, recentlyFailed)
 			resp, err := r.chatWithDeployment(ctx, messages, opts, target, choice.DeploymentID)
 			if err == nil {
 				r.recordSuccess(choice.DeploymentID)
@@ -161,6 +165,7 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.EyrieMess
 				}
 				return nil, err
 			}
+			recentlyFailed = choice.DeploymentID
 		}
 	}
 	if lastErr == nil {
@@ -189,8 +194,12 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Eyr
 			if attempts < 1 {
 				attempts = 1
 			}
+			// Prefer a different deployment than the one that just failed
+			// this stage, instead of re-selecting the same dead endpoint
+			// up to stage.Retries times.
+			recentlyFailed := ""
 			for attempt := 0; attempt < attempts; attempt++ {
-				choice := selectDeploymentChoice(choices)
+				choice := selectDeploymentChoice(choices, recentlyFailed)
 				fallback, err := r.streamWithDeployment(streamCtx, out, messages, opts, target, choice.DeploymentID)
 				if err == nil {
 					r.recordSuccess(choice.DeploymentID)
@@ -215,6 +224,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Eyr
 					}
 					return
 				}
+				recentlyFailed = choice.DeploymentID
 			}
 		}
 		if lastErr == nil {
@@ -560,25 +570,41 @@ func offeringSupportsTools(offering catalog.ModelOffering, tools []string) bool 
 	return true
 }
 
-func selectDeploymentChoice(choices []DeploymentChoice) DeploymentChoice {
+// selectDeploymentChoice picks a deployment from choices using weighted random
+// selection. The deployment whose ID equals exclude is skipped when more than
+// one option is available, so a retry after a failure prefers a different
+// endpoint instead of hammering the same dead one.
+func selectDeploymentChoice(choices []DeploymentChoice, exclude string) DeploymentChoice {
 	if len(choices) == 1 {
 		return choices[0]
 	}
+	alternatives := choices
+	if exclude != "" {
+		filtered := make([]DeploymentChoice, 0, len(choices))
+		for _, c := range choices {
+			if c.DeploymentID != exclude {
+				filtered = append(filtered, c)
+			}
+		}
+		if len(filtered) > 0 {
+			alternatives = filtered
+		}
+	}
 	total := 0
-	for _, choice := range choices {
+	for _, choice := range alternatives {
 		total += choice.Weight
 	}
 	if total <= 0 {
-		return choices[0]
+		return alternatives[0]
 	}
 	n := rand.IntN(total) // #nosec G404 -- non-cryptographic weighted load-balancing choice, not a security decision
-	for _, choice := range choices {
+	for _, choice := range alternatives {
 		n -= choice.Weight
 		if n < 0 {
 			return choice
 		}
 	}
-	return choices[len(choices)-1]
+	return alternatives[len(alternatives)-1]
 }
 
 func isOutputEvent(event client.EyrieStreamEvent) bool {

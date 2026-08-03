@@ -16,11 +16,13 @@ type deploymentMockProvider struct {
 	lastModel  string
 	lastTools  []client.EyrieTool
 	streamDone bool
+	callCount  int
 }
 
 func (m *deploymentMockProvider) Chat(_ context.Context, _ []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error) {
 	m.lastModel = opts.Model
 	m.lastTools = opts.Tools
+	m.callCount++
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -358,5 +360,52 @@ func TestDeploymentRouterNativeMimoUsesConfiguredXiaomiDeployment(t *testing.T) 
 	}
 	if mimo.lastModel != "mimo-v2.5-pro" {
 		t.Fatalf("native model = %q", mimo.lastModel)
+	}
+}
+
+// TestDeploymentRouterRetriesPreferDifferentEndpoint verifies the fix for
+// "deployment retry can re-select the same dead deployment": when a stage
+// has multiple deployments and the first choice fails transiently, the next
+// attempt should prefer a different deployment (and the healthy one is
+// reached) instead of retrying the same dead endpoint up to stage.Retries.
+func TestDeploymentRouterRetriesPreferDifferentEndpoint(t *testing.T) {
+	t.Parallel()
+	dead := &deploymentMockProvider{name: "direct", err: fmt.Errorf("HTTP 503 unavailable")}
+	healthy := &deploymentMockProvider{name: "vertex"}
+	r, err := NewDeploymentRouter(DeploymentRouterOptions{
+		Catalog: testCompiledCatalog(t),
+		Deployments: map[string]DeploymentAdapter{
+			"anthropic-direct": {Provider: dead},
+			"anthropic-vertex": {Provider: healthy},
+		},
+		Routing: RoutingPolicy{Providers: map[string][]RoutingStage{"anthropic": {{
+			Deployments: []DeploymentChoice{
+				{DeploymentID: "anthropic-direct", Weight: 100},
+				{DeploymentID: "anthropic-vertex", Weight: 1},
+			},
+			Retries: 3,
+		}}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := r.Chat(context.Background(),
+		[]client.EyrieMessage{{Role: "user", Content: "hi"}},
+		client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	if err != nil {
+		t.Fatalf("Chat: %v", err)
+	}
+	if resp.Content != "from vertex" {
+		t.Fatalf("expected vertex (healthy) deployment after direct (dead) failed, got %q", resp.Content)
+	}
+	// The dead provider is tried at most once (to discover the failure); the
+	// retry must prefer the healthy endpoint instead of re-selecting the same
+	// dead one up to stage.Retries times.
+	if dead.callCount > 1 {
+		t.Fatalf("dead deployment retried %d times; want at most 1", dead.callCount)
+	}
+	if healthy.callCount != 1 {
+		t.Fatalf("healthy deployment called %d times; want 1", healthy.callCount)
 	}
 }
