@@ -1,6 +1,7 @@
 package live
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -550,7 +551,10 @@ func FetchOllama(env map[string]string) ([]Entry, error) {
 	var entries []Entry
 	for _, raw := range payload.Models {
 		var m struct {
-			Name string `json:"name"`
+			Name    string `json:"name"`
+			Details struct {
+				ContextLength int `json:"context_length"`
+			} `json:"details"`
 		}
 		if err := json.Unmarshal(raw, &m); err != nil {
 			continue
@@ -559,12 +563,91 @@ func FetchOllama(env map[string]string) ([]Entry, error) {
 		if id == "" {
 			continue
 		}
-		entries = append(entries, Entry{
+		entry := Entry{
 			ID: id, DisplayName: id,
-			RawJSON: append(json.RawMessage(nil), raw...),
-		})
+			ContextWindow: m.Details.ContextLength,
+			RawJSON:       append(json.RawMessage(nil), raw...),
+		}
+		enrichOllamaEntry(root, &entry)
+		entries = append(entries, entry)
 	}
 	return entries, nil
+}
+
+type ollamaShowResponse struct {
+	Capabilities []string `json:"capabilities"`
+	Details      struct {
+		ContextLength int `json:"context_length"`
+	} `json:"details"`
+	ModelInfo map[string]json.RawMessage `json:"model_info"`
+}
+
+// enrichOllamaEntry reads the model capabilities that Ollama exposes only from
+// /api/show. Older Ollama versions or restricted gateways may not implement the
+// endpoint, so the tag listing remains usable when enrichment fails.
+func enrichOllamaEntry(root string, entry *Entry) {
+	if entry == nil || strings.TrimSpace(entry.ID) == "" {
+		return
+	}
+	body, err := json.Marshal(struct {
+		Name string `json:"name"`
+	}{Name: entry.ID})
+	if err != nil {
+		return
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, root+"/api/show", bytes.NewReader(body))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return
+	}
+	var show ollamaShowResponse
+	if err := decodeJSONLimited(resp.Body, &show); err != nil {
+		return
+	}
+	for _, capability := range show.Capabilities {
+		switch strings.ToLower(strings.TrimSpace(capability)) {
+		case "tools", "function_calling", "function-calling":
+			entry.Features = appendOllamaFeature(entry.Features, "tools")
+		case "thinking":
+			entry.Features = appendOllamaFeature(entry.Features, "thinking:enabled")
+		case "vision":
+			entry.Features = appendOllamaFeature(entry.Features, "vision")
+		}
+	}
+	if show.Details.ContextLength > 0 {
+		entry.ContextWindow = show.Details.ContextLength
+		return
+	}
+	for key, raw := range show.ModelInfo {
+		if !strings.HasSuffix(key, ".context_length") {
+			continue
+		}
+		var contextWindow int
+		if err := json.Unmarshal(raw, &contextWindow); err == nil && contextWindow > 0 {
+			entry.ContextWindow = contextWindow
+			return
+		}
+	}
+}
+
+func appendOllamaFeature(features []string, feature string) []string {
+	for _, existing := range features {
+		if existing == feature {
+			return features
+		}
+	}
+	return append(features, feature)
 }
 
 // FetchDeepSeek lists models from the DeepSeek OpenAI-compatible API.

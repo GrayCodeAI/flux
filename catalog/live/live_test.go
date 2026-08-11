@@ -147,3 +147,63 @@ func TestFetchOllama_EmptyModels(t *testing.T) {
 		t.Fatalf("expected 0 entries, got %d", len(entries))
 	}
 }
+
+func TestFetchOllama_EnrichesCapabilities(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/tags":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"models": []any{map[string]any{"name": "deepseek-r1:7b"}},
+			})
+		case "/api/show":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"capabilities": []string{"completion", "thinking", "tools"},
+				"model_info":   map[string]any{"qwen2.context_length": 131072},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	entries, err := FetchOllama(map[string]string{"OLLAMA_BASE_URL": srv.URL + "/v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	entry := entries[0]
+	if entry.ContextWindow != 131072 {
+		t.Fatalf("context window = %d, want 131072", entry.ContextWindow)
+	}
+	if len(entry.Features) != 2 || entry.Features[0] != "thinking:enabled" || entry.Features[1] != "tools" {
+		t.Fatalf("features = %v, want [thinking:enabled tools]", entry.Features)
+	}
+}
+
+func TestFetchOllama_UsesTagsWhenShowUnavailable(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/tags" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"models": []any{map[string]any{"name": "text-model"}},
+			})
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	entries, err := FetchOllama(map[string]string{"OLLAMA_BASE_URL": srv.URL + "/v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].ID != "text-model" {
+		t.Fatalf("entries = %+v", entries)
+	}
+	if len(entries[0].Features) != 0 {
+		t.Fatalf("unexpected features after unavailable show endpoint: %v", entries[0].Features)
+	}
+}
