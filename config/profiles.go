@@ -17,6 +17,8 @@ const (
 	ProviderConcentrate         APIProvider = "concentrate"
 	ProviderOpenGateway         APIProvider = "opengateway"
 	ProviderAgnes               APIProvider = "agnes"
+	ProviderLongCat             APIProvider = "longcat"
+	ProviderFireworks           APIProvider = "fireworks"
 	ProviderGrok                APIProvider = "grok"
 	ProviderGemini              APIProvider = "gemini"
 	ProviderBedrock             APIProvider = "bedrock"
@@ -66,6 +68,27 @@ var (
 		ModelEnv:     []string{"OPENAI_MODEL"},
 		BaseURLEnv:   []string{"OPENAI_BASE_URL", "OPENAI_API_BASE"},
 		APIKeys:      []APIKeyDef{{Env: "OPENAI_API_KEY", Source: "openai"}},
+	}
+	AgnesRuntimeProfile = RuntimeProviderProfile{
+		Mode: "openai", DefaultBaseURL: DefaultAgnesOpenAIBaseURL,
+		DetectionEnv: []string{"AGNES_API_KEY"},
+		ModelEnv:     []string{"AGNES_MODEL", "OPENAI_MODEL"},
+		BaseURLEnv:   []string{"AGNES_BASE_URL"},
+		APIKeys:      []APIKeyDef{{Env: "AGNES_API_KEY", Source: "agnes"}},
+	}
+	LongCatRuntimeProfile = RuntimeProviderProfile{
+		Mode: "openai", DefaultBaseURL: DefaultLongCatOpenAIBaseURL,
+		DetectionEnv: []string{"LONGCAT_API_KEY"},
+		ModelEnv:     []string{"LONGCAT_MODEL", "OPENAI_MODEL"},
+		BaseURLEnv:   []string{"LONGCAT_BASE_URL"},
+		APIKeys:      []APIKeyDef{{Env: "LONGCAT_API_KEY", Source: "longcat"}},
+	}
+	FireworksRuntimeProfile = RuntimeProviderProfile{
+		Mode: "openai", DefaultBaseURL: DefaultFireworksOpenAIBaseURL,
+		DetectionEnv: []string{"FIREWORKS_API_KEY"},
+		ModelEnv:     []string{"FIREWORKS_MODEL", "OPENAI_MODEL"},
+		BaseURLEnv:   []string{"FIREWORKS_BASE_URL"},
+		APIKeys:      []APIKeyDef{{Env: "FIREWORKS_API_KEY", Source: "fireworks"}},
 	}
 	GrokRuntimeProfile = RuntimeProviderProfile{
 		Mode: "grok", DefaultBaseURL: DefaultGrokOpenAIBaseURL, DefaultModel: "grok-2",
@@ -232,7 +255,7 @@ var (
 
 // APIProviderDetectionOrder is the priority order for provider detection.
 var APIProviderDetectionOrder = []APIProvider{
-	ProviderAnthropic, ProviderConcentrate, ProviderOpenRouter, ProviderGrok, ProviderGemini,
+	ProviderAnthropic, ProviderConcentrate, ProviderAgnes, ProviderLongCat, ProviderFireworks, ProviderOpenRouter, ProviderGrok, ProviderGemini,
 	ProviderVertex, ProviderBedrock, ProviderZAICoding, ProviderZAIPayg, ProviderCanopyWave, ProviderDeepSeek, ProviderPoolside, ProviderGroq, ProviderClinePass, ProviderAzure, ProviderOpenAI, ProviderOpenCodeGo,
 	ProviderKimi, ProviderXiaomiMimoPayg, ProviderXiaomiMimoTokenPlan, ProviderMiniMaxTokenPlan, ProviderMiniMaxPayg, ProviderOllama, ProviderStepFun, ProviderOpenGateway,
 }
@@ -264,6 +287,7 @@ var ProviderModelEnvKeys = map[APIProvider][]string{
 	ProviderMiniMaxPayg:         {"MINIMAX_PAYG_MODEL", "MINIMAX_MODEL", "OPENAI_MODEL"},
 	ProviderStepFun:             StepFunRuntimeProfile.ModelEnv,
 	ProviderOpenGateway:         OpenGatewayRuntimeProfile.ModelEnv,
+	ProviderFireworks:           FireworksRuntimeProfile.ModelEnv,
 }
 
 const (
@@ -273,15 +297,16 @@ const (
 
 // OpenAICompatibleRuntimeProfileOrder is the detection order for runtime profiles.
 var OpenAICompatibleRuntimeProfileOrder = []string{
-	"concentrate", "agnes", "longcat", "openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg", "stepfun", "opengateway",
+	"concentrate", "agnes", "longcat", "fireworks", "openrouter", "grok", "gemini", "anthropic", "zai_coding", "zai_payg", "canopywave", "deepseek", "poolside", "groq", "clinepass", "openai", "opencodego", "kimi", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan", "minimax_token_plan", "minimax_payg", "stepfun", "opengateway",
 }
 
 // OpenAICompatibleRuntimeProfiles maps profile key to its runtime profile.
 var OpenAICompatibleRuntimeProfiles = map[string]RuntimeProviderProfile{
 	"concentrate":            ConcentrateRuntimeProfile,
+	"agnes":                  AgnesRuntimeProfile,
+	"longcat":                LongCatRuntimeProfile,
+	"fireworks":              FireworksRuntimeProfile,
 	"opengateway":            OpenGatewayRuntimeProfile,
-	"agnes":                  OpenAIRuntimeProfile,
-	"longcat":                OpenAIRuntimeProfile,
 	"anthropic":              AnthropicRuntimeProfile,
 	"grok":                   GrokRuntimeProfile,
 	"gemini":                 GeminiRuntimeProfile,
@@ -307,7 +332,9 @@ var OpenAICompatibleRuntimeProfiles = map[string]RuntimeProviderProfile{
 var RuntimeProviderProfiles = map[string]RuntimeProviderProfile{
 	"anthropic":              AnthropicRuntimeProfile,
 	"openai":                 OpenAIRuntimeProfile,
-	"agnes":                  OpenAIRuntimeProfile,
+	"agnes":                  AgnesRuntimeProfile,
+	"longcat":                LongCatRuntimeProfile,
+	"fireworks":              FireworksRuntimeProfile,
 	"grok":                   GrokRuntimeProfile,
 	"gemini":                 GeminiRuntimeProfile,
 	"vertex":                 VertexRuntimeProfile,

@@ -274,6 +274,12 @@ func providerForDeployment(id string, deployment config.DeploymentConfig, cfg *c
 			return nil, false
 		}
 		return client.NewOpenRouterClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultOpenRouterOpenAIBaseURL), &client.OpenRouterCompat), true
+	case "fireworks-direct":
+		apiKey := FirstNonEmpty(deployment.APIKey, lookup("FIREWORKS_API_KEY"))
+		if apiKey == "" {
+			return nil, false
+		}
+		return client.NewOpenAIClient(apiKey, FirstNonEmpty(deployment.BaseURL, config.DefaultFireworksOpenAIBaseURL), &client.OpenAICompat), true
 	case "canopywave":
 		apiKey := FirstNonEmpty(deployment.APIKey, lookup("CANOPYWAVE_API_KEY"))
 		if apiKey == "" {

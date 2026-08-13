@@ -260,6 +260,15 @@ func providerSpecs() []ProviderSpec {
 			ThinkingToggleSupported: true,
 			DefaultThinkingDisabled: true,
 		},
+		{
+			ProviderID: "fireworks", DisplayName: "Fireworks AI", DeploymentID: "fireworks-direct", SortOrder: 28, ChatPreference: 23,
+			RequiresKey: true, CredentialEnv: "FIREWORKS_API_KEY",
+			BaseURLEnv: []string{"FIREWORKS_BASE_URL"},
+			ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.fireworks.ai/inference/v1",
+			LiveFetcherKey: "fireworks", LiveCatalogKey: "fireworks",
+			ProtocolID: "openai-chat-completions", AdapterID: "fireworks", RuntimeProfileKey: "fireworks",
+			DNSHost: "api.fireworks.ai",
+		},
 
 		// ── Niche ─────────────────────────────────────────────────────────
 		{

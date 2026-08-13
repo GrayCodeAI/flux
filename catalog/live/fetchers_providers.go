@@ -30,6 +30,15 @@ func FetchGrok(env map[string]string) ([]Entry, error) {
 	return entries, nil
 }
 
+// FetchFireworks lists models from Fireworks' OpenAI-compatible API.
+func FetchFireworks(env map[string]string) ([]Entry, error) {
+	return fetchOpenAICompatModels(
+		context.Background(),
+		envOr(env, "FIREWORKS_BASE_URL", DefaultFireworksBaseURL),
+		env["FIREWORKS_API_KEY"], "Bearer",
+	)
+}
+
 func FetchZAI(env map[string]string) ([]Entry, error) {
 	entries, err := fetchOpenAICompatModels(
 		context.Background(),

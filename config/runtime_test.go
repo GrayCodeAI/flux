@@ -35,6 +35,7 @@ func TestRuntimeProfileFields(t *testing.T) {
 		"grok":       GrokRuntimeProfile,
 		"gemini":     GeminiRuntimeProfile,
 		"openrouter": OpenRouterRuntimeProfile,
+		"fireworks":  FireworksRuntimeProfile,
 		"canopywave": CanopyWaveRuntimeProfile,
 		"deepseek":   DeepSeekRuntimeProfile,
 		"zai_payg":   ZAIPaygRuntimeProfile,
@@ -70,6 +71,7 @@ func TestRuntimeProfileAPIKeys(t *testing.T) {
 		"grok":       GrokRuntimeProfile,
 		"gemini":     GeminiRuntimeProfile,
 		"openrouter": OpenRouterRuntimeProfile,
+		"fireworks":  FireworksRuntimeProfile,
 		"canopywave": CanopyWaveRuntimeProfile,
 		"deepseek":   DeepSeekRuntimeProfile,
 		"zai_payg":   ZAIPaygRuntimeProfile,
@@ -99,6 +101,7 @@ func TestModelEnvKeysCorrectForEachProvider(t *testing.T) {
 		ProviderCanopyWave: "CANOPYWAVE_MODEL",
 		ProviderDeepSeek:   "DEEPSEEK_MODEL",
 		ProviderOpenRouter: "OPENROUTER_MODEL",
+		ProviderFireworks:  "FIREWORKS_MODEL",
 		ProviderGrok:       "XAI_MODEL",
 		ProviderGemini:     "GEMINI_MODEL",
 		ProviderOllama:     "OLLAMA_MODEL",
@@ -126,6 +129,7 @@ func TestProviderModelEnvKeys_AllProvidersPresent(t *testing.T) {
 	allProviders := []string{
 		ProviderAnthropic, ProviderOpenAI, ProviderCanopyWave, ProviderDeepSeek,
 		ProviderOpenRouter, ProviderGrok, ProviderGemini,
+		ProviderFireworks,
 		ProviderOllama, ProviderOpenCodeGo,
 	}
 

@@ -73,19 +73,7 @@ func FetchLiveProviderCatalog(env map[string]string) (Catalog, []LiveProviderEnr
 				name = entryID
 			}
 
-			// If the native model ID already contains a "/" and the owner
-			// matches the provider's canonical form, keep it as-is.
-			canonicalID := entryID
-			if hasSlash(entryID) {
-				owner, _, hasOwner := splitOwner(entryID)
-				if hasOwner && owner == canonicalProviderID(providerID) {
-					canonicalID = entryID
-				} else if hasInputPricing(entry.RawJSON) {
-					canonicalID = providerID + "/" + entryID
-				}
-			} else if hasInputPricing(entry.RawJSON) {
-				canonicalID = providerID + "/" + entryID
-			}
+			canonicalID := canonicalModelIDForLiveEntry(providerID, entry)
 
 			cat.Models[canonicalID] = Model{
 				ID:            canonicalID,
@@ -111,6 +99,24 @@ func FetchLiveProviderCatalog(env map[string]string) (Catalog, []LiveProviderEnr
 		enrichment = append(enrichment, LiveProviderEnrichment{Provider: catalogKey, ModelCount: len(models), DurationMs: duration})
 	}
 	return cat, enrichment
+}
+
+// canonicalModelIDForLiveEntry qualifies ownerless native IDs with the
+// provider while preserving owner-qualified IDs. Gateway-priced IDs retain the
+// gateway prefix so provider-specific pricing does not collide with a direct
+// provider offering for the same underlying model.
+func canonicalModelIDForLiveEntry(providerID string, entry live.Entry) string {
+	if !hasSlash(entry.ID) {
+		return providerID + "/" + entry.ID
+	}
+	owner, _, hasOwner := splitOwner(entry.ID)
+	if hasOwner && owner == canonicalProviderID(providerID) {
+		return entry.ID
+	}
+	if hasInputPricing(entry.RawJSON) {
+		return providerID + "/" + entry.ID
+	}
+	return entry.ID
 }
 
 // FetchLiveModelEntriesForProvider lists models from one provider's live API with full JSON metadata.

@@ -493,6 +493,13 @@ func TestProviderForDeployment_OpenAIDirect(t *testing.T) {
 	}
 }
 
+func TestProviderForDeployment_Fireworks(t *testing.T) {
+	p, ok := ProviderForDeployment("fireworks-direct", config.DeploymentConfig{APIKey: "fw-test-key"})
+	if !ok || p == nil {
+		t.Fatal("expected Fireworks provider")
+	}
+}
+
 func TestProviderForDeployment_OpenAIDirectRequiresKey(t *testing.T) {
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)

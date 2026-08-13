@@ -41,6 +41,13 @@ func TestDetectProvider_AdditionalProviders(t *testing.T) {
 		want string
 	}{
 		{name: "deepseek", env: "DEEPSEEK_API_KEY", want: "deepseek"},
+		{name: "concentrate", env: "CONCENTRATE_API_KEY", want: "concentrate"},
+		{name: "agnes", env: "AGNES_API_KEY", want: "agnes"},
+		{name: "longcat", env: "LONGCAT_API_KEY", want: "longcat"},
+		{name: "fireworks", env: "FIREWORKS_API_KEY", want: "fireworks"},
+		{name: "stepfun", env: "STEP_API_KEY", want: "stepfun"},
+		{name: "opengateway", env: "OPENGATEWAY_API_KEY", want: "opengateway"},
+		{name: "clinepass", env: "CLINE_API_KEY", want: "clinepass"},
 		{name: "kimi", env: "MOONSHOT_API_KEY", want: "kimi"},
 		{name: "xiaomi payg", env: "XIAOMI_MIMO_PAYG_API_KEY", want: "xiaomi_mimo_payg"},
 		{name: "xiaomi token plan", env: "XIAOMI_MIMO_TOKEN_PLAN_API_KEY", want: "xiaomi_mimo_token_plan"},

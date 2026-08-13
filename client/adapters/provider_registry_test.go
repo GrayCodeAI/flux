@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"context"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
@@ -81,6 +82,33 @@ func TestDetectProvider_NoProvider(t *testing.T) {
 	got := DetectProvider()
 	if got != "anthropic" {
 		t.Errorf("DetectProvider = %q, want anthropic (default)", got)
+	}
+}
+
+func TestDetectProvider_AllProfileCredentialProviders(t *testing.T) {
+	for _, tc := range []struct {
+		provider string
+		env      string
+	}{
+		{"concentrate", "CONCENTRATE_API_KEY"},
+		{"agnes", "AGNES_API_KEY"},
+		{"longcat", "LONGCAT_API_KEY"},
+		{"fireworks", "FIREWORKS_API_KEY"},
+		{"stepfun", "STEP_API_KEY"},
+		{"opengateway", "OPENGATEWAY_API_KEY"},
+		{"clinepass", "CLINE_API_KEY"},
+	} {
+		t.Run(tc.provider, func(t *testing.T) {
+			store := &credentials.MapStore{}
+			credentials.SetDefaultStore(store)
+			t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+			if err := store.Set(context.Background(), credentials.AccountForEnv(tc.env), "test-key"); err != nil {
+				t.Fatal(err)
+			}
+			if got := DetectProvider(); got != tc.provider {
+				t.Fatalf("DetectProvider() = %q, want %q", got, tc.provider)
+			}
+		})
 	}
 }
 

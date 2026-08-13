@@ -32,6 +32,7 @@ func TestDiscoverRun_RemoteFailureUsesCacheFallback(t *testing.T) {
 			RefreshRemote: true,
 			RemoteURL:     failServer.URL,
 		},
+		DisableCredentialFallback: true,
 	})
 	if err != nil {
 		t.Fatalf("discover.Run: %v", err)
@@ -61,6 +62,7 @@ func TestDiscoverRun_ConcurrentCallsSerialized(t *testing.T) {
 			CachePath:     cachePath,
 			RefreshRemote: false,
 		},
+		DisableCredentialFallback: true,
 	}
 	done := make(chan error, 2)
 	for i := 0; i < 2; i++ {

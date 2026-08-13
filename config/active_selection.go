@@ -90,6 +90,8 @@ func SetProviderModel(cfg *ProviderConfig, provider, model string) {
 		cfg.XiaomiModel = model
 	case ProviderMiniMaxTokenPlan, ProviderMiniMaxPayg:
 		cfg.MiniMaxModel = model
+	case ProviderFireworks:
+		cfg.FireworksModel = model
 	default:
 		// Unknown/custom provider: active_model + active_provider are enough.
 	}

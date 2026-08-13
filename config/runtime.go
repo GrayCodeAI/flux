@@ -25,18 +25,16 @@ type ResolvedOpenAICompatibleRuntime struct {
 
 // IsOpenAICompatibleRuntimeEnabled checks if any provider API key is set.
 func IsOpenAICompatibleRuntimeEnabled() bool {
-	keys := []string{
-		"OPENROUTER_API_KEY", "XAI_API_KEY", "GEMINI_API_KEY",
-		"ANTHROPIC_API_KEY", "CANOPYWAVE_API_KEY", "DEEPSEEK_API_KEY", "ZAI_API_KEY", "OPENAI_API_KEY",
-		"OPENCODEGO_API_KEY", "OLLAMA_BASE_URL",
-		"MOONSHOT_API_KEY", "XIAOMI_MIMO_PAYG_API_KEY", "XIAOMI_MIMO_TOKEN_PLAN_API_KEY",
-	}
-	for _, k := range keys {
-		if envValue(k) != "" {
-			return true
+	// Derive detection keys from the registered runtime profiles so adding a
+	// provider cannot silently leave readiness checks out of sync.
+	for _, profile := range RuntimeProviderProfiles {
+		for _, key := range profile.DetectionEnv {
+			if envValue(key) != "" {
+				return true
+			}
 		}
 	}
-	return false
+	return envValue("OLLAMA_BASE_URL") != ""
 }
 
 func envValue(key string) string {

@@ -70,6 +70,7 @@ func mergeDiscoveryEnvFromConfig(env map[string]string, cfg *ProviderConfig, all
 	setDiscoveryEnv(env, "POOLSIDE_BASE_URL", cfg.PoolsideBaseURL)
 	setDiscoveryEnv(env, "GROQ_BASE_URL", cfg.GroqBaseURL)
 	setDiscoveryEnv(env, "CLINE_API_BASE", cfg.ClinePassBaseURL)
+	setDiscoveryEnv(env, "FIREWORKS_BASE_URL", cfg.FireworksBaseURL)
 	if ollamaBase := NormalizeOllamaOpenAIBaseURL(AsNonEmptyString(cfg.OllamaBaseURL)); ollamaBase != "" {
 		env["OLLAMA_BASE_URL"] = ollamaBase
 	}
@@ -114,6 +115,7 @@ func mergeDeploymentBaseURL(env map[string]string, deploymentID, baseURL string)
 		"clinepass":                     "CLINE_API_BASE",
 		"opencodego":                    "OPENCODEGO_BASE_URL",
 		"ollama-local":                  "OLLAMA_BASE_URL",
+		"fireworks-direct":              "FIREWORKS_BASE_URL",
 	}
 	if key := keys[deploymentID]; key != "" {
 		setDiscoveryEnv(env, key, baseURL)

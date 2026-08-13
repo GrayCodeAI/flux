@@ -293,6 +293,30 @@ func TestApplyProviderEnv_DeepSeek(t *testing.T) {
 	}
 }
 
+func TestApplyProviderEnv_Fireworks(t *testing.T) {
+	t.Parallel()
+	cfg := &ProviderConfig{
+		FireworksAPIKey:  "fireworks-key-1234567890",
+		FireworksBaseURL: "https://fireworks.example/v1",
+	}
+	cat := testModelCatalog()
+
+	env := ApplyProviderEnv(ProviderFireworks, cfg, "accounts/fireworks/models/deepseek-v4-flash", true, &cat)
+
+	if env["FIREWORKS_API_KEY"] != "fireworks-key-1234567890" {
+		t.Errorf("expected FIREWORKS_API_KEY, got %q", env["FIREWORKS_API_KEY"])
+	}
+	if env["FIREWORKS_MODEL"] != "accounts/fireworks/models/deepseek-v4-flash" {
+		t.Errorf("expected FIREWORKS_MODEL, got %q", env["FIREWORKS_MODEL"])
+	}
+	if env["FIREWORKS_BASE_URL"] != "https://fireworks.example/v1" {
+		t.Errorf("expected FIREWORKS_BASE_URL, got %q", env["FIREWORKS_BASE_URL"])
+	}
+	if env["OPENAI_API_KEY"] != "fireworks-key-1234567890" || env["OPENAI_BASE_URL"] != "https://fireworks.example/v1" {
+		t.Errorf("expected OpenAI compatibility env, got key=%q base=%q", env["OPENAI_API_KEY"], env["OPENAI_BASE_URL"])
+	}
+}
+
 func TestApplyProviderEnv_Ollama(t *testing.T) {
 	t.Parallel()
 	cfg := &ProviderConfig{

@@ -46,6 +46,7 @@ const (
 	DefaultKimiBaseURL       = "https://api.moonshot.ai/v1"
 	DefaultXiaomiBaseURL     = "https://api.xiaomimimo.com/v1"
 	DefaultMiniMaxBaseURL    = "https://api.minimax.io/v1"
+	DefaultFireworksBaseURL  = "https://api.fireworks.ai/inference/v1"
 )
 
 // FetchFunc lists models from a live provider API.
@@ -74,6 +75,7 @@ var Registry = map[string]FetchFunc{
 	"opengateway":            FetchOpenGateway,
 	"agnes":                  FetchAgnes,
 	"longcat":                FetchLongCat,
+	"fireworks":              FetchFireworks,
 	"canopywave":             FetchCanopyWave,
 	"opencodego":             FetchOpenCodeGo,
 	"kimi":                   FetchKimi,

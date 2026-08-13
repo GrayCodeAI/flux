@@ -68,6 +68,13 @@ func TestIsOpenAICompatibleRuntimeEnabled(t *testing.T) {
 	if !IsOpenAICompatibleRuntimeEnabled() {
 		t.Error("expected true with OPENAI_API_KEY in secure store")
 	}
+	store = &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	ClearProviderRuntimeEnv()
+	_ = store.Set(context.Background(), credentials.AccountForEnv("FIREWORKS_API_KEY"), "fireworks-test-key")
+	if !IsOpenAICompatibleRuntimeEnabled() {
+		t.Error("expected true with FIREWORKS_API_KEY in secure store")
+	}
 }
 
 func TestNormalizeOllamaOpenAIBaseURL(t *testing.T) {
@@ -87,8 +94,8 @@ func TestNormalizeOllamaOpenAIBaseURL(t *testing.T) {
 
 func TestProviderDetectionOrder(t *testing.T) {
 	t.Parallel()
-	if len(APIProviderDetectionOrder) != 25 {
-		t.Errorf("expected 25 providers in detection order, got %d", len(APIProviderDetectionOrder))
+	if len(APIProviderDetectionOrder) != 28 {
+		t.Errorf("expected 28 providers in detection order, got %d", len(APIProviderDetectionOrder))
 	}
 	if APIProviderDetectionOrder[0] != ProviderAnthropic {
 		t.Error("expected anthropic first in detection order")

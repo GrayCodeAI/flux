@@ -42,6 +42,7 @@ const (
 	DefaultAgnesOpenAIBaseURL       = "https://apihub.agnes-ai.com/v1"
 	DefaultLongCatOpenAIBaseURL     = "https://api.longcat.chat/openai/v1"
 	DefaultLongCatAnthropicBaseURL  = "https://api.longcat.chat/anthropic"
+	DefaultFireworksOpenAIBaseURL   = "https://api.fireworks.ai/inference/v1"
 )
 
 // ProviderTransport is the transport type for provider requests.
