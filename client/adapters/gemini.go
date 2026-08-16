@@ -161,12 +161,12 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messages []core.EyrieMess
 	if geminiSharedParserEnabled() {
 		sseEvents := core.ParseSSEStream(streamCtx, resp.Body, c.logger)
 		events := processGeminiStream(streamCtx, sseEvents, c.logger)
-		return llm.NewStreamResult(events, "", cancel), nil
+		return llm.NewStreamResult(events, requestID, cancel), nil
 	}
 	// Fallback (opt-out via EYRIE_GEMINI_SHARED_PARSER=0): old bespoke parser.
 	events := make(chan core.EyrieStreamEvent, 64)
 	go c.streamLoop(streamCtx, resp.Body, events)
-	return llm.NewStreamResult(events, "", cancel), nil
+	return llm.NewStreamResult(events, requestID, cancel), nil
 }
 
 func (c *GeminiClient) Ping(ctx context.Context) error {

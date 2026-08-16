@@ -7,6 +7,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Changed — Shared MiMo auth-retry helper (2026-08-16)
+- **Deduplicated `doRequestWithMimoAuthRetry`** between the OpenAI and
+  Anthropic adapters into one `doWithMimoAuthRetry` helper (client/adapters,
+  next to `mimoAuthHeaders`); the two adapters now differ only in the Bearer
+  headers they apply to the 401 retry. No behavior change.
+
+### Fixed — Gemini stream request IDs (2026-08-16)
+- **Gemini `StreamChat` now propagates the provider request ID.** The client
+  captured `X-Goog-Request-Id` from the response headers but passed an empty
+  string to the stream result, so hosts lost the correlation ID on
+  successful streams (it was only preserved on errors). Both the shared
+  parser path and the legacy opt-out parser now carry it.
+
+### Fixed — Non-fatal stream diagnostics no longer fail the stream (2026-08-16)
+- **Stream health diagnostics are now warnings, not terminal errors.**
+  `client/core`'s OpenAI stream processor emits end-of-stream diagnostics
+  (reasoning-only responses, empty responses) as error-type events followed
+  by the terminal `done` — but the engine mapped *every* error event to
+  `provider_unavailable`, stopped forwarding, and set `Err()` even though
+  content had been delivered. Diagnostic events are now marked non-fatal via
+  the existing `EyrieStreamEvent.Warning` field (additive); the engine
+  forwards them as `warning` events and still delivers the final
+  `done`/usage event with `Err()` unset. Genuinely fatal stream errors keep
+  the previous behavior. The deprecated client continuation helper and the
+  tracing middleware treat warning-marked events the same way.
+
+### Fixed — Concentrate adapter robustness (2026-08-16)
+- **Concentrate Responses client now uses the shared pooled HTTP client**
+  (`core.NewPooledHTTPClient(core.DefaultTimeout)`) instead of a private
+  `&http.Client{Timeout: 120s}` literal — long streams are no longer cut off
+  at 2 minutes and connections reuse the process-wide transport pool like
+  every other adapter.
+- **Concentrate requests are retried via `core.DoWithRetry`** (chat and
+  stream paths) on 429/500/502/503/529 with backoff and `Retry-After`
+  support; `SetRetry` previously discarded the config with a comment claiming
+  the HTTP client handled retries (it never does).
+- **Concentrate errors are structured `*core.EyrieError`s** built by
+  `core.ParseProviderError`/`core.FormatAPIError` (8KB bounded read,
+  provider/op/status/request-ID preserved), so `IsRetriable()`/`IsAuthError()`
+  and the engine's error classification work; the captured `X-Request-Id` is
+  also propagated to stream results.
+- **`normalizeToolParams` no longer mutates the caller's tool schema map** —
+  a shallow copy gets `additionalProperties:false` injected for strict mode.
+
 ### Added — Round 3 ecosystem improvements (2026-06-06)
 - **Reasoning controls** — `reasoning_effort` and Anthropic extended-thinking
   `thinking_budget_tokens` passthrough on `ChatOptions` (omitted when unset).

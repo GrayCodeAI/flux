@@ -25,6 +25,7 @@ type ConcentrateResponsesClient struct {
 	baseURL    string
 	apiKey     string
 	httpClient *http.Client
+	retry      core.RetryConfig
 	logger     *slog.Logger
 }
 
@@ -35,7 +36,8 @@ func NewConcentrateResponsesClient(apiKey, baseURL string, opts ...core.ClientOp
 	c := &ConcentrateResponsesClient{
 		baseURL:    baseURL,
 		apiKey:     apiKey,
-		httpClient: &http.Client{Timeout: 120 * time.Second},
+		httpClient: core.NewPooledHTTPClient(core.DefaultTimeout),
+		retry:      core.DefaultRetryConfig(),
 		logger:     slog.Default(),
 	}
 	for _, opt := range opts {
@@ -179,16 +181,19 @@ func (c *ConcentrateResponsesClient) Chat(ctx context.Context, messages []core.E
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	httpReq.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 
-	resp, err := c.httpClient.Do(httpReq)
+	resp, err := core.DoWithRetry(ctx, c.httpClient, httpReq, c.retry, c.logger)
 	if err != nil {
 		return nil, fmt.Errorf("concentrate: request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	requestID := resp.Header.Get("X-Request-Id")
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("concentrate: request failed (%d): %s", resp.StatusCode, string(body))
+		detail, readErr := core.ParseProviderError(resp.Body)
+		return nil, core.FormatAPIError("concentrate", "chat", resp.StatusCode, requestID, detail, readErr)
 	}
 
 	var apiResp responsesResponse
@@ -221,21 +226,24 @@ func (c *ConcentrateResponsesClient) StreamChat(ctx context.Context, messages []
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	httpReq.Header.Set("Accept", "text/event-stream")
 	httpReq.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	httpReq.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 
-	resp, err := c.httpClient.Do(httpReq)
+	resp, err := core.DoWithRetry(streamCtx, c.httpClient, httpReq, c.retry, c.logger)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("concentrate: request failed: %w", err)
+		return nil, fmt.Errorf("concentrate: stream request failed: %w", err)
 	}
+
+	requestID := resp.Header.Get("X-Request-Id")
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		detail, readErr := core.ParseProviderError(resp.Body)
+		_ = resp.Body.Close()
 		cancel()
-		return nil, fmt.Errorf("concentrate: stream request failed (%d): %s", resp.StatusCode, string(body))
+		return nil, core.FormatAPIError("concentrate", "stream", resp.StatusCode, requestID, detail, readErr)
 	}
 
-	return c.handleStream(streamCtx, cancel, resp), nil
+	return c.handleStream(streamCtx, cancel, resp, requestID), nil
 }
 
 // Ping checks the health of the Concentrate API.
@@ -354,6 +362,8 @@ func concentrateToolChoice(choice *core.ToolChoiceOption) interface{} {
 
 // normalizeToolParams ensures tool parameters conform to Concentrate's strict mode
 // requirements: additionalProperties must be false at the top level when strict=true.
+// The input map is never mutated: a shallow copy is returned so the caller's
+// tool definition (which may be reused across requests) stays intact.
 // See: https://concentrate.ai/docs/api-reference/endpoint/tool-calling
 func normalizeToolParams(params map[string]interface{}) map[string]interface{} {
 	if params == nil {
@@ -362,7 +372,12 @@ func normalizeToolParams(params map[string]interface{}) map[string]interface{} {
 	// Only enforce for object-typed schemas
 	if t, ok := params["type"]; ok && t == "object" {
 		if _, has := params["additionalProperties"]; !has {
-			params["additionalProperties"] = false
+			normalized := make(map[string]interface{}, len(params)+1)
+			for k, v := range params {
+				normalized[k] = v
+			}
+			normalized["additionalProperties"] = false
+			return normalized
 		}
 	}
 	return params
@@ -517,7 +532,7 @@ type streamEvent struct {
 	ContentIndex   int             `json:"content_index,omitempty"`
 }
 
-func (c *ConcentrateResponsesClient) handleStream(ctx context.Context, cancel context.CancelFunc, resp *http.Response) *core.StreamResult {
+func (c *ConcentrateResponsesClient) handleStream(ctx context.Context, cancel context.CancelFunc, resp *http.Response, requestID string) *core.StreamResult {
 	events := make(chan core.EyrieStreamEvent, core.StreamChannelBuffer)
 
 	go func() {
@@ -639,7 +654,7 @@ func (c *ConcentrateResponsesClient) handleStream(ctx context.Context, cancel co
 		}
 	}()
 
-	return llm.NewStreamResult(events, "", cancel)
+	return llm.NewStreamResult(events, requestID, cancel)
 }
 
 func sendConcentrateStreamEvent(ctx context.Context, events chan<- core.EyrieStreamEvent, event core.EyrieStreamEvent) bool {
@@ -722,7 +737,7 @@ func (c *ConcentrateResponsesClient) SetHTTPClient(hc *http.Client) {
 
 // SetRetry implements core.Configurable.
 func (c *ConcentrateResponsesClient) SetRetry(rc core.RetryConfig) {
-	// Retries handled at HTTP client level
+	c.retry = rc
 }
 
 // SetLogger implements core.Configurable.
@@ -752,7 +767,7 @@ func (c *ConcentrateResponsesClient) HTTPClient() *http.Client {
 
 // Retry implements core.Configurable.
 func (c *ConcentrateResponsesClient) Retry() core.RetryConfig {
-	return core.RetryConfig{}
+	return c.retry
 }
 
 // Logger implements core.Configurable.

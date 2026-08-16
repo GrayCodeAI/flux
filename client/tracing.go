@@ -97,8 +97,14 @@ func (tp *TracingProvider) StreamChat(ctx context.Context, messages []EyrieMessa
 		for evt := range origEvents {
 			switch evt.Type {
 			case "error":
-				span.SetStatus(codes.Error, evt.Error)
-				span.SetAttributes(attribute.Bool("error", true))
+				if evt.Warning != "" {
+					// Non-fatal health diagnostic: record it without
+					// failing the span (the stream still completes).
+					span.SetAttributes(attribute.String("warning", evt.Warning))
+				} else {
+					span.SetStatus(codes.Error, evt.Error)
+					span.SetAttributes(attribute.Bool("error", true))
+				}
 			case "usage":
 				// Token usage is delivered on the "usage" event, not "done".
 				if evt.Usage != nil {

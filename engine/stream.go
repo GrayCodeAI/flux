@@ -148,6 +148,13 @@ func normalizeEvent(event client.EyrieStreamEvent) (Event, error) {
 	case "continuation":
 		out.Type = EventContinuation
 	case "error":
+		if event.Warning != "" {
+			// Non-fatal health diagnostic (e.g. a reasoning-only response):
+			// client/core marks these with Warning so they can be surfaced
+			// without terminating the stream — the terminal done/usage event
+			// follows. Forward as a warning event; do not set Err()/stop.
+			return Event{Type: EventWarning, Warning: event.Warning}, nil
+		}
 		return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error}
 	default:
 		out.Type = event.Type

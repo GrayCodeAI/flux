@@ -148,7 +148,12 @@ func StreamChatWithContinuation(ctx context.Context, p Provider, messages []Eyri
 					stopReason = evt.StopReason
 				case "error":
 					emit(cancelCtx, outCh, evt)
-					return
+					// Warning-marked error events are non-fatal health
+					// diagnostics emitted just before the terminal done;
+					// keep consuming so that done event is observed.
+					if evt.Warning == "" {
+						return
+					}
 				default:
 					emit(cancelCtx, outCh, evt)
 				}

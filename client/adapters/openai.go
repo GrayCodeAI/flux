@@ -82,24 +82,7 @@ func (c *OpenAIClient) setBearerHeaders(req *http.Request) {
 
 // doRequestWithMimoAuthRetry runs the HTTP request; on 401 with MiMo api-key auth, retries once with Bearer.
 func (c *OpenAIClient) doRequestWithMimoAuthRetry(ctx context.Context, req *http.Request, body []byte) (*http.Response, error) {
-	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
-	if err != nil {
-		return nil, err
-	}
-	if !c.useMimoAuth || resp.StatusCode != http.StatusUnauthorized {
-		return resp, nil
-	}
-	_ = resp.Body.Close()
-	req2, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	c.setBearerHeaders(req2)
-	if req.Header.Get("Accept") != "" {
-		req2.Header.Set("Accept", req.Header.Get("Accept"))
-	}
-	req2.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
-	return core.DoWithRetry(ctx, c.httpClient, req2, c.retry, c.logger)
+	return doWithMimoAuthRetry(ctx, c.httpClient, c.retry, c.logger, c.useMimoAuth, req, body, c.setBearerHeaders)
 }
 
 type (

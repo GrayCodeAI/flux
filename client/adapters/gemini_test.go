@@ -149,6 +149,37 @@ func TestGeminiClient_StreamChat_EmptyModel(t *testing.T) {
 	}
 }
 
+// Regression (audit E5): StreamChat captured X-Goog-Request-Id for error
+// reporting but passed "" to NewStreamResult, dropping the provider request
+// ID on successful streams.
+func TestGeminiClient_StreamChat_PropagatesRequestID(t *testing.T) {
+	t.Parallel()
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body := "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"hi\"}]},\"finishReason\":\"STOP\"}]}\n\n"
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type":      []string{"text/event-stream"},
+				"X-Goog-Request-Id": []string{"goog-req-42"},
+			},
+			Body: io.NopCloser(strings.NewReader(body)),
+		}, nil
+	})
+	c := NewGeminiClient("key", "")
+	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
+	c.httpClient = &http.Client{Transport: transport}
+	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash"})
+	if err != nil {
+		t.Fatalf("StreamChat: %v", err)
+	}
+	defer result.Close()
+	for range result.Events {
+	}
+	if result.RequestID != "goog-req-42" {
+		t.Fatalf("stream request id = %q, want goog-req-42", result.RequestID)
+	}
+}
+
 func TestGeminiClient_Ping_Success(t *testing.T) {
 	t.Parallel()
 	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {

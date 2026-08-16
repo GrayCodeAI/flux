@@ -62,7 +62,9 @@ func TestHealthFromResponse(t *testing.T) {
 }
 
 // Integration: a stream that emits only reasoning_content then finishes must
-// produce a diagnostic error event before the terminal done.
+// produce a diagnostic error event before the terminal done. The diagnostic
+// must carry the Warning marker (non-fatal) so downstream consumers keep
+// streaming and still observe the terminal done event.
 func TestStreamEmitsErrorOnlyReasoningDiagnostic(t *testing.T) {
 	t.Parallel()
 	events := make(chan SSEEvent, 10)
@@ -72,7 +74,9 @@ func TestStreamEmitsErrorOnlyReasoningDiagnostic(t *testing.T) {
 
 	ch := ProcessOpenAIStream(context.Background(), events, testLogger())
 
-	var sawThinking, sawDiagnostic, sawContent bool
+	var sawThinking, sawDiagnostic, sawContent, sawDone bool
+	diagnosticIdx, doneIdx := -1, -1
+	var i int
 	for evt := range ch {
 		switch evt.Type {
 		case "thinking":
@@ -82,8 +86,16 @@ func TestStreamEmitsErrorOnlyReasoningDiagnostic(t *testing.T) {
 		case "error":
 			if strings.Contains(evt.Error, "reasoning") {
 				sawDiagnostic = true
+				diagnosticIdx = i
+				if evt.Warning == "" {
+					t.Error("diagnostic error event must set the Warning marker")
+				}
 			}
+		case "done":
+			sawDone = true
+			doneIdx = i
 		}
+		i++
 	}
 	if !sawThinking {
 		t.Error("expected a thinking event from reasoning_content")
@@ -93,6 +105,12 @@ func TestStreamEmitsErrorOnlyReasoningDiagnostic(t *testing.T) {
 	}
 	if !sawDiagnostic {
 		t.Error("expected an error-only-reasoning diagnostic event")
+	}
+	if !sawDone {
+		t.Fatal("expected a terminal done event after the diagnostic")
+	}
+	if diagnosticIdx < 0 || doneIdx < diagnosticIdx {
+		t.Fatalf("diagnostic (%d) must precede done (%d)", diagnosticIdx, doneIdx)
 	}
 }
 

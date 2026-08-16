@@ -3,8 +3,11 @@ package adapters
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +26,20 @@ func TestNewConcentrateResponsesClient(t *testing.T) {
 	}
 	if client.BaseURL() != "https://api.concentrate.ai/v1" {
 		t.Errorf("base URL = %q", client.BaseURL())
+	}
+}
+
+func TestNewConcentrateResponsesClient_UsesSharedPooledHTTPClient(t *testing.T) {
+	t.Parallel()
+	client := NewConcentrateResponsesClient("cn-key", "https://api.concentrate.ai/v1")
+	if client.httpClient.Timeout != core.DefaultTimeout {
+		t.Errorf("timeout = %v, want default %v", client.httpClient.Timeout, core.DefaultTimeout)
+	}
+	if client.httpClient.Transport != core.NewPooledHTTPClient(0).Transport {
+		t.Error("client does not use the shared pooled transport")
+	}
+	if client.Retry().MaxRetries != core.DefaultRetryConfig().MaxRetries {
+		t.Error("client does not default to the shared retry config")
 	}
 }
 
@@ -309,5 +326,195 @@ func TestConcentrateResponsesClient_PingDoesNotRequireAuth(t *testing.T) {
 	client.httpClient = &http.Client{Transport: transport}
 	if err := client.Ping(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestConcentrateResponsesClient_ChatRetriesOn500ThenSucceeds(t *testing.T) {
+	t.Parallel()
+	attempts := 0
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		attempts++
+		if attempts == 1 {
+			return jsonResponse(http.StatusInternalServerError, map[string]any{
+				"error": map[string]string{"message": "upstream exploded"},
+			}), nil
+		}
+		// The retried request must still carry the full body (GetBody path).
+		var body map[string]interface{}
+		if err := jsonDecodeRequest(req, &body); err != nil {
+			t.Fatalf("decode retried body: %v", err)
+		}
+		if body["model"] != "gpt-5" {
+			t.Fatalf("retried body = %#v", body)
+		}
+		return jsonResponse(http.StatusOK, map[string]any{
+			"id":     "resp_retry",
+			"status": "completed",
+			"output": []map[string]any{{
+				"type": "message", "role": "assistant",
+				"content": []map[string]any{{"type": "output_text", "text": "ok"}},
+			}},
+		}), nil
+	})
+	client := NewConcentrateResponsesClient("cn-key", "https://api.concentrate.ai/v1")
+	client.httpClient = &http.Client{Transport: transport}
+	client.SetRetry(core.NewRetryConfig(2, time.Millisecond, 2*time.Millisecond, 500))
+
+	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-5"})
+	if err != nil {
+		t.Fatalf("Chat: %v", err)
+	}
+	if resp.Content != "ok" {
+		t.Fatalf("content = %q", resp.Content)
+	}
+	if attempts != 2 {
+		t.Fatalf("attempts = %d, want 2 (one 500 + one success)", attempts)
+	}
+}
+
+func TestConcentrateResponsesClient_ChatErrorIsStructuredEyrieError(t *testing.T) {
+	t.Parallel()
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		resp := jsonResponse(http.StatusUnauthorized, map[string]any{
+			"error": map[string]string{"code": "invalid_api_key", "message": "bad key"},
+		})
+		resp.Header.Set("X-Request-Id", "req_abc")
+		return resp, nil
+	})
+	client := NewConcentrateResponsesClient("cn-key", "https://api.concentrate.ai/v1")
+	client.httpClient = &http.Client{Transport: transport}
+	client.SetRetry(core.RetryConfig{}) // no retries: classify the terminal error
+
+	_, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-5"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var eyrieErr *core.EyrieError
+	if !errors.As(err, &eyrieErr) {
+		t.Fatalf("error is %T, want *core.EyrieError (%v)", err, err)
+	}
+	if eyrieErr.Provider != "concentrate" || eyrieErr.Op != "chat" {
+		t.Fatalf("provider/op = %s/%s", eyrieErr.Provider, eyrieErr.Op)
+	}
+	if eyrieErr.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", eyrieErr.StatusCode)
+	}
+	if !eyrieErr.IsAuthError() {
+		t.Error("IsAuthError() = false, want true")
+	}
+	if eyrieErr.IsRetriable() {
+		t.Error("IsRetriable() = true for 401, want false")
+	}
+	if eyrieErr.RequestID != "req_abc" {
+		t.Errorf("request id = %q, want req_abc", eyrieErr.RequestID)
+	}
+	if !strings.Contains(eyrieErr.Message, "bad key") {
+		t.Errorf("message = %q, want it to carry the provider detail", eyrieErr.Message)
+	}
+}
+
+func TestConcentrateResponsesClient_StreamErrorIsStructuredEyrieError(t *testing.T) {
+	t.Parallel()
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		resp := jsonResponse(http.StatusTooManyRequests, map[string]any{
+			"error": map[string]string{"type": "rate_limit_error", "message": "slow down"},
+		})
+		resp.Header.Set("X-Request-Id", "req_429")
+		return resp, nil
+	})
+	client := NewConcentrateResponsesClient("cn-key", "https://api.concentrate.ai/v1")
+	client.httpClient = &http.Client{Transport: transport}
+	client.SetRetry(core.RetryConfig{}) // no retries: classify the terminal error
+
+	_, err := client.StreamChat(context.Background(), nil, core.ChatOptions{Model: "gpt-5"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var eyrieErr *core.EyrieError
+	if !errors.As(err, &eyrieErr) {
+		t.Fatalf("error is %T, want *core.EyrieError (%v)", err, err)
+	}
+	if eyrieErr.Op != "stream" {
+		t.Fatalf("op = %s, want stream", eyrieErr.Op)
+	}
+	if eyrieErr.StatusCode != http.StatusTooManyRequests || !eyrieErr.IsRateLimited() || !eyrieErr.IsRetriable() {
+		t.Fatalf("status = %d (rate-limited=%v, retriable=%v), want 429/true/true",
+			eyrieErr.StatusCode, eyrieErr.IsRateLimited(), eyrieErr.IsRetriable())
+	}
+	if eyrieErr.RequestID != "req_429" {
+		t.Errorf("request id = %q, want req_429", eyrieErr.RequestID)
+	}
+}
+
+// The adapter must not impose a short whole-response timeout: a stream whose
+// wall time exceeds the previous hard-coded 120s-class wiring still delivers
+// every event plus the terminal done. Gaps are kept small so the test stays
+// fast; the default pooled client (core.DefaultTimeout) is exercised as-is.
+func TestConcentrateResponsesClient_StreamSurvivesSlowServer(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("X-Request-Id", "req_slow")
+		flusher := w.(http.Flusher)
+		send := func(payload string) {
+			fmt.Fprintf(w, "data: %s\n\n", payload)
+			flusher.Flush()
+		}
+		send(`{"type":"response.output_text.delta","delta":"slow"}`)
+		time.Sleep(150 * time.Millisecond)
+		send(`{"type":"response.output_text.delta","delta":" but steady"}`)
+		time.Sleep(150 * time.Millisecond)
+		send(`{"type":"response.completed","response":{"status":"completed"}}`)
+	}))
+	defer server.Close()
+
+	client := NewConcentrateResponsesClient("cn-key", server.URL)
+	result, err := client.StreamChat(context.Background(), nil, core.ChatOptions{Model: "gpt-5"})
+	if err != nil {
+		t.Fatalf("StreamChat: %v", err)
+	}
+	defer result.Close()
+
+	var content strings.Builder
+	sawDone := false
+	for evt := range result.Events {
+		switch evt.Type {
+		case "content":
+			content.WriteString(evt.Content)
+		case "done":
+			sawDone = true
+		}
+	}
+	if got := content.String(); got != "slow but steady" {
+		t.Fatalf("content = %q", got)
+	}
+	if !sawDone {
+		t.Fatal("stream never delivered the terminal done event")
+	}
+	if result.RequestID != "req_slow" {
+		t.Fatalf("stream request id = %q, want req_slow", result.RequestID)
+	}
+}
+
+func TestNormalizeToolParamsDoesNotMutateCallerMap(t *testing.T) {
+	t.Parallel()
+	original := map[string]interface{}{
+		"type":       "object",
+		"properties": map[string]interface{}{"path": map[string]interface{}{"type": "string"}},
+	}
+	normalized := normalizeToolParams(original)
+	if _, has := original["additionalProperties"]; has {
+		t.Fatal("caller's parameter map was mutated in place")
+	}
+	if got := normalized["additionalProperties"]; got != false {
+		t.Fatalf("normalized additionalProperties = %#v, want false", got)
+	}
+	if _, ok := normalized["properties"].(map[string]interface{}); !ok {
+		t.Fatalf("normalized properties = %#v, want the original nested schema", normalized["properties"])
+	}
+
+	explicit := map[string]interface{}{"type": "object", "additionalProperties": true}
+	if got := normalizeToolParams(explicit); got["additionalProperties"] != true {
+		t.Fatalf("explicit additionalProperties = %#v, want preserved true", got["additionalProperties"])
 	}
 }

@@ -177,6 +177,69 @@ func TestNormalizedStreamContract(t *testing.T) {
 	}
 }
 
+// Regression (audit E4): client/core emits end-of-stream health diagnostics
+// (e.g. reasoning-only responses) as error-type events marked non-fatal via
+// the Warning field, followed by the terminal done. The engine must forward
+// them as warning events and still deliver the done/usage event without
+// setting Err().
+func TestStreamDiagnosticErrorEventIsNonFatal(t *testing.T) {
+	sourceEvents := make(chan client.EyrieStreamEvent, 3)
+	sourceEvents <- client.EyrieStreamEvent{Type: "content", Content: "answer"}
+	sourceEvents <- client.EyrieStreamEvent{Type: "error", Error: "model produced reasoning tokens but no answer", Warning: "model produced reasoning tokens but no answer"}
+	sourceEvents <- client.EyrieStreamEvent{Type: "done", StopReason: "stop", Usage: &client.EyrieUsage{PromptTokens: 1, CompletionTokens: 2, TotalTokens: 3}}
+	close(sourceEvents)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := newStream(ctx, cancel, client.NewStreamResult(sourceEvents, nil), Route{Provider: "mock", Model: "mock/model"})
+	defer stream.Close()
+
+	var events []Event
+	for stream.Next() {
+		events = append(events, stream.Event())
+	}
+	if err := stream.Err(); err != nil {
+		t.Fatalf("diagnostic must not set Err(): %v", err)
+	}
+	if len(events) != 4 {
+		t.Fatalf("events = %d, want 4: %+v", len(events), events)
+	}
+	if events[1].Type != EventContentDelta || events[1].Content != "answer" {
+		t.Fatalf("content delta lost: %+v", events[1])
+	}
+	if events[2].Type != EventWarning || events[2].Warning == "" {
+		t.Fatalf("diagnostic should surface as a warning event: %+v", events[2])
+	}
+	if events[3].Type != EventDone || events[3].Usage == nil || events[3].Usage.TotalTokens != 3 {
+		t.Fatalf("terminal done/usage lost: %+v", events[3])
+	}
+}
+
+// Genuinely fatal error events (no Warning marker) keep the previous
+// behavior: the stream terminates and Err() carries the classified error.
+func TestStreamFatalErrorEventStillTerminal(t *testing.T) {
+	sourceEvents := make(chan client.EyrieStreamEvent, 2)
+	sourceEvents <- client.EyrieStreamEvent{Type: "content", Content: "partial"}
+	sourceEvents <- client.EyrieStreamEvent{Type: "error", Error: "connection reset"}
+	close(sourceEvents)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := newStream(ctx, cancel, client.NewStreamResult(sourceEvents, nil), Route{Provider: "mock", Model: "mock/model"})
+	defer stream.Close()
+
+	var events []Event
+	for stream.Next() {
+		events = append(events, stream.Event())
+	}
+	if err := stream.Err(); err == nil {
+		t.Fatal("fatal error event must set Err()")
+	} else if !IsCode(err, ErrorProviderUnavailable) {
+		t.Fatalf("error code = %v, want provider_unavailable", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("events = %d, want 2 (route_selected + content_delta): %+v", len(events), events)
+	}
+}
+
 func TestSnapshotPublishesCapabilities(t *testing.T) {
 	compiled := &catalog.CompiledCatalog{
 		ModelsByID: map[string]catalog.Model{

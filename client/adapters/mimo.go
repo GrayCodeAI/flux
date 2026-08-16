@@ -1,7 +1,10 @@
 package adapters
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -64,6 +67,40 @@ func parseHTTPStatusFromError(msg string) int {
 // mimoAuthHeaders sets MiMo-preferred authentication on outbound requests.
 func mimoAuthHeaders(req *http.Request, apiKey string) {
 	xiaomi.SetMimoRequestAuth(req, apiKey)
+}
+
+// doWithMimoAuthRetry runs the HTTP request through core.DoWithRetry; on 401
+// with MiMo api-key auth it rebuilds the request with the provider's Bearer
+// headers (set by setRetryHeaders) and retries once. Shared by the OpenAI and
+// Anthropic adapters, which differ only in the headers applied to the retry.
+func doWithMimoAuthRetry(
+	ctx context.Context,
+	httpClient *http.Client,
+	retry core.RetryConfig,
+	logger *slog.Logger,
+	useMimoAuth bool,
+	req *http.Request,
+	body []byte,
+	setRetryHeaders func(*http.Request),
+) (*http.Response, error) {
+	resp, err := core.DoWithRetry(ctx, httpClient, req, retry, logger)
+	if err != nil {
+		return nil, err
+	}
+	if !useMimoAuth || resp.StatusCode != http.StatusUnauthorized {
+		return resp, nil
+	}
+	_ = resp.Body.Close()
+	req2, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	setRetryHeaders(req2)
+	if req.Header.Get("Accept") != "" {
+		req2.Header.Set("Accept", req.Header.Get("Accept"))
+	}
+	req2.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
+	return core.DoWithRetry(ctx, httpClient, req2, retry, logger)
 }
 
 // ProviderID reports the configured MiMo gateway identity.

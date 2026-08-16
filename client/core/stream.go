@@ -453,8 +453,11 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 		}
 
 		// finish emits the terminal done event, preceded by a non-fatal health
-		// diagnostic (as an error-type event the consumer can log) when the
-		// response produced no usable content/tool-calls.
+		// diagnostic when the response produced no usable content/tool-calls.
+		// The diagnostic rides an error-type event (so consumers that only
+		// read .Error still see it) but is marked non-fatal via the Warning
+		// field: downstream layers must surface it without terminating the
+		// stream, because the terminal done event follows immediately.
 		finish := func(stopReason string) {
 			emitTools()
 			health := DetectResponseHealth(ResponseSignals{
@@ -465,7 +468,7 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 				StreamEnded:  true,
 			})
 			if d := health.Diagnostic(); d != "" {
-				Emit(ctx, ch, EyrieStreamEvent{Type: "error", Error: d})
+				Emit(ctx, ch, EyrieStreamEvent{Type: "error", Error: d, Warning: d})
 			}
 			Emit(ctx, ch, EyrieStreamEvent{Type: "done", StopReason: stopReason, TTFTms: ttftMs})
 		}

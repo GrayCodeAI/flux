@@ -1,6 +1,6 @@
 module github.com/GrayCodeAI/eyrie
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/GrayCodeAI/hawk-core-contracts v0.1.12

@@ -629,27 +629,12 @@ func (c *AnthropicClient) StreamChat(ctx context.Context, messages []core.EyrieM
 }
 
 func (c *AnthropicClient) doRequestWithMimoAuthRetry(ctx context.Context, req *http.Request, body []byte) (*http.Response, error) {
-	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
-	if err != nil {
-		return nil, err
-	}
-	if !c.useMimoAuth || resp.StatusCode != http.StatusUnauthorized {
-		return resp, nil
-	}
-	_ = resp.Body.Close()
-	req2, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req2.Header.Set("Content-Type", "application/json")
-	req2.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req2.Header.Set("Anthropic-Version", c.version)
-	req2.Header.Set("User-Agent", core.UserAgent())
-	if req.Header.Get("Accept") != "" {
-		req2.Header.Set("Accept", req.Header.Get("Accept"))
-	}
-	req2.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
-	return core.DoWithRetry(ctx, c.httpClient, req2, c.retry, c.logger)
+	return doWithMimoAuthRetry(ctx, c.httpClient, c.retry, c.logger, c.useMimoAuth, req, body, func(req2 *http.Request) {
+		req2.Header.Set("Content-Type", "application/json")
+		req2.Header.Set("Authorization", "Bearer "+c.apiKey)
+		req2.Header.Set("Anthropic-Version", c.version)
+		req2.Header.Set("User-Agent", core.UserAgent())
+	})
 }
 
 // Ping checks connectivity to the Anthropic API using a lightweight GET request.
