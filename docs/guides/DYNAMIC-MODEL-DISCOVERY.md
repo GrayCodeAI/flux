@@ -259,14 +259,15 @@ standalone Eyrie change
   --> signed Eyrie commit
   --> publish a resolvable Eyrie module release/commit
   --> update Hawk module dependency when needed
-  --> pin Hawk's Eyrie submodule to the same commit
+  --> update Hawk's Eyrie module pin to the same published commit
   --> Hawk integration + boundary + clean-clone verification (two passes)
   --> commit Hawk code and gitlink together
 ```
 
-The submodule must point to a committed Eyrie object, never working-tree-only
-code. The published module and submodule must expose the same Engine contract
-so both workspace builds and `GOWORK=off` builds are reproducible.
+The parent workspace must use a committed Eyrie checkout, never working-tree-
+only code, and Hawk's module pin must resolve to that same published commit.
+Both workspace builds and `GOWORK=off` builds must expose the same Engine
+contract.
 
 ## Related documentation
 

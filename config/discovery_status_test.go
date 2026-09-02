@@ -25,6 +25,7 @@ func (emptyCredentialStore) Get(context.Context, string) (string, error) { retur
 func (emptyCredentialStore) Delete(context.Context, string) error        { return nil }
 
 func TestHasAnyConfiguredDeployment_RejectsPlaceholder(t *testing.T) {
+	t.Setenv("HAWK_CONFIG_DIR", t.TempDir())
 	credentials.SetDefaultStore(emptyCredentialStore{})
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 

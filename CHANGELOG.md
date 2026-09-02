@@ -90,8 +90,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   5. Whitespace collapse
   Reports aggregate `BytesSaved` and `PercentOff` across all tools
   in the slice. Safe to call concurrently.
-  Aligns eyrie with the rest of the hawk-eco ecosystem (`hawk`, `tok`,
-  `yaad`, `sight`, `inspect`).
+  Aligns eyrie with the rest of the hawk-eco ecosystem (`hawk`, `shrike`,
+  `harrier`, `kestrel`, `merlin`).
 
 ### Added
 - Output guardrails framework (PII, secrets, injection, harmful content)

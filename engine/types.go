@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 // Intent expresses a host's semantic preference without naming a provider.

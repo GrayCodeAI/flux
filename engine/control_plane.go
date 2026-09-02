@@ -10,7 +10,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
-	llm "github.com/GrayCodeAI/hawk-core-contracts/llm"
+	llm "github.com/GrayCodeAI/eyrie/llm"
 )
 
 // ResolveCredential validates credential input and returns safe provider

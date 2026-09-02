@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 // ConcentrateResponsesClient uses the Concentrate Responses API (the production-ready

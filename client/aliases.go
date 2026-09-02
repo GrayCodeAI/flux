@@ -8,7 +8,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client/adapters"
 	"github.com/GrayCodeAI/eyrie/client/core"
 	"github.com/GrayCodeAI/eyrie/client/embeddings"
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 // The provider contract and request/response data types live in
@@ -234,7 +234,7 @@ var (
 // NewStreamResult creates a StreamResult with a cancel function for resource
 // cleanup. The request ID is optional; pass "" when it is not yet available.
 // The canonical constructor lives in
-// github.com/GrayCodeAI/hawk-core-contracts/llm; this is a thin facade
+// github.com/GrayCodeAI/eyrie/llm; this is a thin facade
 // wrapper that keeps the public client API stable.
 func NewStreamResult(events <-chan EyrieStreamEvent, cancel context.CancelFunc) *StreamResult {
 	return llm.NewStreamResult(events, "", cancel)

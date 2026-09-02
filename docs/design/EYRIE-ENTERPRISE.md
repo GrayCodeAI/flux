@@ -418,7 +418,7 @@ These repos are privacy-first; the enterprise layer must not regress that.
 
 1. **Single-tenant per binary vs. multi-org per binary?** This doc assumes multi-org within one
    operator's deployment. Is true cross-customer multi-tenancy ever in scope, or does that stay
-   a hawk-cloud concern (`TOP20_COMPARISON.md:33-34`)?
+   a graycode-cloud concern (`TOP20_COMPARISON.md:33-34`)?
 2. **SSO scope:** OIDC only for P0, or do enterprise buyers require SAML (which needs a heavier
    dep)? SAML likely pushes to P2.
 3. **Where does `session_id` originate?** From the OpenAI `user` field (`openai_proxy.go:41`), a

@@ -169,7 +169,7 @@ Preflight has two explicit modes:
 These modes must not be conflated: local readiness is suitable for startup and
 diagnostics; live readiness is an explicit network operation.
 
-## Release and submodule order
+## Release and sibling-repository order
 
 The boundary is delivered Eyrie-first:
 
@@ -177,14 +177,15 @@ The boundary is delivered Eyrie-first:
 1. Change and verify standalone Eyrie
 2. Commit Eyrie and publish a resolvable release/commit
 3. Update Hawk's Eyrie module version when required
-4. Advance Hawk's Eyrie submodule pin to that exact commit
+4. Update Hawk's Eyrie module pin to that exact published commit
 5. Verify Hawk integration, boundary checks, and clean-clone/module builds
-6. Commit Hawk's code and gitlink update together
+6. Commit the Hawk module-pin update in Hawk's repository
 ```
 
-Hawk must never point at an uncommitted Eyrie worktree. A submodule pin proves
-source identity; a resolvable module version is also required for workflows
-that build Hawk with `GOWORK=off`.
+Hawk must never depend on an uncommitted Eyrie worktree. The parent workspace
+uses a sibling checkout for source identity during local development; a
+resolvable published module version is also required for workflows that build
+Hawk with `GOWORK=off`.
 
 ## Compatibility policy
 

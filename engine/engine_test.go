@@ -10,7 +10,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 func TestNewUsesInjectedCredentialStore(t *testing.T) {

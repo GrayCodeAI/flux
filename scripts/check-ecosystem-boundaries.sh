@@ -5,10 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # Eyrie is host-neutral: it must not depend on any Hawk package. Shared
-# ecosystem vocabulary belongs in hawk-core-contracts, whose module path does
+# ecosystem vocabulary belongs in eagle, whose module path does
 # not match this expression.
 FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk(/|")'
-FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(yaad|tok|trace|sight|inspect)(/|")'
+FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(harrier|shrike|swift|kestrel|merlin)(/|")'
 
 exit_code=0
 
@@ -24,7 +24,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden Hawk imports found:"
   echo "${violations}"
   echo
-  echo "eyrie must use hawk-core-contracts or local contracts, never the Hawk product module"
+  echo "eyrie must use eagle or local contracts, never the Hawk product module"
   exit_code=1
 fi
 

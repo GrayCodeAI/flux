@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	llm "github.com/GrayCodeAI/hawk-core-contracts/llm"
+	llm "github.com/GrayCodeAI/eyrie/llm"
 )
 
 func TestToClientMessages_ReturnsMessagesUnchanged(t *testing.T) {

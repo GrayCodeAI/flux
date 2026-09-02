@@ -3,7 +3,8 @@
 **Status:** In Progress — Phases 1–3 implemented 2026-07-13; layering guard live
 **Author:** Claude (architecture review session)
 **Date:** 2026-07-12
-**Repos affected:** eyrie (all changes), hawk (no code changes required; re-pin external/eyrie)
+**Repos affected:** eyrie (all changes), hawk (no code changes required; update
+the published Eyrie module pin)
 
 ## Problem Statement
 
@@ -196,7 +197,7 @@ Learned in Phases 1–2 (apply to later phases):
 | Hidden unexported coupling beyond the measured sets | med | Phases are one-cluster-at-a-time; the compiler finds every missed reference at move time; abort/expand `core` rather than weaken boundaries |
 | Type identity breakage for consumers doing type switches | high | Use aliases (`=`), never new named types, for everything that already exists |
 | Method sets split from their types | high | Methods move with their receiver's file into the same subpackage — never leave methods behind |
-| external/eyrie pin drift in hawk during the refactor | low | Land phases as individual PRs; re-pin hawk after each; `make sync-external` reports drift |
+| Eyrie module-pin drift in Hawk during the refactor | low | Land phases as individual PRs; update Hawk after each; `make sync` reports drift |
 | Facade grows stale re-exports | low | Phase 5 CI check + deprecation comments |
 
 ## References

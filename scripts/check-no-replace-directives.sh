@@ -8,7 +8,7 @@ if grep -qE '^replace .+ => \.\./' go.mod; then
   grep -nE '^replace .+ => \.\./' go.mod
   echo ""
   echo "Local replace directives must be removed before tagging a release."
-  echo "For a release, the published module version of hawk-core-contracts must be used."
+  echo "For a release, the published module version of eagle must be used."
   exit 1
 fi
 echo "OK: no local replace directives in go.mod."

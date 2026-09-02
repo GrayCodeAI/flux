@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk-core-contracts/llm"
+import "github.com/GrayCodeAI/eyrie/llm"
 
 // Compile-time assertions: the host facade implements the shared port.
 // If a method is added to llm.Provider (or EventStreamer), this file fails

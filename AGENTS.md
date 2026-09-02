@@ -54,7 +54,10 @@ make ci                          # Full CI suite
 - `client.Provider` remains the lower-level compatibility boundary for other
   consumers; preserve its method set and the facade's type identity
 - Streaming tests need careful goroutine management
-- `go.work` here should stay minimal; hawk's own `go.work` adds an `external/eyrie` replace so hawk can develop against a local eyrie checkout. Do not add extra local `replace` directives here without coordinating with hawk's workspace.
+- `go.work` here should stay minimal; the parent `graycode-eco/go.work`
+  connects this independent `eyrie` checkout beside Hawk for local development.
+  Do not add extra local `replace` directives here without coordinating with
+  the parent workspace.
 
 ## Naming Conventions
 
@@ -138,4 +141,7 @@ make ci                          # Full CI suite
 | Main test file | `client/client_test.go` (httptest servers, provider detection) |
 | Linter config | `.golangci.yml` (govet, ineffassign, misspell — minimal) |
 
-This repo is a submodule of [hawk](https://github.com/GrayCodeAI/hawk) at `hawk/external/eyrie`. Work in the submodule (go.work picks it up), push, sync here, PR/merge, then pull main in the submodule.
+This is an independent repository consumed by Hawk. In the local
+`graycode-eco` parent workspace it is checked out beside `hawk` as `../eyrie`
+and connected through the parent `go.work`; publish changes here, then update
+Hawk's module pin through a separate PR.

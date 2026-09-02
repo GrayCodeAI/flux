@@ -47,11 +47,11 @@ provider packages.
 
 eyrie is a Hawk support engine. Keep the dependency edge one-way:
 
-- host-facing DTOs and the `Provider` port live in `hawk-core-contracts/llm`; `engine/` re-exports them as aliases (`*Engine` implements `llm.Provider`)
+- host-facing DTOs and the `Provider` port live in `eagle/llm`; `engine/` re-exports them as aliases (`*Engine` implements `llm.Provider`)
 - internal provider/transport types stay eyrie-scoped (not shared contracts)
 - do not import `hawk/internal/*`
 - do not import removed legacy path `hawk/shared/types`
-- do not import other engines (`yaad`, `tok`, `trace`, `sight`, `inspect`) — engines are peers, not dependencies
+- do not import other engines (`harrier`, `shrike`, `swift`, `kestrel`, `merlin`) — engines are peers, not dependencies
 
 ## Quick Start
 
@@ -308,9 +308,9 @@ eyrie is part of the hawk-eco:
 |---|---|---|
 | **hawk** | [GrayCodeAI/hawk](https://github.com/GrayCodeAI/hawk) | AI coding agent |
 | **eyrie** | This repo | LLM provider runtime |
-| **tok** | [GrayCodeAI/tok](https://github.com/GrayCodeAI/tok) | Tokenizer & compression |
-| **yaad** | [GrayCodeAI/yaad](https://github.com/GrayCodeAI/yaad) | Graph-based memory |
-| **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture |
+| **shrike** | [GrayCodeAI/shrike](https://github.com/GrayCodeAI/shrike) | Tokenizer & compression |
+| **harrier** | [GrayCodeAI/harrier](https://github.com/GrayCodeAI/harrier) | Graph-based memory |
+| **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture |
 
 ## Development
 

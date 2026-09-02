@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	llmcontracts "github.com/GrayCodeAI/hawk-core-contracts/llm"
+	graphcontracts "github.com/GrayCodeAI/eyrie/graph"
+	llmcontracts "github.com/GrayCodeAI/eyrie/llm"
 )
 
 const SchemaVersion = "eyrie.graph/v1"

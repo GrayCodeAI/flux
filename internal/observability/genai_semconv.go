@@ -3,7 +3,7 @@
 // These exported constants are the canonical, ecosystem-wide attribute keys for
 // describing LLM / AI agent operations. They follow the OpenTelemetry GenAI
 // semantic conventions (gen_ai.*) and are shared as the reference set that the
-// other hawk-eco repos (hawk, yaad, tok, trace) should mirror when emitting
+// other hawk-eco repos (hawk, harrier, shrike, swift) should mirror when emitting
 // spans, so dashboards and exporters can correlate cost/usage/identity across
 // the whole ecosystem.
 //

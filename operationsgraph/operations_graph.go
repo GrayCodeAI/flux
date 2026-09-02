@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
+	graphcontracts "github.com/GrayCodeAI/eyrie/graph"
 )
 
 // OperationNode represents a node in the operations graph.

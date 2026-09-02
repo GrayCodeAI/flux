@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 // geminiSharedParserEnvVar is the opt-out flag for the new

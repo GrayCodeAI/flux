@@ -4,7 +4,7 @@
 //
 // core is a leaf package — it must not import any other eyrie/client
 // subpackage. The conversation DTOs below are aliases to the canonical
-// hawk-core-contracts/llm definitions; core re-exports them so subpackages
+// eagle/llm definitions; core re-exports them so subpackages
 // share the contract without an import cycle through the facade. The public
 // names remain available as aliases in github.com/GrayCodeAI/eyrie/client,
 // which is the API consumers should keep importing.
@@ -15,7 +15,7 @@ package core
 import (
 	"context"
 
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 // Provider is the core interface for LLM providers.
@@ -76,7 +76,7 @@ type EyrieStreamEvent = llm.EyrieStreamEvent
 //
 // StreamResult is aliased to the canonical contract type; its Close()
 // method and canonical constructor (NewStreamResult) live in
-// github.com/GrayCodeAI/hawk-core-contracts/llm.
+// github.com/GrayCodeAI/eyrie/llm.
 type StreamResult = llm.StreamResult
 
 // ResponseFormat specifies the desired output format for the model response.
