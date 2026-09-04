@@ -25,19 +25,19 @@ type Interaction struct {
 
 // RecordedRequest captures the essential fields of a chat request.
 type RecordedRequest struct {
-	Messages []EyrieMessage `json:"messages"`
-	Model    string         `json:"model"`
-	System   string         `json:"system,omitempty"`
-	Hash     string         `json:"hash"`
+	Messages []GraycodeRouterMessage `json:"messages"`
+	Model    string                  `json:"model"`
+	System   string                  `json:"system,omitempty"`
+	Hash     string                  `json:"hash"`
 }
 
 // RecordedResponse captures the response from a provider.
 type RecordedResponse struct {
-	Content      string      `json:"content,omitempty"`
-	ToolCalls    []ToolCall  `json:"tool_calls,omitempty"`
-	Usage        *EyrieUsage `json:"usage,omitempty"`
-	FinishReason string      `json:"finish_reason,omitempty"`
-	Error        string      `json:"error,omitempty"`
+	Content      string               `json:"content,omitempty"`
+	ToolCalls    []ToolCall           `json:"tool_calls,omitempty"`
+	Usage        *GraycodeRouterUsage `json:"usage,omitempty"`
+	FinishReason string               `json:"finish_reason,omitempty"`
+	Error        string               `json:"error,omitempty"`
 }
 
 // LoadCassette reads a cassette from a JSON file at path.
@@ -92,7 +92,7 @@ func SaveCassette(c *Cassette, path string) error {
 // requestHash computes a SHA256 hash of the canonical request fields.
 // Only model, system prompt, and message roles/content are included in the hash.
 // Images, temperature, and other varying options are excluded for stability.
-func requestHash(messages []EyrieMessage, opts ChatOptions) string {
+func requestHash(messages []GraycodeRouterMessage, opts ChatOptions) string {
 	type hashMessage struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`

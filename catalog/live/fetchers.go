@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
+	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
 )
 
 // maxLiveResponseBytes caps how much of an external provider's HTTP response
@@ -187,7 +187,7 @@ func fetchOpenAICompatModels(ctx context.Context, baseURL, apiKey, authHeader st
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

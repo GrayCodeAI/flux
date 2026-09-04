@@ -7,7 +7,7 @@
 // Sinks are pluggable via the AuditSink interface. The default NoopSink discards
 // events; JSONLFileSink appends one JSON object per line to a configurable file.
 // Everything here is stdlib-only.
-package eyrie
+package graycoderouter
 
 import (
 	"crypto/sha256"

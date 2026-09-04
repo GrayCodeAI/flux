@@ -4,7 +4,7 @@ package core
 // (assistant messages with tool calls that lack matching tool_result blocks)
 // and injects synthetic error results to prevent 400 errors from providers.
 // This is critical for session resume and compaction scenarios.
-func SanitizeMessages(messages []EyrieMessage) []EyrieMessage {
+func SanitizeMessages(messages []GraycodeRouterMessage) []GraycodeRouterMessage {
 	if len(messages) == 0 {
 		return messages
 	}
@@ -22,7 +22,7 @@ func SanitizeMessages(messages []EyrieMessage) []EyrieMessage {
 	}
 
 	// Find orphaned tool_use IDs and inject synthetic results
-	var result []EyrieMessage
+	var result []GraycodeRouterMessage
 	for _, msg := range messages {
 		result = append(result, msg)
 
@@ -30,7 +30,7 @@ func SanitizeMessages(messages []EyrieMessage) []EyrieMessage {
 			for _, tc := range msg.ToolUse {
 				if tc.ID != "" && !resultIDs[tc.ID] {
 					// Inject synthetic error result
-					result = append(result, EyrieMessage{
+					result = append(result, GraycodeRouterMessage{
 						Role: "user",
 						ToolResults: []ToolResult{{
 							ToolUseID: tc.ID,

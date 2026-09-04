@@ -1,11 +1,11 @@
 package engine
 
-import "github.com/GrayCodeAI/eyrie/client"
+import "github.com/GrayCodeAI/graycode-router/client"
 
 // toClientMessages returns the messages unchanged: the engine and the client
 // both speak the canonical contract message type, so no per-field conversion
 // is needed.
-func toClientMessages(in []Message) []client.EyrieMessage {
+func toClientMessages(in []Message) []client.GraycodeRouterMessage {
 	return in
 }
 
@@ -13,7 +13,7 @@ func toClientMessages(in []Message) []client.EyrieMessage {
 // wire-format chat options. Provider-specific translation continues to live in
 // the adapters; this is the contract-level mapping.
 func toClientOptions(req GenerateRequest, route Route, stream bool) client.ChatOptions {
-	tools := append([]client.EyrieTool(nil), req.Tools...)
+	tools := append([]client.GraycodeRouterTool(nil), req.Tools...)
 	opts := client.ChatOptions{
 		Provider: route.Provider, Model: route.Model, Stream: stream,
 		System: req.SystemPrompt, Tools: tools, Temperature: req.Temperature,
@@ -88,7 +88,7 @@ func cloneStringMap(in map[string]string) map[string]string {
 // fromClientResponse attaches the resolved route to a client response. The
 // engine and the client both speak the canonical contract response type, so
 // this only sets the route the engine selected.
-func fromClientResponse(resp *client.EyrieResponse, route Route) *GenerateResponse {
+func fromClientResponse(resp *client.GraycodeRouterResponse, route Route) *GenerateResponse {
 	if resp == nil {
 		return &GenerateResponse{Route: &route}
 	}
@@ -98,6 +98,6 @@ func fromClientResponse(resp *client.EyrieResponse, route Route) *GenerateRespon
 
 // fromClientUsage returns the usage unchanged: the engine and the client both
 // speak the canonical contract usage type.
-func fromClientUsage(usage *client.EyrieUsage) *Usage {
+func fromClientUsage(usage *client.GraycodeRouterUsage) *Usage {
 	return usage
 }

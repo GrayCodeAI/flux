@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 func approxEqual(a, b, eps float64) bool {
@@ -105,18 +105,18 @@ func TestRun_F1ScorePopulated(t *testing.T) {
 	cases := []Case{
 		{
 			ID:       "tool-case",
-			Messages: []client.EyrieMessage{{Role: "user", Content: "call it"}},
+			Messages: []client.GraycodeRouterMessage{{Role: "user", Content: "call it"}},
 			Expect:   Expectation{ToolName: "my_tool"},
 		},
 		{
 			ID:       "no-tool-case",
-			Messages: []client.EyrieMessage{{Role: "user", Content: "no call"}},
+			Messages: []client.GraycodeRouterMessage{{Role: "user", Content: "no call"}},
 			Expect:   Expectation{NonEmptyContent: true},
 		},
 	}
 
 	// All-correct: tool case calls the right tool; no-tool case has content.
-	p := &fakeProvider{name: "fake", responses: map[string]*client.EyrieResponse{
+	p := &fakeProvider{name: "fake", responses: map[string]*client.GraycodeRouterResponse{
 		"call it": {ToolCalls: []client.ToolCall{{Name: "my_tool", Arguments: map[string]any{}}}},
 		"no call": {Content: "done"},
 	}}

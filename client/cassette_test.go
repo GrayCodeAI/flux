@@ -19,7 +19,7 @@ func TestSaveAndLoadCassette(t *testing.T) {
 		Interactions: []Interaction{
 			{
 				Request: RecordedRequest{
-					Messages: []EyrieMessage{
+					Messages: []GraycodeRouterMessage{
 						{Role: "user", Content: "Hello"},
 					},
 					Model:  "gpt-4o",
@@ -28,7 +28,7 @@ func TestSaveAndLoadCassette(t *testing.T) {
 				Response: RecordedResponse{
 					Content:      "Hi there!",
 					FinishReason: "end_turn",
-					Usage:        &EyrieUsage{PromptTokens: 5, CompletionTokens: 3, TotalTokens: 8},
+					Usage:        &GraycodeRouterUsage{PromptTokens: 5, CompletionTokens: 3, TotalTokens: 8},
 				},
 			},
 		},
@@ -118,15 +118,15 @@ func TestCassetteMultipleInteractions(t *testing.T) {
 		Provider: "anthropic",
 		Interactions: []Interaction{
 			{
-				Request:  RecordedRequest{Messages: []EyrieMessage{{Role: "user", Content: "Q1"}}, Model: "claude-3"},
+				Request:  RecordedRequest{Messages: []GraycodeRouterMessage{{Role: "user", Content: "Q1"}}, Model: "claude-3"},
 				Response: RecordedResponse{Content: "A1"},
 			},
 			{
-				Request:  RecordedRequest{Messages: []EyrieMessage{{Role: "user", Content: "Q2"}}, Model: "claude-3"},
+				Request:  RecordedRequest{Messages: []GraycodeRouterMessage{{Role: "user", Content: "Q2"}}, Model: "claude-3"},
 				Response: RecordedResponse{Content: "A2"},
 			},
 			{
-				Request:  RecordedRequest{Messages: []EyrieMessage{{Role: "user", Content: "Q3"}}, Model: "claude-3"},
+				Request:  RecordedRequest{Messages: []GraycodeRouterMessage{{Role: "user", Content: "Q3"}}, Model: "claude-3"},
 				Response: RecordedResponse{Content: "A3"},
 			},
 		},
@@ -162,7 +162,7 @@ func TestCassetteWithToolCalls(t *testing.T) {
 		Interactions: []Interaction{
 			{
 				Request: RecordedRequest{
-					Messages: []EyrieMessage{{Role: "user", Content: "Use a tool"}},
+					Messages: []GraycodeRouterMessage{{Role: "user", Content: "Use a tool"}},
 					Model:    "gpt-4o",
 				},
 				Response: RecordedResponse{
@@ -207,7 +207,7 @@ func TestCassetteWithError(t *testing.T) {
 		Interactions: []Interaction{
 			{
 				Request: RecordedRequest{
-					Messages: []EyrieMessage{{Role: "user", Content: "fail"}},
+					Messages: []GraycodeRouterMessage{{Role: "user", Content: "fail"}},
 					Model:    "gpt-4o",
 				},
 				Response: RecordedResponse{
@@ -232,7 +232,7 @@ func TestCassetteWithError(t *testing.T) {
 
 func TestRequestHashDeterministic(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi"},
 	}
@@ -249,8 +249,8 @@ func TestRequestHashDifferentInputs(t *testing.T) {
 	t.Parallel()
 	opts := ChatOptions{Model: "gpt-4o"}
 
-	h1 := requestHash([]EyrieMessage{{Role: "user", Content: "Hello"}}, opts)
-	h2 := requestHash([]EyrieMessage{{Role: "user", Content: "Different"}}, opts)
+	h1 := requestHash([]GraycodeRouterMessage{{Role: "user", Content: "Hello"}}, opts)
+	h2 := requestHash([]GraycodeRouterMessage{{Role: "user", Content: "Different"}}, opts)
 	if h1 == h2 {
 		t.Error("requestHash should differ for different messages")
 	}
@@ -258,7 +258,7 @@ func TestRequestHashDifferentInputs(t *testing.T) {
 
 func TestRequestHashDifferentModel(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{Role: "user", Content: "Hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "Hello"}}
 
 	h1 := requestHash(msgs, ChatOptions{Model: "gpt-4o"})
 	h2 := requestHash(msgs, ChatOptions{Model: "claude-3"})
@@ -269,7 +269,7 @@ func TestRequestHashDifferentModel(t *testing.T) {
 
 func TestRequestHashDifferentSystem(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{Role: "user", Content: "Hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "Hello"}}
 
 	h1 := requestHash(msgs, ChatOptions{Model: "gpt-4o", System: "You are helpful"})
 	h2 := requestHash(msgs, ChatOptions{Model: "gpt-4o", System: "You are a pirate"})
@@ -280,7 +280,7 @@ func TestRequestHashDifferentSystem(t *testing.T) {
 
 func TestRequestHashExcludesTemperature(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{Role: "user", Content: "Hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "Hello"}}
 	t1 := 0.5
 	t2 := 0.9
 

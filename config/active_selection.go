@@ -3,7 +3,7 @@ package config
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog"
 )
 
 // ActiveModel returns the user's selected model from provider.json (canonical when possible).

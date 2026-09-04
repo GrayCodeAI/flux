@@ -1,7 +1,7 @@
 package catalog
 
 import (
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // extraDeploymentEnvFallbacks are env fallbacks for deployments that have no

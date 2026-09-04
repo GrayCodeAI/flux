@@ -11,7 +11,7 @@ func TestContinuation_StopsWhenNotMaxTokens(t *testing.T) {
 	mock.Response = "complete answer"
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test"}
 	cfg := ContinuationConfig{MaxContinuations: 3, MaxTotalTokens: 32000}
 
@@ -36,13 +36,13 @@ func TestContinuation_ContinuesOnMaxTokens(t *testing.T) {
 	// Use a mock that returns max_tokens for the first call, then end_turn for the second
 	mock := &sequentialMock{
 		responses: []mockResponse{
-			{content: "part 1 ", finishReason: "max_tokens", usage: &EyrieUsage{PromptTokens: 10, CompletionTokens: 50, TotalTokens: 60}},
-			{content: "part 2", finishReason: "end_turn", usage: &EyrieUsage{PromptTokens: 20, CompletionTokens: 30, TotalTokens: 50}},
+			{content: "part 1 ", finishReason: "max_tokens", usage: &GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 50, TotalTokens: 60}},
+			{content: "part 2", finishReason: "end_turn", usage: &GraycodeRouterUsage{PromptTokens: 20, CompletionTokens: 30, TotalTokens: 50}},
 		},
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "write something long"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "write something long"}}
 	opts := ChatOptions{Model: "test"}
 	cfg := ContinuationConfig{MaxContinuations: 5, MaxTotalTokens: 32000}
 
@@ -73,15 +73,15 @@ func TestContinuation_RespectsMaxRetries(t *testing.T) {
 	// All responses return max_tokens — should stop after MaxContinuations
 	mock := &sequentialMock{
 		responses: []mockResponse{
-			{content: "a", finishReason: "max_tokens", usage: &EyrieUsage{CompletionTokens: 10}},
-			{content: "b", finishReason: "max_tokens", usage: &EyrieUsage{CompletionTokens: 10}},
-			{content: "c", finishReason: "max_tokens", usage: &EyrieUsage{CompletionTokens: 10}},
-			{content: "d", finishReason: "max_tokens", usage: &EyrieUsage{CompletionTokens: 10}},
+			{content: "a", finishReason: "max_tokens", usage: &GraycodeRouterUsage{CompletionTokens: 10}},
+			{content: "b", finishReason: "max_tokens", usage: &GraycodeRouterUsage{CompletionTokens: 10}},
+			{content: "c", finishReason: "max_tokens", usage: &GraycodeRouterUsage{CompletionTokens: 10}},
+			{content: "d", finishReason: "max_tokens", usage: &GraycodeRouterUsage{CompletionTokens: 10}},
 		},
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "go"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "go"}}
 	opts := ChatOptions{Model: "test"}
 	cfg := ContinuationConfig{MaxContinuations: 2, MaxTotalTokens: 0}
 
@@ -105,13 +105,13 @@ func TestContinuation_RespectsMaxTotalTokens(t *testing.T) {
 	t.Parallel()
 	mock := &sequentialMock{
 		responses: []mockResponse{
-			{content: "big chunk", finishReason: "max_tokens", usage: &EyrieUsage{CompletionTokens: 5000}},
-			{content: " more", finishReason: "max_tokens", usage: &EyrieUsage{CompletionTokens: 5000}},
+			{content: "big chunk", finishReason: "max_tokens", usage: &GraycodeRouterUsage{CompletionTokens: 5000}},
+			{content: " more", finishReason: "max_tokens", usage: &GraycodeRouterUsage{CompletionTokens: 5000}},
 		},
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "go"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "go"}}
 	opts := ChatOptions{Model: "test"}
 	cfg := ContinuationConfig{MaxContinuations: 10, MaxTotalTokens: 5000}
 
@@ -133,7 +133,7 @@ func TestContinuation_StopsOnToolCalls(t *testing.T) {
 	mock := NewMockProvider(MockModeToolUse)
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "use a tool"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "use a tool"}}
 	opts := ChatOptions{Model: "test"}
 	cfg := ContinuationConfig{MaxContinuations: 5, MaxTotalTokens: 32000}
 
@@ -159,7 +159,7 @@ func TestContinuation_StreamNoContinuationNeeded(t *testing.T) {
 	mock.Response = "complete"
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "hi"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	opts := ChatOptions{Model: "test"}
 	cfg := ContinuationConfig{MaxContinuations: 3, MaxTotalTokens: 32000}
 
@@ -196,13 +196,13 @@ func TestContinuation_StreamContinuesOnMaxTokens(t *testing.T) {
 	// Use the sequential mock which responds max_tokens then end_turn
 	mock := &sequentialMock{
 		responses: []mockResponse{
-			{content: "first", finishReason: "max_tokens", usage: &EyrieUsage{CompletionTokens: 100}},
-			{content: " second", finishReason: "end_turn", usage: &EyrieUsage{CompletionTokens: 50}},
+			{content: "first", finishReason: "max_tokens", usage: &GraycodeRouterUsage{CompletionTokens: 100}},
+			{content: " second", finishReason: "end_turn", usage: &GraycodeRouterUsage{CompletionTokens: 50}},
 		},
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "go"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "go"}}
 	opts := ChatOptions{Model: "test"}
 	cfg := ContinuationConfig{MaxContinuations: 5, MaxTotalTokens: 32000}
 
@@ -245,7 +245,7 @@ func TestContinuation_StreamContinuesOnMaxTokens(t *testing.T) {
 type mockResponse struct {
 	content      string
 	finishReason string
-	usage        *EyrieUsage
+	usage        *GraycodeRouterUsage
 	toolCalls    []ToolCall
 }
 
@@ -259,14 +259,14 @@ func (s *sequentialMock) Name() string { return "sequential-mock" }
 
 func (s *sequentialMock) Ping(_ context.Context) error { return nil }
 
-func (s *sequentialMock) Chat(_ context.Context, _ []EyrieMessage, _ ChatOptions) (*EyrieResponse, error) {
+func (s *sequentialMock) Chat(_ context.Context, _ []GraycodeRouterMessage, _ ChatOptions) (*GraycodeRouterResponse, error) {
 	idx := s.callCount
 	s.callCount++
 	if idx >= len(s.responses) {
 		idx = len(s.responses) - 1
 	}
 	r := s.responses[idx]
-	return &EyrieResponse{
+	return &GraycodeRouterResponse{
 		Content:      r.content,
 		FinishReason: r.finishReason,
 		Usage:        r.usage,
@@ -274,20 +274,20 @@ func (s *sequentialMock) Chat(_ context.Context, _ []EyrieMessage, _ ChatOptions
 	}, nil
 }
 
-func (s *sequentialMock) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (s *sequentialMock) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	resp, err := s.Chat(ctx, messages, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	streamCtx, cancel := context.WithCancel(ctx)
-	ch := make(chan EyrieStreamEvent, 64)
+	ch := make(chan GraycodeRouterStreamEvent, 64)
 
 	go func() {
 		defer close(ch)
 		if resp.Content != "" {
 			select {
-			case ch <- EyrieStreamEvent{Type: "content", Content: resp.Content}:
+			case ch <- GraycodeRouterStreamEvent{Type: "content", Content: resp.Content}:
 			case <-streamCtx.Done():
 				return
 			}
@@ -295,20 +295,20 @@ func (s *sequentialMock) StreamChat(ctx context.Context, messages []EyrieMessage
 		for i := range resp.ToolCalls {
 			tc := resp.ToolCalls[i]
 			select {
-			case ch <- EyrieStreamEvent{Type: "tool_call", ToolCall: &tc}:
+			case ch <- GraycodeRouterStreamEvent{Type: "tool_call", ToolCall: &tc}:
 			case <-streamCtx.Done():
 				return
 			}
 		}
 		if resp.Usage != nil {
 			select {
-			case ch <- EyrieStreamEvent{Type: "usage", Usage: resp.Usage}:
+			case ch <- GraycodeRouterStreamEvent{Type: "usage", Usage: resp.Usage}:
 			case <-streamCtx.Done():
 				return
 			}
 		}
 		select {
-		case ch <- EyrieStreamEvent{Type: "done", StopReason: resp.FinishReason}:
+		case ch <- GraycodeRouterStreamEvent{Type: "done", StopReason: resp.FinishReason}:
 		case <-streamCtx.Done():
 		}
 	}()

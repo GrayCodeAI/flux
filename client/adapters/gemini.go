@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 // geminiSharedParserEnvVar is the opt-out flag for the new
@@ -20,7 +20,7 @@ import (
 // from stream.go). Set to "0" / "false" / "no" to revert to the
 // old bespoke streamLoop. The old path will be removed after one
 // release once the new path is validated in production.
-const geminiSharedParserEnvVar = "EYRIE_GEMINI_SHARED_PARSER"
+const geminiSharedParserEnvVar = "GRAYCODE_ROUTER_GEMINI_SHARED_PARSER"
 
 // GeminiSharedParserEnvVar controls the shared SSE parser compatibility switch.
 const GeminiSharedParserEnvVar = geminiSharedParserEnvVar
@@ -78,9 +78,9 @@ func (c *GeminiClient) isVertex() bool {
 	return strings.Contains(c.baseURL, "aiplatform.googleapis.com")
 }
 
-func (c *GeminiClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *GeminiClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for gemini")
+		return nil, fmt.Errorf("graycode-router: model is required for gemini")
 	}
 	body, err := c.buildBody(messages, opts)
 	if err != nil {
@@ -89,14 +89,14 @@ func (c *GeminiClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 	url := fmt.Sprintf("%s/models/%s:generateContent", c.baseURL, opts.Model)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: gemini request creation failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: gemini request creation failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: gemini request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: gemini request failed: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -113,24 +113,24 @@ func (c *GeminiClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: gemini response read failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: gemini response read failed: %w", err)
 	}
 
-	eyrieResp, err := c.parseResponse(respBody, requestID)
+	graycodeRouterResp, err := c.parseResponse(respBody, requestID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := core.ApplyGuardrails(ctx, eyrieResp, c.guardrails); err != nil {
+	if err := core.ApplyGuardrails(ctx, graycodeRouterResp, c.guardrails); err != nil {
 		return nil, err
 	}
 
-	return eyrieResp, nil
+	return graycodeRouterResp, nil
 }
 
-func (c *GeminiClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *GeminiClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for gemini")
+		return nil, fmt.Errorf("graycode-router: model is required for gemini")
 	}
 	body, err := c.buildBody(messages, opts)
 	if err != nil {
@@ -139,14 +139,14 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messages []core.EyrieMess
 	url := fmt.Sprintf("%s/models/%s:streamGenerateContent?alt=sse", c.baseURL, opts.Model)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: gemini stream request creation failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: gemini stream request creation failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: gemini stream request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: gemini stream request failed: %w", err)
 	}
 
 	requestID := resp.Header.Get("X-Goog-Request-Id")
@@ -163,8 +163,8 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messages []core.EyrieMess
 		events := processGeminiStream(streamCtx, sseEvents, c.logger)
 		return llm.NewStreamResult(events, requestID, cancel), nil
 	}
-	// Fallback (opt-out via EYRIE_GEMINI_SHARED_PARSER=0): old bespoke parser.
-	events := make(chan core.EyrieStreamEvent, 64)
+	// Fallback (opt-out via GRAYCODE_ROUTER_GEMINI_SHARED_PARSER=0): old bespoke parser.
+	events := make(chan core.GraycodeRouterStreamEvent, 64)
 	go c.streamLoop(streamCtx, resp.Body, events)
 	return llm.NewStreamResult(events, requestID, cancel), nil
 }
@@ -173,12 +173,12 @@ func (c *GeminiClient) Ping(ctx context.Context) error {
 	url := fmt.Sprintf("%s/models", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("eyrie: gemini ping request creation failed: %w", err)
+		return fmt.Errorf("graycode-router: gemini ping request creation failed: %w", err)
 	}
 	c.setHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("eyrie: gemini ping failed: %w", err)
+		return fmt.Errorf("graycode-router: gemini ping failed: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -186,7 +186,7 @@ func (c *GeminiClient) Ping(ctx context.Context) error {
 		}
 	}()
 	if resp.StatusCode == 401 {
-		return fmt.Errorf("eyrie: gemini: invalid API key")
+		return fmt.Errorf("graycode-router: gemini: invalid API key")
 	}
 	return nil
 }
@@ -277,7 +277,7 @@ type geminiSafetySetting struct {
 	Threshold string `json:"threshold"` // e.g., "BLOCK_NONE", "BLOCK_LOW_AND_ABOVE", etc.
 }
 
-func (c *GeminiClient) buildBody(messages []core.EyrieMessage, opts core.ChatOptions) ([]byte, error) {
+func (c *GeminiClient) buildBody(messages []core.GraycodeRouterMessage, opts core.ChatOptions) ([]byte, error) {
 	messages = core.SanitizeMessages(messages)
 	contents := make([]geminiContent, 0, len(messages))
 	var systemInstruction *geminiContent
@@ -456,7 +456,7 @@ func (c *GeminiClient) buildBody(messages []core.EyrieMessage, opts core.ChatOpt
 		return nil, err
 	}
 	if len(data) > maxGeminiRequestSize {
-		return nil, fmt.Errorf("eyrie: request size %d bytes exceeds Gemini limit of %d bytes", len(data), maxGeminiRequestSize)
+		return nil, fmt.Errorf("graycode-router: request size %d bytes exceeds Gemini limit of %d bytes", len(data), maxGeminiRequestSize)
 	}
 	return data, nil
 }
@@ -488,10 +488,10 @@ type geminiPromptFeedback struct {
 	BlockReasonMessage string `json:"blockReasonMessage,omitempty"`
 }
 
-func (c *GeminiClient) parseResponse(data []byte, requestID string) (*core.EyrieResponse, error) {
+func (c *GeminiClient) parseResponse(data []byte, requestID string) (*core.GraycodeRouterResponse, error) {
 	var gr geminiResponse
 	if err := json.Unmarshal(data, &gr); err != nil {
-		return nil, fmt.Errorf("eyrie: gemini response parse failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: gemini response parse failed: %w", err)
 	}
 	if len(gr.Candidates) == 0 {
 		// Check if the prompt was blocked
@@ -500,13 +500,13 @@ func (c *GeminiClient) parseResponse(data []byte, requestID string) (*core.Eyrie
 			if gr.PromptFeedback.BlockReasonMessage != "" {
 				msg = gr.PromptFeedback.BlockReasonMessage
 			}
-			return nil, fmt.Errorf("eyrie: gemini blocked prompt: %s", msg)
+			return nil, fmt.Errorf("graycode-router: gemini blocked prompt: %s", msg)
 		}
-		return nil, fmt.Errorf("eyrie: gemini returned no candidates")
+		return nil, fmt.Errorf("graycode-router: gemini returned no candidates")
 	}
 
 	candidate := gr.Candidates[0]
-	resp := &core.EyrieResponse{
+	resp := &core.GraycodeRouterResponse{
 		FinishReason: mapGeminiFinishReason(candidate.FinishReason),
 		RequestID:    requestID,
 	}
@@ -528,7 +528,7 @@ func (c *GeminiClient) parseResponse(data []byte, requestID string) (*core.Eyrie
 	}
 
 	if gr.Usage != nil {
-		resp.Usage = &core.EyrieUsage{
+		resp.Usage = &core.GraycodeRouterUsage{
 			PromptTokens:     gr.Usage.PromptTokenCount,
 			CompletionTokens: gr.Usage.CandidatesTokenCount,
 			TotalTokens:      gr.Usage.TotalTokenCount,
@@ -556,7 +556,7 @@ func mapGeminiFinishReason(reason string) string {
 // --- Streaming ---
 
 // processGeminiStream converts Gemini SSE events (parsed by the shared
-// core.ParseSSEStream) into EyrieStreamEvents. Handles text, tool calls
+// core.ParseSSEStream) into GraycodeRouterStreamEvents. Handles text, tool calls
 // (functionCall), and the final usage+done event.
 //
 // Behavior matches the original streamLoop's processStreamChunk:
@@ -569,8 +569,8 @@ func mapGeminiFinishReason(reason string) string {
 //     StopReason but no Usage.
 //   - If the SSE channel closes without a finish reason, a bare "done"
 //     is emitted (matches the original "if !doneSent" fallback).
-func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, logger *slog.Logger) <-chan core.EyrieStreamEvent {
-	ch := make(chan core.EyrieStreamEvent, core.StreamChannelBuffer)
+func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, logger *slog.Logger) <-chan core.GraycodeRouterStreamEvent {
+	ch := make(chan core.GraycodeRouterStreamEvent, core.StreamChannelBuffer)
 	go func() {
 		defer close(ch)
 		doneSent := false
@@ -581,14 +581,14 @@ func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, lo
 			case evt, ok := <-sseEvents:
 				if !ok {
 					if !doneSent {
-						core.Emit(ctx, ch, core.EyrieStreamEvent{Type: "done"})
+						core.Emit(ctx, ch, core.GraycodeRouterStreamEvent{Type: "done"})
 					}
 					return
 				}
 				// Propagate SSE-level errors (raised by core.ParseSSEStream on
 				// scanner failure or non-cancel context expiry).
 				if evt.Event == "error" {
-					core.Emit(ctx, ch, core.EyrieStreamEvent{Type: "error", Error: evt.Data})
+					core.Emit(ctx, ch, core.GraycodeRouterStreamEvent{Type: "error", Error: evt.Data})
 					return
 				}
 				data := strings.TrimSpace(evt.Data)
@@ -606,7 +606,7 @@ func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, lo
 				candidate := chunk.Candidates[0]
 				for _, part := range candidate.Content.Parts {
 					if part.Text != "" {
-						core.Emit(ctx, ch, core.EyrieStreamEvent{Type: "content", Content: part.Text})
+						core.Emit(ctx, ch, core.GraycodeRouterStreamEvent{Type: "content", Content: part.Text})
 					}
 					if part.FunctionCall != nil {
 						tc := &core.ToolCall{
@@ -616,7 +616,7 @@ func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, lo
 						if part.FunctionCall.ID != "" {
 							tc.ID = part.FunctionCall.ID
 						}
-						core.Emit(ctx, ch, core.EyrieStreamEvent{
+						core.Emit(ctx, ch, core.GraycodeRouterStreamEvent{
 							Type:     "tool_call",
 							ToolCall: tc,
 						})
@@ -627,9 +627,9 @@ func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, lo
 				// original streamLoop emitted these together in a
 				// single event when the chunk carried both.
 				if chunk.Usage != nil || candidate.FinishReason != "" {
-					evt := core.EyrieStreamEvent{Type: "done"}
+					evt := core.GraycodeRouterStreamEvent{Type: "done"}
 					if chunk.Usage != nil {
-						evt.Usage = &core.EyrieUsage{
+						evt.Usage = &core.GraycodeRouterUsage{
 							PromptTokens:     chunk.Usage.PromptTokenCount,
 							CompletionTokens: chunk.Usage.CandidatesTokenCount,
 							TotalTokens:      chunk.Usage.TotalTokenCount,
@@ -649,7 +649,7 @@ func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, lo
 	return ch
 }
 
-func (c *GeminiClient) streamLoop(ctx context.Context, body io.ReadCloser, events chan<- core.EyrieStreamEvent) {
+func (c *GeminiClient) streamLoop(ctx context.Context, body io.ReadCloser, events chan<- core.GraycodeRouterStreamEvent) {
 	defer close(events)
 	defer func() { _ = body.Close() }()
 
@@ -684,13 +684,13 @@ func (c *GeminiClient) streamLoop(ctx context.Context, body io.ReadCloser, event
 
 	if !doneSent {
 		select {
-		case events <- core.EyrieStreamEvent{Type: "done"}:
+		case events <- core.GraycodeRouterStreamEvent{Type: "done"}:
 		case <-ctx.Done():
 		}
 	}
 }
 
-func (c *GeminiClient) processStreamChunk(ctx context.Context, data string, events chan<- core.EyrieStreamEvent) bool {
+func (c *GeminiClient) processStreamChunk(ctx context.Context, data string, events chan<- core.GraycodeRouterStreamEvent) bool {
 	var chunk geminiResponse
 	if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 		return false
@@ -702,7 +702,7 @@ func (c *GeminiClient) processStreamChunk(ctx context.Context, data string, even
 	for _, part := range candidate.Content.Parts {
 		if part.Text != "" {
 			select {
-			case events <- core.EyrieStreamEvent{Type: "content", Content: part.Text}:
+			case events <- core.GraycodeRouterStreamEvent{Type: "content", Content: part.Text}:
 			case <-ctx.Done():
 				return false
 			}
@@ -716,7 +716,7 @@ func (c *GeminiClient) processStreamChunk(ctx context.Context, data string, even
 				tc.ID = part.FunctionCall.ID
 			}
 			select {
-			case events <- core.EyrieStreamEvent{
+			case events <- core.GraycodeRouterStreamEvent{
 				Type:     "tool_call",
 				ToolCall: tc,
 			}:
@@ -727,9 +727,9 @@ func (c *GeminiClient) processStreamChunk(ctx context.Context, data string, even
 	}
 	if chunk.Usage != nil {
 		select {
-		case events <- core.EyrieStreamEvent{
+		case events <- core.GraycodeRouterStreamEvent{
 			Type: "done",
-			Usage: &core.EyrieUsage{
+			Usage: &core.GraycodeRouterUsage{
 				PromptTokens:     chunk.Usage.PromptTokenCount,
 				CompletionTokens: chunk.Usage.CandidatesTokenCount,
 				TotalTokens:      chunk.Usage.TotalTokenCount,
@@ -751,6 +751,6 @@ func (c *GeminiClient) HTTPClient() *http.Client { return c.httpClient }
 func (c *GeminiClient) Retry() core.RetryConfig { return c.retry }
 
 // ProcessGeminiStream normalizes decoded Gemini SSE events.
-func ProcessGeminiStream(ctx context.Context, events <-chan core.SSEEvent, logger *slog.Logger) <-chan core.EyrieStreamEvent {
+func ProcessGeminiStream(ctx context.Context, events <-chan core.SSEEvent, logger *slog.Logger) <-chan core.GraycodeRouterStreamEvent {
 	return processGeminiStream(ctx, events, logger)
 }

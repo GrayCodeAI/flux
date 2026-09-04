@@ -6,7 +6,7 @@ import (
 
 func TestMergeConsecutiveRoles_Basic(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "user", Content: "How are you?"},
 		{Role: "assistant", Content: "I'm fine"},
@@ -26,7 +26,7 @@ func TestMergeConsecutiveRoles_Basic(t *testing.T) {
 
 func TestMergeConsecutiveRoles_NoMerge(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi"},
 		{Role: "user", Content: "Bye"},
@@ -40,7 +40,7 @@ func TestMergeConsecutiveRoles_NoMerge(t *testing.T) {
 
 func TestMergeConsecutiveRoles_SkipToolUse(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "assistant", Content: "Let me check", ToolUse: []ToolCall{{Name: "read_file"}}},
 		{Role: "assistant", Content: "Here is the result"},
 	}
@@ -54,7 +54,7 @@ func TestMergeConsecutiveRoles_SkipToolUse(t *testing.T) {
 
 func TestMergeConsecutiveRoles_SkipToolResult(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Run the tool"},
 		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "abc", Content: "done"}}},
 	}
@@ -68,7 +68,7 @@ func TestMergeConsecutiveRoles_SkipToolResult(t *testing.T) {
 
 func TestMergeConsecutiveRoles_MultipleConsecutive(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "A"},
 		{Role: "user", Content: "B"},
 		{Role: "user", Content: "C"},
@@ -98,7 +98,7 @@ func TestMergeConsecutiveRoles_Empty(t *testing.T) {
 
 func TestMergeConsecutiveRoles_Images(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "See this", Images: []string{"img1.png"}},
 		{Role: "user", Content: "And this", Images: []string{"img2.png"}},
 	}

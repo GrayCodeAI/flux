@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // ModelUI is one selectable model for host /config UIs.

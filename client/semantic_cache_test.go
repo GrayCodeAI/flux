@@ -13,7 +13,7 @@ func TestCachedProviderCacheHit(t *testing.T) {
 
 	cp := NewCachedProvider(inner, DefaultCacheConfig())
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	// First call: cache miss.
@@ -48,14 +48,14 @@ func TestCachedProviderDifferentInputsMiss(t *testing.T) {
 	cp := NewCachedProvider(inner, DefaultCacheConfig())
 
 	// Two different messages should produce two different cache keys.
-	resp1, err := cp.Chat(context.Background(), []EyrieMessage{
+	resp1, err := cp.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 	}, ChatOptions{Model: "test-model"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	resp2, err := cp.Chat(context.Background(), []EyrieMessage{
+	resp2, err := cp.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "world"},
 	}, ChatOptions{Model: "test-model"})
 	if err != nil {
@@ -79,7 +79,7 @@ func TestCachedProviderHighTempSkipsCache(t *testing.T) {
 
 	highTemp := 0.9
 	opts := ChatOptions{Model: "test-model", Temperature: &highTemp}
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 
 	// Both calls should go through to inner.
 	_, err := cp.Chat(context.Background(), msgs, opts)
@@ -104,7 +104,7 @@ func TestCachedProviderLowTempUsesCacheEntry(t *testing.T) {
 
 	lowTemp := 0.0
 	opts := ChatOptions{Model: "test-model", Temperature: &lowTemp}
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 
 	_, err := cp.Chat(context.Background(), msgs, opts)
 	if err != nil {
@@ -131,7 +131,7 @@ func TestCachedProviderTTLExpiration(t *testing.T) {
 	}
 	cp := NewCachedProvider(inner, cfg)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	// First call: miss.
@@ -171,7 +171,7 @@ func TestCachedProviderLRUEviction(t *testing.T) {
 
 	// Fill the cache with 3 entries.
 	for i := 0; i < 3; i++ {
-		_, err := cp.Chat(context.Background(), []EyrieMessage{
+		_, err := cp.Chat(context.Background(), []GraycodeRouterMessage{
 			{Role: "user", Content: string(rune('a' + i))},
 		}, opts)
 		if err != nil {
@@ -188,7 +188,7 @@ func TestCachedProviderLRUEviction(t *testing.T) {
 	}
 
 	// Add a 4th entry -> should evict the LRU entry.
-	_, err := cp.Chat(context.Background(), []EyrieMessage{
+	_, err := cp.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "d"},
 	}, opts)
 	if err != nil {
@@ -203,7 +203,7 @@ func TestCachedProviderLRUEviction(t *testing.T) {
 	// The oldest entry ("a") should have been evicted.
 	// Accessing "a" again should produce another inner call.
 	callsBefore := inner.CallCount()
-	_, err = cp.Chat(context.Background(), []EyrieMessage{
+	_, err = cp.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "a"},
 	}, opts)
 	if err != nil {
@@ -226,7 +226,7 @@ func TestCachedProviderDisabled(t *testing.T) {
 	}
 	cp := NewCachedProvider(inner, cfg)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	_, _ = cp.Chat(context.Background(), msgs, opts)
@@ -243,7 +243,7 @@ func TestCachedProviderSetEnabled(t *testing.T) {
 
 	cp := NewCachedProvider(inner, DefaultCacheConfig())
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	// Disable at runtime.
@@ -271,7 +271,7 @@ func TestCachedProviderClearCache(t *testing.T) {
 
 	cp := NewCachedProvider(inner, DefaultCacheConfig())
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	_, _ = cp.Chat(context.Background(), msgs, opts)
@@ -294,7 +294,7 @@ func TestCachedProviderStreamNotCached(t *testing.T) {
 
 	cp := NewCachedProvider(inner, DefaultCacheConfig())
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	sr, err := cp.StreamChat(context.Background(), msgs, opts)
@@ -334,7 +334,7 @@ func TestCachedProviderDifferentModels(t *testing.T) {
 
 	cp := NewCachedProvider(inner, DefaultCacheConfig())
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 
 	_, _ = cp.Chat(context.Background(), msgs, ChatOptions{Model: "model-a"})
 	_, _ = cp.Chat(context.Background(), msgs, ChatOptions{Model: "model-b"})
@@ -352,7 +352,7 @@ func TestCachedProviderResponseIsolation(t *testing.T) {
 
 	cp := NewCachedProvider(inner, DefaultCacheConfig())
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	resp1, _ := cp.Chat(context.Background(), msgs, opts)
@@ -366,7 +366,7 @@ func TestCachedProviderResponseIsolation(t *testing.T) {
 
 func TestBuildCacheKeyDeterministic(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", Content: "hi"},
 	}

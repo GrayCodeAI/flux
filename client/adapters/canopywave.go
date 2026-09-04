@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // CanopyWaveClient uses the OpenAI-compatible CanopyWave endpoint.
@@ -24,11 +24,11 @@ func NewCanopyWaveClient(apiKey, openAIBase string, compat *OpenAICompatConfig, 
 
 func (c *CanopyWaveClient) Name() string { return "canopywave" }
 
-func (c *CanopyWaveClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *CanopyWaveClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *CanopyWaveClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *CanopyWaveClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.openAI.StreamChat(ctx, messages, opts)
 }
 

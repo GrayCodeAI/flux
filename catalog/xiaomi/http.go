@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/internal/probehttp"
+	"github.com/GrayCodeAI/graycode-router/internal/probehttp"
 )
 
 // ProbeOpenAIModels GETs {baseURL}/models using api-key auth, then Bearer on 401.

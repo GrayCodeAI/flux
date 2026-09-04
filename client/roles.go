@@ -81,7 +81,7 @@ var _ Provider = (*RoleRouter)(nil)
 // otherwise.
 func NewRoleRouter(inner Provider, roles ModelRoles) (*RoleRouter, error) {
 	if inner == nil {
-		return nil, errors.New("eyrie: NewRoleRouter inner provider must not be nil")
+		return nil, errors.New("graycode-router: NewRoleRouter inner provider must not be nil")
 	}
 	return &RoleRouter{inner: inner, roles: roles}, nil
 }
@@ -94,13 +94,13 @@ func (r *RoleRouter) Ping(ctx context.Context) error { return r.inner.Ping(ctx) 
 
 // Chat resolves the request's role to a model, applies it to opts, then
 // delegates to the inner provider.
-func (r *RoleRouter) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (r *RoleRouter) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	return r.inner.Chat(ctx, messages, r.applyRole(ctx, opts))
 }
 
 // StreamChat resolves the request's role to a model, applies it to opts, then
 // delegates to the inner provider.
-func (r *RoleRouter) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (r *RoleRouter) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	return r.inner.StreamChat(ctx, messages, r.applyRole(ctx, opts))
 }
 

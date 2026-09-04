@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 type RouteEntry struct {
@@ -103,7 +103,7 @@ func (r *Router) Ping(ctx context.Context) error {
 	return fmt.Errorf("router: no providers configured")
 }
 
-func (r *Router) Chat(ctx context.Context, messages []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error) {
+func (r *Router) Chat(ctx context.Context, messages []client.GraycodeRouterMessage, opts client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	provider, retry := r.selectProvider()
 	r.stratState.beginInFlight(provider.Name())
 	start := time.Now()
@@ -135,7 +135,7 @@ func (r *Router) Chat(ctx context.Context, messages []client.EyrieMessage, opts 
 	return nil, err
 }
 
-func (r *Router) StreamChat(ctx context.Context, messages []client.EyrieMessage, opts client.ChatOptions) (*client.StreamResult, error) {
+func (r *Router) StreamChat(ctx context.Context, messages []client.GraycodeRouterMessage, opts client.ChatOptions) (*client.StreamResult, error) {
 	provider, retry := r.selectProvider()
 	r.stratState.beginInFlight(provider.Name())
 	start := time.Now()
@@ -195,7 +195,7 @@ func (r *Router) selectEntry() RouteEntry {
 	return r.entries[idx]
 }
 
-func (r *Router) chatWithRetry(ctx context.Context, p client.Provider, messages []client.EyrieMessage, opts client.ChatOptions, cfg RetryConfig) (*client.EyrieResponse, error) {
+func (r *Router) chatWithRetry(ctx context.Context, p client.Provider, messages []client.GraycodeRouterMessage, opts client.ChatOptions, cfg RetryConfig) (*client.GraycodeRouterResponse, error) {
 	var lastErr error
 	for attempt := 0; attempt <= cfg.MaxRetries; attempt++ {
 		resp, err := p.Chat(ctx, messages, opts)
@@ -227,7 +227,7 @@ func (r *Router) chatWithRetry(ctx context.Context, p client.Provider, messages 
 // errors on stream setup are retried with backoff. Errors that surface
 // mid-stream (after a successful setup) are not retried here — the caller
 // owns the event channel by then.
-func (r *Router) streamWithRetry(ctx context.Context, p client.Provider, messages []client.EyrieMessage, opts client.ChatOptions, cfg RetryConfig) (*client.StreamResult, error) {
+func (r *Router) streamWithRetry(ctx context.Context, p client.Provider, messages []client.GraycodeRouterMessage, opts client.ChatOptions, cfg RetryConfig) (*client.StreamResult, error) {
 	var lastErr error
 	for attempt := 0; attempt <= cfg.MaxRetries; attempt++ {
 		sr, err := p.StreamChat(ctx, messages, opts)
@@ -266,7 +266,7 @@ func (r *Router) recordSuccess(name string) {
 
 // recordUsage folds the token usage from a response into the usage-based
 // strategy counters. It is a no-op when the response carries no usage data.
-func (r *Router) recordUsage(name string, resp *client.EyrieResponse) {
+func (r *Router) recordUsage(name string, resp *client.GraycodeRouterResponse) {
 	if resp == nil || resp.Usage == nil {
 		return
 	}

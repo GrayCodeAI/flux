@@ -1,6 +1,6 @@
-# Credential setup: hawk (face) + eyrie (brain)
+# Credential setup: hawk (face) + graycode-router (brain)
 
-**Principle:** Hawk renders UI only. Eyrie owns providers, keys, validation, catalog, models.
+**Principle:** Hawk renders UI only. GraycodeRouter owns providers, keys, validation, catalog, models.
 
 See also: [DYNAMIC-MODEL-DISCOVERY.md](./DYNAMIC-MODEL-DISCOVERY.md)
 
@@ -24,7 +24,7 @@ See also: [DYNAMIC-MODEL-DISCOVERY.md](./DYNAMIC-MODEL-DISCOVERY.md)
 | MiniMax (minimax) Pay-as-you-go | `minimax_payg` | `MINIMAX_PAYG_API_KEY` | `https://api.minimax.io/v1` |
 | Ollama (local) | `ollama` | `OLLAMA_BASE_URL` | live `/api/tags` only |
 
-Single source: `eyrie/catalog/registry/providers.go`
+Single source: `graycode-router/catalog/registry/providers.go`
 
 ### Xiaomi MiMo (two gateways, one key each)
 
@@ -46,11 +46,11 @@ Token Plan region (`cn`, `sgp`, `ams`) is stored in `~/.hawk/provider.json` as `
 | OpenAI | `POST https://api.xiaomimimo.com/v1/chat/completions` | `POST {token-plan-*}/v1/chat/completions` |
 | Anthropic | `POST https://api.xiaomimimo.com/anthropic/v1/messages` | `POST {token-plan-*}/anthropic/v1/messages` |
 
-Eyrie stores Anthropic **base** as `…/anthropic` (no `/v1`); `AnthropicClient` appends `/v1/messages`, matching [Anthropic API](https://platform.xiaomimimo.com/docs/en-US/api/chat/anthropic-api) and the Python SDK `base_url="https://api.xiaomimimo.com/anthropic"`.
+GraycodeRouter stores Anthropic **base** as `…/anthropic` (no `/v1`); `AnthropicClient` appends `/v1/messages`, matching [Anthropic API](https://platform.xiaomimimo.com/docs/en-US/api/chat/anthropic-api) and the Python SDK `base_url="https://api.xiaomimimo.com/anthropic"`.
 
 **Legacy:** `xiaomi_mimo` / `XIAOMI_MIMO_API_KEY` / keychain account `xiaomi_mimo_api_key` migrate to pay-as-you-go (`XIAOMI_MIMO_PAYG_API_KEY` / `xiaomi_mimo_payg_api_key`) on load and startup.
 
-**Code:** `eyrie/catalog/xiaomi/` (URLs), `eyrie/client/mimo.go` (dual-protocol client), `hawk/cmd/chat_config_xiaomi.go` (region UI).
+**Code:** `graycode-router/catalog/xiaomi/` (URLs), `graycode-router/client/mimo.go` (dual-protocol client), `hawk/cmd/chat_config_xiaomi.go` (region UI).
 
 **Not implemented (out of scope):** ASR/TTS ([Speech Recognition](https://platform.xiaomimimo.com/docs/en-US/api/audio/Speech-Recognition), speech synthesis guides), web-search billing plugins, user toggle for Anthropic-primary routing.
 
@@ -58,7 +58,7 @@ Official: [Token Plan quick access](https://platform.xiaomimimo.com/docs/en-US/p
 
 ### API keys (no prefix rules)
 
-Setup is **gateway-first**: pick the gateway on the Gateways tab, paste any non-empty secret (min length 8; placeholders rejected). Eyrie does **not** validate or infer provider from key prefixes (`sk-ant-`, `tp-`, etc.). Live probe runs only for the selected gateway.
+Setup is **gateway-first**: pick the gateway on the Gateways tab, paste any non-empty secret (min length 8; placeholders rejected). GraycodeRouter does **not** validate or infer provider from key prefixes (`sk-ant-`, `tp-`, etc.). Live probe runs only for the selected gateway.
 
 ## Flow
 
@@ -69,10 +69,10 @@ Setup is **gateway-first**: pick the gateway on the Gateways tab, paste any non-
   → Pick model    → ListModels (auto) when credentials exist
 ```
 
-## Host API (hawk uses `internal/eyrieclient` only)
+## Host API (hawk uses `internal/graycode-routerclient` only)
 
 - `ResolveCredentialForHost` / `SaveCredentialForHost`
-- `ApplyEyrieCredentials`
+- `ApplyGraycodeRouterCredentials`
 - `ListModelsForProvider` — registry-driven live vs cache
 - `LocalCredentialInference("ollama")`
 - `FormatSetupError(provider, err)`

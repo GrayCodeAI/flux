@@ -10,7 +10,7 @@ import (
 // array, per the MoonshotAI-Cookbook context-caching spec.
 func TestKimiCacheRoleInjected(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{
 		Model:              "moonshot-v1-8k",
 		KimiContextCacheID: "cache-abc-123",
@@ -42,7 +42,7 @@ func TestKimiCacheRoleInjected(t *testing.T) {
 // cache message when KimiCacheResetTTL is true.
 func TestKimiCacheRoleWithResetTTL(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{
 		Model:              "moonshot-v1-8k",
 		KimiContextCacheID: "cache-abc-123",
@@ -71,7 +71,7 @@ func TestKimiCacheRoleWithResetTTL(t *testing.T) {
 // prepended when KimiContextCacheID is empty, even with KimiCompat.
 func TestKimiCacheRoleNotInjectedWhenIDEmpty(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{
 		Model:              "moonshot-v1-8k",
 		KimiContextCacheID: "", // empty — no injection
@@ -93,7 +93,7 @@ func TestKimiCacheRoleNotInjectedWhenIDEmpty(t *testing.T) {
 // OpenAI, Grok, or any other provider that does not support the cache role.
 func TestKimiCacheRoleNotInjectedForOtherProviders(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{
 		Model:              "gpt-4o",
 		KimiContextCacheID: "cache-abc-123", // set, but compat doesn't support it

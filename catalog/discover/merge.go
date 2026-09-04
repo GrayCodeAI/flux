@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog"
 )
 
 // MergePolicy controls catalog merge behavior when enriching from live APIs.

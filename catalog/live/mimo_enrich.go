@@ -1,6 +1,6 @@
 package live
 
-import "github.com/GrayCodeAI/eyrie/catalog/xiaomi"
+import "github.com/GrayCodeAI/graycode-router/catalog/xiaomi"
 
 func enrichMimoEntry(e Entry, platform map[string]xiaomi.PlatformModel) Entry {
 	display, desc, ctx, maxOut, in, out, meta := xiaomi.ApplyPlatformMetadata(

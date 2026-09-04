@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 func TestNewBedrockClient(t *testing.T) {
@@ -84,7 +84,7 @@ func TestBedrockClient_Chat_Success(t *testing.T) {
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
 
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514", MaxTokens: 256})
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestBedrockClient_Chat_Success(t *testing.T) {
 func TestBedrockClient_Chat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -111,7 +111,7 @@ func TestBedrockClient_Chat_EmptyModel(t *testing.T) {
 func TestBedrockClient_Chat_EmptyRegion(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("", "", "", "")
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
 	if err == nil {
 		t.Fatal("expected error for empty credentials")
 	}
@@ -127,7 +127,7 @@ func TestBedrockClient_Chat_APIError(t *testing.T) {
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -181,7 +181,7 @@ func TestBedrockClient_modelURL(t *testing.T) {
 func TestBedrockClient_BuildBody(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
-	body, err := c.BuildBody([]core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
+	body, err := c.BuildBody([]core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("BuildBody: %v", err)
 	}
@@ -403,7 +403,7 @@ func TestBedrockClient_StreamChat_Success(t *testing.T) {
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
 
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -430,7 +430,7 @@ func TestBedrockClient_StreamChat_Error(t *testing.T) {
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
+	_, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude", MaxTokens: 256})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -439,7 +439,7 @@ func TestBedrockClient_StreamChat_Error(t *testing.T) {
 func TestBedrockClient_StreamChat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
-	_, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -494,7 +494,7 @@ func TestBedrockClient_Chat_DefaultMaxTokens(t *testing.T) {
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514"})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -527,7 +527,7 @@ func TestBedrockClient_Chat_SystemPrompt(t *testing.T) {
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{
 		{Role: "system", Content: "system from message"},
 		{Role: "user", Content: "Hi"},
 	}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514", MaxTokens: 256, System: "You are a helpful assistant"})
@@ -560,7 +560,7 @@ func TestBedrockClient_Chat_SystemOnlyOpts(t *testing.T) {
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514", MaxTokens: 256, System: "only from opts"})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude-sonnet-4-20250514", MaxTokens: 256, System: "only from opts"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}

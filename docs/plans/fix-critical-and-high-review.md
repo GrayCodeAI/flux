@@ -1,7 +1,7 @@
-# Plan: Fix Critical + High-Impact Review Findings — eyrie
+# Plan: Fix Critical + High-Impact Review Findings — graycode-router
 
 > Branch: `fix/critical-and-high-review-2026-06`
-> PR: <https://github.com/GrayCodeAI/eyrie/pull/38>
+> PR: <https://github.com/GrayCodeAI/graycode-router/pull/38>
 > Status: **✅ COMPLETE — all 8 items committed, 8 PRs merged into the branch.**
 > Constraint: **no new go.mod / go.sum dependencies** for any item in this plan.
 
@@ -16,20 +16,20 @@
 | H1  | high | Unify Gemini SSE parser | ✅ committed | `98af9e7` |
 | H2  | high | Extract shared `providerRequest` builder | ✅ committed | `704162f` |
 | H3  | high | Unify Anthropic response parsing (3 → 1) | ✅ committed | `cf61ca7` |
-| H4  | high | Wire `EyrieError` into provider error paths | ✅ committed | `d8993ba` |
+| H4  | high | Wire `GraycodeRouterError` into provider error paths | ✅ committed | `d8993ba` |
 
 **Net diff**: 8 production-code changes + 8 test files; all tests pass with `-race`; `go vet ./...` clean; `go.mod` / `go.sum` unchanged. **No new dependencies.**
 
 ## Context
 
-A deep code review of `eyrie` and `hawk` (see `docs/plans/review-2026-06-summary.md`
+A deep code review of `graycode-router` and `hawk` (see `docs/plans/review-2026-06-summary.md`
 — to be created if you want it archived here) surfaced 7 critical and 9 high
-items. This plan covers **all eyrie items** (C1, C2, C6, C7, H1, H2, H3, H4)
+items. This plan covers **all graycode-router items** (C1, C2, C6, C7, H1, H2, H3, H4)
 broken into a sequence of small, reviewable PRs.
 
 The hawk-side companion plan lives at `../hawk/docs/plans/fix-critical-and-high-review.md`.
 
-## Scope (eyrie)
+## Scope (graycode-router)
 
 | ID | Severity | Title | File(s) | Effort |
 |----|----------|-------|---------|--------|
@@ -40,7 +40,7 @@ The hawk-side companion plan lives at `../hawk/docs/plans/fix-critical-and-high-
 | H1 | high | Unify Gemini SSE parser | `client/gemini.go:496-535` | M |
 | H2 | high | Extract shared `providerRequest` builder | `client/anthropic.go`, `client/openai.go` | L |
 | H3 | high | Unify Anthropic response parsing (3 → 1) | `client/{anthropic,bedrock,vertex}.go` | M |
-| H4 | high | Wire `EyrieError` into provider error paths | `client/errors.go`, all `client/*.go` | M |
+| H4 | high | Wire `GraycodeRouterError` into provider error paths | `client/errors.go`, all `client/*.go` | M |
 
 ## Out of scope (deferred to next plan)
 
@@ -171,7 +171,7 @@ user's `OPENAI_API_KEY` header to the attacker's server.
 **Fix** (two-step, opt-in safe):
 1. Remove the auto-registration. `getOrCreateProvider` returns
    `ErrUnknownProvider` for unknown provider names.
-2. Add a documented opt-in: `EYRIE_ALLOW_DYNAMIC_PROVIDERS=1` env var. When
+2. Add a documented opt-in: `GRAYCODE_ROUTER_ALLOW_DYNAMIC_PROVIDERS=1` env var. When
    set, the existing auto-registration is allowed (for users who run
    local proxies like LiteLLM, Ollama, etc.). Default: off.
 3. Log a `WARN` line the first time a dynamic provider is registered.
@@ -184,12 +184,12 @@ user's `OPENAI_API_KEY` header to the attacker's server.
 **Test plan**:
 - `TestDynamicProvider_DefaultDeny` — unknown provider returns
   `ErrUnknownProvider`.
-- `TestDynamicProvider_OptIn` — with `EYRIE_ALLOW_DYNAMIC_PROVIDERS=1`,
+- `TestDynamicProvider_OptIn` — with `GRAYCODE_ROUTER_ALLOW_DYNAMIC_PROVIDERS=1`,
   the existing behavior is preserved.
 - `TestDynamicProvider_LogsWarning` — assert the `WARN` log line.
 
 **Risk**: low. The new opt-in is backward-compatible for users who set
-`EYRIE_ALLOW_DYNAMIC_PROVIDERS=1`. The default is safer.
+`GRAYCODE_ROUTER_ALLOW_DYNAMIC_PROVIDERS=1`. The default is safer.
 
 **Rollback**: revert. The opt-in can be enabled in the env at any time.
 
@@ -227,7 +227,7 @@ between reads.
 - Existing `cloud_providers_test.go` should pass unchanged.
 
 **Risk**: medium. Streaming changes can break live behavior. Mitigation:
-ship behind a feature flag (`EYRIE_GEMINI_SHARED_PARSER=0` to revert to
+ship behind a feature flag (`GRAYCODE_ROUTER_GEMINI_SHARED_PARSER=0` to revert to
 the old path), keep both code paths for one release, then remove.
 
 **Rollback**: feature flag. If regressions appear, set the env var to 0.
@@ -277,7 +277,7 @@ A wire-format change needs 3 edits.
 
 **Fix**:
 1. Move the parser to `client/anthropic_response.go` (or
-   `client/response.go`) as `parseAnthropicResponse(raw []byte, requestID, orgID string) (*EyrieResponse, error)`.
+   `client/response.go`) as `parseAnthropicResponse(raw []byte, requestID, orgID string) (*GraycodeRouterResponse, error)`.
 2. All three call sites import it. They differ only in how `requestID` /
    `orgID` are extracted from the response (HTTP headers), so pass those in.
 3. `buildAnthropicMessages` is already shared; mirror the same pattern.
@@ -300,24 +300,24 @@ its own test; the shared parser is unit-tested independently.
 
 ---
 
-## PR 8 — Wire `EyrieError` into provider error paths (H4)
+## PR 8 — Wire `GraycodeRouterError` into provider error paths (H4)
 
-**Refactor**: `client/errors.go:7` defines `EyrieError` with
+**Refactor**: `client/errors.go:7` defines `GraycodeRouterError` with
 `IsRetriable()`, `IsAuthError()`, `IsRateLimited()` methods, but **no
-provider returns `*EyrieError`**. All error paths use
-`fmt.Errorf("eyrie: …")`. `doWithRetry` does its own string classification
+provider returns `*GraycodeRouterError`**. All error paths use
+`fmt.Errorf("graycode-router: …")`. `doWithRetry` does its own string classification
 instead of using the structured type.
 
 **Fix**:
-1. `formatAPIError` returns `*EyrieError` (wrap into a `*EyrieError` with
+1. `formatAPIError` returns `*GraycodeRouterError` (wrap into a `*GraycodeRouterError` with
    `StatusCode`, `RequestID`, `Message`, `Err`).
-2. `doWithRetry` checks `var eyrieErr *EyrieError; if errors.As(err, &eyrieErr) { … }`
+2. `doWithRetry` checks `var graycode-routerErr *GraycodeRouterError; if errors.As(err, &graycode-routerErr) { … }`
    instead of string-matching status codes.
 3. All provider error returns flow through `formatAPIError`.
 4. Public API consumers (hawk) can now use `errors.As` for typed errors.
 
 **Files**:
-- `client/errors.go` (extend `EyrieError` with `Unwrap()`, helpers)
+- `client/errors.go` (extend `GraycodeRouterError` with `Unwrap()`, helpers)
 - `client/anthropic.go`, `client/openai.go`, `client/gemini.go`,
   `client/bedrock.go`, `client/vertex.go`, `client/azure.go` (use the
   shared `formatAPIError`)
@@ -327,10 +327,10 @@ instead of using the structured type.
   `isRetriableError` heuristic)
 
 **Test plan**:
-- `TestEyrieError_IsRetriable` — table of status codes.
-- `TestRetry_UsesEyrieError` — mock 401; assert retry does NOT happen
+- `TestGraycodeRouterError_IsRetriable` — table of status codes.
+- `TestRetry_UsesGraycodeRouterError` — mock 401; assert retry does NOT happen
   (auth errors are not retriable).
-- `TestFallback_UsesEyrieError` — mock auth error in second provider;
+- `TestFallback_UsesGraycodeRouterError` — mock auth error in second provider;
   assert fallback to third.
 - All existing tests pass.
 
@@ -369,10 +369,10 @@ Coverage target: maintained at 60%+ (CI gate).
 1. **C7 default-deny vs opt-in flag** — confirm you want the flag
    (instead of hard removal of the dynamic path).
 2. **H1 feature flag** — confirm you're OK with a temporary
-   `EYRIE_GEMINI_SHARED_PARSER` env var for one release.
+   `GRAYCODE_ROUTER_GEMINI_SHARED_PARSER` env var for one release.
 3. **H2 / H3 sequencing** — H2 first (bigger, but independent) or H3
    first (smaller, lower risk)?
 4. **H4 scope** — should `client/recorder.go` and `client/coalesce.go`
-   also adopt `EyrieError`, or is that M-tier?
+   also adopt `GraycodeRouterError`, or is that M-tier?
 5. **Branch lifetime** — keep the branch as a long-lived namespace, or
    squash each PR to a single commit on merge?

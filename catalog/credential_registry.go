@@ -3,7 +3,7 @@ package catalog
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // EnsureCredentialRegistryInCatalog merges registry providers/deployments into catalog v1.

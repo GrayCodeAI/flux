@@ -15,8 +15,8 @@ import (
 // so callers can match on either; the BudgetProvider depends only on the
 // structural method set, not on these specific values.
 var (
-	ErrBudgetExceeded    = errors.New("eyrie: virtual key budget exceeded")
-	ErrUnknownVirtualKey = errors.New("eyrie: unknown virtual key")
+	ErrBudgetExceeded    = errors.New("graycode-router: virtual key budget exceeded")
+	ErrUnknownVirtualKey = errors.New("graycode-router: unknown virtual key")
 )
 
 // VirtualKey is a logical key that maps to a real provider key and carries a

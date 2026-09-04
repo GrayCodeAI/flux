@@ -81,16 +81,16 @@ func (c *ImageClient) Generate(ctx context.Context, prompt, model, size string, 
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("eyrie: image generate: %w", err)
+		return nil, nil, fmt.Errorf("graycode-router: image generate: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, nil, fmt.Errorf("eyrie: image API %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
+		return nil, nil, fmt.Errorf("graycode-router: image API %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
 	}
 	var out ImageGenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, nil, fmt.Errorf("eyrie: image decode: %w", err)
+		return nil, nil, fmt.Errorf("graycode-router: image decode: %w", err)
 	}
 	imgs := make([][]byte, 0, len(out.Data))
 	urls := make([]string, 0, len(out.Data))
@@ -98,7 +98,7 @@ func (c *ImageClient) Generate(ctx context.Context, prompt, model, size string, 
 		if d.B64JSON != "" {
 			b, derr := base64.StdEncoding.DecodeString(d.B64JSON)
 			if derr != nil {
-				return nil, nil, fmt.Errorf("eyrie: image b64 decode: %w", derr)
+				return nil, nil, fmt.Errorf("graycode-router: image b64 decode: %w", derr)
 			}
 			imgs = append(imgs, b)
 		}
@@ -179,16 +179,16 @@ func (c *AudioClient) Transcribe(ctx context.Context, r TranscriptionRequest) (s
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("eyrie: transcribe: %w", err)
+		return "", fmt.Errorf("graycode-router: transcribe: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return "", fmt.Errorf("eyrie: audio API %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
+		return "", fmt.Errorf("graycode-router: audio API %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
 	}
 	var tr Transcript
 	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
-		return "", fmt.Errorf("eyrie: transcript decode: %w", err)
+		return "", fmt.Errorf("graycode-router: transcript decode: %w", err)
 	}
 	return tr.Text, nil
 }

@@ -7,5 +7,5 @@
     "outDir": "dist",
     "strict": true
   },
-  "include": ["eyrie.ts"]
+  "include": ["graycode-router.ts"]
 }

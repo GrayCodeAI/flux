@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/storage"
 )
 
 type orphanMockProvider struct{}
@@ -17,14 +17,14 @@ func (orphanMockProvider) Ping(_ context.Context) error {
 	return nil
 }
 
-func (orphanMockProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
-	return &client.EyrieResponse{Content: "ok", FinishReason: "end_turn"}, nil
+func (orphanMockProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
+	return &client.GraycodeRouterResponse{Content: "ok", FinishReason: "end_turn"}, nil
 }
 
-func (orphanMockProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 2)
-	ch <- client.EyrieStreamEvent{Type: "content", Content: "ok"}
-	ch <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn"}
+func (orphanMockProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.GraycodeRouterStreamEvent, 2)
+	ch <- client.GraycodeRouterStreamEvent{Type: "content", Content: "ok"}
+	ch <- client.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn"}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }

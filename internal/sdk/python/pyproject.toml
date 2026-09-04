@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "eyrie-sdk"
-version = "0.1.0"
-description = "Eyrie conversation DAG HTTP API client"
+name = "graycode-router-sdk"
+version = "0.0.1"
+description = "GraycodeRouter conversation DAG HTTP API client"
 requires-python = ">=3.10"
 dependencies = ["httpx"]
 license = {text = "MIT"}

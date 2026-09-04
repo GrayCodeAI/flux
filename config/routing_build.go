@@ -1,11 +1,11 @@
 package config
 
 import (
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // BuildRoutingPolicyFromDeployments builds deployment routing from configured deployments.
-// Hawk should not author routing rules — consume this JSON from eyrie only.
+// Hawk should not author routing rules — consume this JSON from graycode-router only.
 func BuildRoutingPolicyFromDeployments(deployments map[string]DeploymentConfig) *RoutingPolicy {
 	if len(deployments) == 0 {
 		return &RoutingPolicy{}

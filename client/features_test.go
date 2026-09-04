@@ -3,7 +3,7 @@ package client
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog"
 )
 
 // Tests below that read or write the package-level cachedCatalog run

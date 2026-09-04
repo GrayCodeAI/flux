@@ -1,6 +1,6 @@
 package client
 
-import "github.com/GrayCodeAI/eyrie/client/adapters"
+import "github.com/GrayCodeAI/graycode-router/client/adapters"
 
 // OpenAICompatConfig holds provider-specific compatibility flags.
 type OpenAICompatConfig = adapters.OpenAICompatConfig

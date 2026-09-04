@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 func TestResolveEnvSecret(t *testing.T) {

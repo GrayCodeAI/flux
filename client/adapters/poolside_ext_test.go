@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 func TestPoolsideClient_Name(t *testing.T) {
@@ -28,7 +28,7 @@ func TestPoolsideClient_Chat(t *testing.T) {
 	c := NewPoolsideClient("psk", "https://poolside.example")
 	c.openAI.httpClient = &http.Client{Transport: transport}
 
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "poolside/laguna-m.1", MaxTokens: 256})
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "poolside/laguna-m.1", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestPoolsideClient_StreamChatContentful(t *testing.T) {
 	c := NewPoolsideClient("psk", "https://poolside.example")
 	c.openAI.httpClient = &http.Client{Transport: transport}
 
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "poolside/laguna-m.1", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "poolside/laguna-m.1", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}

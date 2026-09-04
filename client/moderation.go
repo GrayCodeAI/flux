@@ -85,7 +85,7 @@ func (mp *ModerationProvider) Ping(ctx context.Context) error {
 }
 
 // Chat validates the input messages and forwards to the inner provider.
-func (mp *ModerationProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (mp *ModerationProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	if err := mp.moderate(messages); err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (mp *ModerationProvider) Chat(ctx context.Context, messages []EyrieMessage,
 }
 
 // StreamChat validates the input messages and forwards to the inner provider.
-func (mp *ModerationProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (mp *ModerationProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	if err := mp.moderate(messages); err != nil {
 		return nil, err
 	}
@@ -101,13 +101,13 @@ func (mp *ModerationProvider) StreamChat(ctx context.Context, messages []EyrieMe
 }
 
 // moderate runs all validation checks on the input messages.
-func (mp *ModerationProvider) moderate(messages []EyrieMessage) error {
+func (mp *ModerationProvider) moderate(messages []GraycodeRouterMessage) error {
 	text := extractText(messages)
 
 	// Check blocked patterns.
 	for _, re := range mp.blockedRegexps {
 		if re.MatchString(text) {
-			return fmt.Errorf("eyrie: content moderation blocked: message matches blocked pattern %q", re.String())
+			return fmt.Errorf("graycode-router: content moderation blocked: message matches blocked pattern %q", re.String())
 		}
 	}
 
@@ -115,14 +115,14 @@ func (mp *ModerationProvider) moderate(messages []EyrieMessage) error {
 	if mp.maxTokens > 0 {
 		tokens := estimateTokens(text)
 		if tokens > mp.maxTokens {
-			return fmt.Errorf("eyrie: content moderation blocked: estimated token count %d exceeds limit %d", tokens, mp.maxTokens)
+			return fmt.Errorf("graycode-router: content moderation blocked: estimated token count %d exceeds limit %d", tokens, mp.maxTokens)
 		}
 	}
 
 	// Check custom checker.
 	if mp.customChecker != nil {
 		if err := mp.customChecker(text); err != nil {
-			return fmt.Errorf("eyrie: content moderation blocked: %w", err)
+			return fmt.Errorf("graycode-router: content moderation blocked: %w", err)
 		}
 	}
 
@@ -130,7 +130,7 @@ func (mp *ModerationProvider) moderate(messages []EyrieMessage) error {
 }
 
 // extractText concatenates the text content of all messages.
-func extractText(messages []EyrieMessage) string {
+func extractText(messages []GraycodeRouterMessage) string {
 	var b strings.Builder
 	for _, m := range messages {
 		if m.Content != "" {

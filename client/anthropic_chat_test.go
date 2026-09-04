@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/adapters"
+	"github.com/GrayCodeAI/graycode-router/client/adapters"
 )
 
 // AnthropicClient Chat and StreamChat tests. Split out of anthropic_test.go for clarity.
@@ -61,7 +61,7 @@ func TestAnthropicChat_Success(t *testing.T) {
 		WithRetry(NewRetryConfig(0, 0, 0)),
 	)
 
-	resp, err := client.Chat(context.Background(), []EyrieMessage{
+	resp, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi there"},
 	}, ChatOptions{
 		Model:     "claude-sonnet-4-6",
@@ -121,7 +121,7 @@ func TestAnthropicChat_WithToolCallResponse(t *testing.T) {
 		"sk-test", server.URL,
 		WithRetry(NewRetryConfig(0, 0, 0)),
 	)
-	resp, err := client.Chat(context.Background(), []EyrieMessage{
+	resp, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "What is the weather in SF?"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -176,7 +176,7 @@ func TestAnthropicChat_MultipleToolCalls(t *testing.T) {
 	defer server.Close()
 
 	client := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	resp, err := client.Chat(context.Background(), []EyrieMessage{
+	resp, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "read /etc/hosts and list /tmp"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -211,7 +211,7 @@ func TestAnthropicChat_DefaultMaxTokens(t *testing.T) {
 	defer server.Close()
 
 	client := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	_, err := client.Chat(context.Background(), []EyrieMessage{
+	_, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"}) // MaxTokens not set
 	if err != nil {
@@ -225,7 +225,7 @@ func TestAnthropicChat_DefaultMaxTokens(t *testing.T) {
 func TestAnthropicChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	client := NewAnthropicClient("key", "http://localhost")
-	_, err := client.Chat(context.Background(), []EyrieMessage{
+	_, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{}) // No model set
 	if err == nil {
@@ -254,7 +254,7 @@ func TestAnthropicChat_SystemMerge(t *testing.T) {
 	defer server.Close()
 
 	client := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	_, err := client.Chat(context.Background(), []EyrieMessage{
+	_, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "system", Content: "From messages"},
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6", System: "From opts"})
@@ -288,11 +288,11 @@ func TestAnthropicChat_WithTools(t *testing.T) {
 	defer server.Close()
 
 	client := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	_, err := client.Chat(context.Background(), []EyrieMessage{
+	_, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{
 		Model: "claude-sonnet-4-6",
-		Tools: []EyrieTool{
+		Tools: []GraycodeRouterTool{
 			{Name: "calculator", Description: "Math", Parameters: map[string]interface{}{"type": "object"}},
 		},
 	})
@@ -326,7 +326,7 @@ func TestAnthropicChat_CacheUsage(t *testing.T) {
 	defer server.Close()
 
 	client := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	resp, err := client.Chat(context.Background(), []EyrieMessage{
+	resp, err := client.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -381,7 +381,7 @@ func TestAnthropicStreamChat_TextContent(t *testing.T) {
 	defer server.Close()
 
 	client := NewAnthropicClient("sk-test", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	sr, err := client.StreamChat(context.Background(), []EyrieMessage{
+	sr, err := client.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -466,7 +466,7 @@ func TestAnthropicStreamChat_ToolUse(t *testing.T) {
 	defer server.Close()
 
 	client := NewAnthropicClient("sk-test", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	sr, err := client.StreamChat(context.Background(), []EyrieMessage{
+	sr, err := client.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Weather in NYC?"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -512,7 +512,7 @@ func TestAnthropicStreamChat_ToolUse(t *testing.T) {
 func TestAnthropicStreamChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	client := NewAnthropicClient("key", "http://localhost")
-	_, err := client.StreamChat(context.Background(), []EyrieMessage{
+	_, err := client.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{})
 	if err == nil {
@@ -547,7 +547,7 @@ func TestAnthropicStreamChat_ContextCancel(t *testing.T) {
 	defer cancel()
 
 	client := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	sr, err := client.StreamChat(ctx, []EyrieMessage{
+	sr, err := client.StreamChat(ctx, []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {

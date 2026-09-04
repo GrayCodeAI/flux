@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 // Node, alias, prompt-from, rate-limit, error-simulation, content-type,
@@ -318,22 +318,22 @@ type rateLimitProvider struct {
 
 func (r *rateLimitProvider) Name() string                 { return "ratelimit" }
 func (r *rateLimitProvider) Ping(_ context.Context) error { return nil }
-func (r *rateLimitProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (r *rateLimitProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	r.callCount++
 	if r.callCount > r.limit {
 		return nil, fmt.Errorf("429 Too Many Requests: rate limit exceeded")
 	}
-	return &client.EyrieResponse{Content: "ok", FinishReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 1}}, nil
+	return &client.GraycodeRouterResponse{Content: "ok", FinishReason: "end_turn", Usage: &client.GraycodeRouterUsage{CompletionTokens: 1}}, nil
 }
 
-func (r *rateLimitProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (r *rateLimitProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
 	r.callCount++
 	if r.callCount > r.limit {
 		return nil, fmt.Errorf("429 Too Many Requests: rate limit exceeded")
 	}
-	ch := make(chan client.EyrieStreamEvent, 2)
-	ch <- client.EyrieStreamEvent{Type: "content", Content: "ok"}
-	ch <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 1}}
+	ch := make(chan client.GraycodeRouterStreamEvent, 2)
+	ch <- client.GraycodeRouterStreamEvent{Type: "content", Content: "ok"}
+	ch <- client.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.GraycodeRouterUsage{CompletionTokens: 1}}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }

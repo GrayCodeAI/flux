@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/discover"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/discover"
 )
 
 // DiscoverModelCatalogOptions controls catalog discovery behavior.
@@ -14,8 +14,8 @@ type DiscoverModelCatalogOptions struct {
 	ForceRefresh bool
 }
 
-// DiscoverModelCatalog refreshes the remote eyrie catalog and enriches it using the supplied API keys.
-// Pass config.DiscoveryCredentials(ctx) or explicit keys; eyrie owns all model metadata.
+// DiscoverModelCatalog refreshes the remote graycode-router catalog and enriches it using the supplied API keys.
+// Pass config.DiscoveryCredentials(ctx) or explicit keys; graycode-router owns all model metadata.
 func DiscoverModelCatalog(ctx context.Context, creds catalog.Credentials) (*catalog.RefreshResult, error) {
 	return DiscoverModelCatalogWithOptions(ctx, creds, DiscoverModelCatalogOptions{})
 }

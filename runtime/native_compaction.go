@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 type NativeCompactionOpts struct {
 	Provider        string
 	Model           string
-	Messages        []client.EyrieMessage
+	Messages        []client.GraycodeRouterMessage
 	ContextWindow   int
 	ThresholdPct    int
 	MaxOutputTokens int
@@ -36,7 +36,7 @@ type NativeCompactionResult struct {
 	Summary string
 }
 
-// SupportsNativeCompaction reports whether Eyrie can compact this selection
+// SupportsNativeCompaction reports whether GraycodeRouter can compact this selection
 // with a configured provider credential.
 func SupportsNativeCompaction(ctx context.Context, provider, model string) bool {
 	return SupportsNativeCompactionWithStore(ctx, provider, model, credentials.DefaultStore())
@@ -144,7 +144,7 @@ func supportsAnthropicCompactionSelection(provider, model string) bool {
 	return false
 }
 
-func anthropicCompactionMessages(messages []client.EyrieMessage) ([]map[string]any, string) {
+func anthropicCompactionMessages(messages []client.GraycodeRouterMessage) ([]map[string]any, string) {
 	var system string
 	out := make([]map[string]any, 0, len(messages))
 	for _, message := range messages {

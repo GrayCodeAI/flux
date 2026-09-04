@@ -1,4 +1,4 @@
-"""Eyrie Conversation DAG HTTP API client."""
+"""GraycodeRouter Conversation DAG HTTP API client."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from urllib.parse import urljoin
 import httpx
 
 
-class EyrieClient:
-    """Synchronous client for the Eyrie conversation DAG HTTP API."""
+class GraycodeRouterClient:
+    """Synchronous client for the GraycodeRouter conversation DAG HTTP API."""
 
     def __init__(self, base_url: str, api_key: str = "", timeout: float = 120.0) -> None:
         self.base_url = base_url.rstrip("/")
@@ -89,8 +89,8 @@ class EyrieClient:
         self.client.close()
 
 
-class AsyncEyrieClient:
-    """Asynchronous client for the Eyrie conversation DAG HTTP API."""
+class AsyncGraycodeRouterClient:
+    """Asynchronous client for the GraycodeRouter conversation DAG HTTP API."""
 
     def __init__(self, base_url: str, api_key: str = "", timeout: float = 120.0) -> None:
         self.base_url = base_url.rstrip("/")

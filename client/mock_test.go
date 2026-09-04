@@ -41,7 +41,7 @@ func TestMockProviderImplementsProvider(t *testing.T) {
 func TestMockProviderEchoMode(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeEcho)
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello world"},
 	}
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{})
@@ -59,7 +59,7 @@ func TestMockProviderEchoMode(t *testing.T) {
 func TestMockProviderEchoModeNoUser(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeEcho)
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", Content: "system message"},
 	}
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{})
@@ -75,7 +75,7 @@ func TestMockProviderFixedMode(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeFixed)
 	mp.Response = "fixed answer"
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
@@ -89,14 +89,14 @@ func TestMockProviderFixedMode(t *testing.T) {
 func TestMockProviderErrorMode(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeError)
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 
 	_, err := mp.Chat(context.Background(), msgs, ChatOptions{})
 	if err == nil {
 		t.Fatal("Chat should return error in error mode")
 	}
-	if err.Error() != "eyrie: mock error" {
-		t.Errorf("error = %q, want %q", err.Error(), "eyrie: mock error")
+	if err.Error() != "graycode-router: mock error" {
+		t.Errorf("error = %q, want %q", err.Error(), "graycode-router: mock error")
 	}
 }
 
@@ -106,7 +106,7 @@ func TestMockProviderToolUseMode(t *testing.T) {
 	mp.ToolName = "search"
 	mp.ToolArgs = map[string]interface{}{"query": "hello"}
 
-	msgs := []EyrieMessage{{Role: "user", Content: "search for hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "search for hello"}}
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
@@ -129,7 +129,7 @@ func TestMockProviderToolUseMode(t *testing.T) {
 func TestMockProviderToolUseModeDefaults(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeToolUse)
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
@@ -147,7 +147,7 @@ func TestMockProviderToolUseModeDefaults(t *testing.T) {
 func TestMockProviderMaxTokensMode(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeMaxTokens)
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
@@ -171,7 +171,7 @@ func TestMockProviderCallRecording(t *testing.T) {
 		t.Fatal("LastCall should be nil when no calls recorded")
 	}
 
-	msgs := []EyrieMessage{{Role: "user", Content: "first"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "first"}}
 	opts := ChatOptions{Model: "test-model"}
 	mp.Chat(context.Background(), msgs, opts)
 
@@ -196,7 +196,7 @@ func TestMockProviderMultipleCalls(t *testing.T) {
 	mp := NewMockProvider(MockModeEcho)
 
 	for i := 0; i < 5; i++ {
-		mp.Chat(context.Background(), []EyrieMessage{{Role: "user", Content: "msg"}}, ChatOptions{})
+		mp.Chat(context.Background(), []GraycodeRouterMessage{{Role: "user", Content: "msg"}}, ChatOptions{})
 	}
 	if mp.CallCount() != 5 {
 		t.Errorf("CallCount = %d, want 5", mp.CallCount())
@@ -206,7 +206,7 @@ func TestMockProviderMultipleCalls(t *testing.T) {
 func TestMockProviderReset(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeEcho)
-	mp.Chat(context.Background(), []EyrieMessage{{Role: "user", Content: "test"}}, ChatOptions{})
+	mp.Chat(context.Background(), []GraycodeRouterMessage{{Role: "user", Content: "test"}}, ChatOptions{})
 	if mp.CallCount() != 1 {
 		t.Fatalf("before reset: CallCount = %d, want 1", mp.CallCount())
 	}
@@ -223,7 +223,7 @@ func TestMockProviderReset(t *testing.T) {
 func TestMockProviderMarshalCalls(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeEcho)
-	mp.Chat(context.Background(), []EyrieMessage{{Role: "user", Content: "test"}}, ChatOptions{})
+	mp.Chat(context.Background(), []GraycodeRouterMessage{{Role: "user", Content: "test"}}, ChatOptions{})
 
 	s := mp.MarshalCalls()
 	if s == "" {
@@ -238,7 +238,7 @@ func TestMockProviderUsageInResponse(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeFixed)
 	mp.Response = "test"
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
@@ -266,7 +266,7 @@ func TestMockProviderContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 
-	_, err := mp.Chat(ctx, []EyrieMessage{{Role: "user", Content: "test"}}, ChatOptions{})
+	_, err := mp.Chat(ctx, []GraycodeRouterMessage{{Role: "user", Content: "test"}}, ChatOptions{})
 	if err == nil {
 		t.Fatal("Chat should return error when context is cancelled")
 	}
@@ -275,7 +275,7 @@ func TestMockProviderContextCancellation(t *testing.T) {
 func TestMockProviderStreamChat(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeEcho)
-	msgs := []EyrieMessage{{Role: "user", Content: "Hello world"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "Hello world"}}
 
 	sr, err := mp.StreamChat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
@@ -301,7 +301,7 @@ func TestMockProviderStreamChatToolUse(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeToolUse)
 	mp.ToolName = "calculator"
-	msgs := []EyrieMessage{{Role: "user", Content: "compute"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "compute"}}
 
 	sr, err := mp.StreamChat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
@@ -326,7 +326,7 @@ func TestMockProviderStreamChatToolUse(t *testing.T) {
 func TestMockProviderStreamChatError(t *testing.T) {
 	t.Parallel()
 	mp := NewMockProvider(MockModeError)
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 
 	_, err := mp.StreamChat(context.Background(), msgs, ChatOptions{})
 	if err == nil {

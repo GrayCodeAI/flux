@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 func TestNewLongCatClient_Dual(t *testing.T) {
@@ -40,7 +40,7 @@ func TestLongCatClient_ChatUsesOpenAIPath(t *testing.T) {
 	defer server.Close()
 
 	client := NewLongCatClient("key", server.URL, "", &LongCatCompat, core.WithRetry(core.NewRetryConfig(0, 0, 0)))
-	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "LongCat-2.0", MaxTokens: 16})
+	resp, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "LongCat-2.0", MaxTokens: 16})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestLongCatClient_FallsBackToAnthropic(t *testing.T) {
 	defer anthropic.Close()
 
 	client := NewLongCatClient("key", openAI.URL, anthropic.URL, &LongCatCompat, core.WithRetry(core.NewRetryConfig(0, 0, 0)))
-	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "LongCat-2.0", MaxTokens: 16})
+	resp, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "LongCat-2.0", MaxTokens: 16})
 	if err != nil {
 		t.Fatal(err)
 	}

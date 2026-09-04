@@ -1,9 +1,17 @@
 # Changelog
 
-All notable changes to eyrie are documented here.  
+All notable changes to graycode-router are documented here.  
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: [SemVer](https://semver.org/)
 
 ---
+
+## [0.0.1] — 2026-09-04
+
+### Changed — Renamed eyrie to graycode-router
+- **Module is now `github.com/GrayCodeAI/graycode-router`.** All `Eyrie*`
+  types are `GraycodeRouter*`, `EYRIE_*` env vars are `GRAYCODE_ROUTER_*`,
+  and config lives under `~/.graycode-router`. Breaking rename with no
+  behavior change; prior history is preserved below.
 
 ## [Unreleased]
 
@@ -27,7 +35,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   by the terminal `done` — but the engine mapped *every* error event to
   `provider_unavailable`, stopped forwarding, and set `Err()` even though
   content had been delivered. Diagnostic events are now marked non-fatal via
-  the existing `EyrieStreamEvent.Warning` field (additive); the engine
+  the existing `GraycodeRouterStreamEvent.Warning` field (additive); the engine
   forwards them as `warning` events and still delivers the final
   `done`/usage event with `Err()` unset. Genuinely fatal stream errors keep
   the previous behavior. The deprecated client continuation helper and the
@@ -43,7 +51,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   stream paths) on 429/500/502/503/529 with backoff and `Retry-After`
   support; `SetRetry` previously discarded the config with a comment claiming
   the HTTP client handled retries (it never does).
-- **Concentrate errors are structured `*core.EyrieError`s** built by
+- **Concentrate errors are structured `*core.GraycodeRouterError`s** built by
   `core.ParseProviderError`/`core.FormatAPIError` (8KB bounded read,
   provider/op/status/request-ID preserved), so `IsRetriable()`/`IsAuthError()`
   and the engine's error classification work; the captured `X-Request-Id` is
@@ -58,7 +66,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   Actions and exchanges it for AWS Bedrock (STS `AssumeRoleWithWebIdentity`) or
   GCP Vertex (Workload Identity Federation) credentials, no stored secrets.
 - **OpenAI-compatible proxy** — `POST /v1/chat/completions` endpoint so existing
-  OpenAI SDK clients can talk to eyrie unchanged.
+  OpenAI SDK clients can talk to graycode-router unchanged.
 - **Named load-balancing strategies** — `simple-shuffle`, `least-busy`,
   `latency-based`, `cost-based`, and `usage-based` alongside the default
   weighted router.
@@ -74,7 +82,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   build tag, ready to wire when generated stubs are available.
 
 ### Changed
-- **Version re-baselined to `0.1.0`** in `eyrie.go` (`const Version`) and
+- **Version re-baselined to `0.1.0`** in `graycode-router.go` (`const Version`) and
   `client/client.go` (`var Version`, used in the `User-Agent` header).
 
 ### Added — Round 2 ecosystem improvements (2026-06-01)
@@ -90,7 +98,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   5. Whitespace collapse
   Reports aggregate `BytesSaved` and `PercentOff` across all tools
   in the slice. Safe to call concurrently.
-  Aligns eyrie with the rest of the hawk-eco ecosystem (`hawk`, `shrike`,
+  Aligns graycode-router with the rest of the hawk-eco ecosystem (`hawk`, `shrike`,
   `harrier`, `kestrel`, `merlin`).
 
 ### Added
@@ -120,16 +128,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   issues.
 
 ### Fixed (2026-05-16)
-- Flaky test `TestOpenAIStreamChat_MultipleToolCalls` order assertion ([f5e7f3b](https://github.com/GrayCodeAI/eyrie/commit/f5e7f3b21d092886971b092027a8184c6fd8a385))
-- gofumpt formatting ([7de54e3](https://github.com/GrayCodeAI/eyrie/commit/7de54e352170e456bbfe9bfee9b79e244210db72))
-- gofumpt formatting + `go mod tidy` ([8bd58dc](https://github.com/GrayCodeAI/eyrie/commit/8bd58dcea346eb9df8d13d9020d936df2ceba1b5))
-- Remaining errcheck issues ([a0a746a](https://github.com/GrayCodeAI/eyrie/commit/a0a746aa95cd9acdf5d29ef836985e13ab864ba1))
-- Resolve all lint errors (bodyclose, errcheck, gocritic, noctx, unlambda) ([566980f](https://github.com/GrayCodeAI/eyrie/commit/566980f39bdd7ebba072ce4c17bc19bc0f3cf2a0))
-- Syntax errors in test files ([51809bc](https://github.com/GrayCodeAI/eyrie/commit/51809bcb181a27eb344a1493501f59c593b3065b))
-- Upgrade Go from 1.26.1 to 1.26.3 to patch stdlib vulnerabilities ([f4a6594](https://github.com/GrayCodeAI/eyrie/commit/f4a65944a6f777947071c9b870a6f2c4f74891be))
+- Flaky test `TestOpenAIStreamChat_MultipleToolCalls` order assertion ([f5e7f3b](https://github.com/GrayCodeAI/graycode-router/commit/f5e7f3b21d092886971b092027a8184c6fd8a385))
+- gofumpt formatting ([7de54e3](https://github.com/GrayCodeAI/graycode-router/commit/7de54e352170e456bbfe9bfee9b79e244210db72))
+- gofumpt formatting + `go mod tidy` ([8bd58dc](https://github.com/GrayCodeAI/graycode-router/commit/8bd58dcea346eb9df8d13d9020d936df2ceba1b5))
+- Remaining errcheck issues ([a0a746a](https://github.com/GrayCodeAI/graycode-router/commit/a0a746aa95cd9acdf5d29ef836985e13ab864ba1))
+- Resolve all lint errors (bodyclose, errcheck, gocritic, noctx, unlambda) ([566980f](https://github.com/GrayCodeAI/graycode-router/commit/566980f39bdd7ebba072ce4c17bc19bc0f3cf2a0))
+- Syntax errors in test files ([51809bc](https://github.com/GrayCodeAI/graycode-router/commit/51809bcb181a27eb344a1493501f59c593b3065b))
+- Upgrade Go from 1.26.1 to 1.26.3 to patch stdlib vulnerabilities ([f4a6594](https://github.com/GrayCodeAI/graycode-router/commit/f4a65944a6f777947071c9b870a6f2c4f74891be))
 
 ### Tests (2026-05-16)
-- Fix flaky `TestBackoffDelay` by accounting for jitter ([5fa573f](https://github.com/GrayCodeAI/eyrie/commit/5fa573fe3ec8074a84bf81d10ea59837bf40b7bc))
+- Fix flaky `TestBackoffDelay` by accounting for jitter ([5fa573f](https://github.com/GrayCodeAI/graycode-router/commit/5fa573fe3ec8074a84bf81d10ea59837bf40b7bc))
 
 ## [0.1.0] — 2026-05-12
 
@@ -142,7 +150,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 - `AnthropicClient` — Anthropic Messages API with full content block support
 - `OpenAIClient` — OpenAI and all OpenAI-compatible providers
 - `MockProvider` — testing without API keys (echo / fixed / tool_use / error / max_tokens modes)
-- `EyrieClient` — thread-safe universal client with cached provider instances
+- `GraycodeRouterClient` — thread-safe universal client with cached provider instances
 
 **Streaming**
 - SSE parser for Anthropic and OpenAI formats
@@ -187,8 +195,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 - Embedding support
 
 **Quality**
-- `User-Agent: eyrie/0.1.0` on all HTTP requests
+- `User-Agent: graycode-router/0.1.0` on all HTTP requests
 - Request ID captured from response headers
 - 4 KB error body cap — prevents OOM on large error responses
-- `"eyrie: "` prefix on all errors with `%w` wrapping
+- `"graycode-router: "` prefix on all errors with `%w` wrapping
 - Zero external dependencies · Go 1.26

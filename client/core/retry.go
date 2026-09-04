@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 // RetryConfig controls retry behavior for HTTP clients.
@@ -99,9 +99,9 @@ func parseRetryDelay(errMsg string) time.Duration {
 // DoWithRetry executes an HTTP request with retry logic.
 //
 // Note: DoWithRetry operates at the transport layer, before
-// formatAPIError constructs *EyrieError. Structured-error awareness
+// formatAPIError constructs *GraycodeRouterError. Structured-error awareness
 // lives in the fallback chain (fallback.go:240-244) where
-// *EyrieError.IsRetriable() / IsAuthError() drive provider
+// *GraycodeRouterError.IsRetriable() / IsAuthError() drive provider
 // rotation. DoWithRetry only needs the raw transport status code
 // and the underlying network error to decide whether to retry the
 // same request.
@@ -168,5 +168,5 @@ func DoWithRetry(ctx context.Context, httpClient *http.Client, req *http.Request
 		_ = resp.Body.Close()
 	}
 
-	return nil, fmt.Errorf("eyrie: %s: max retries (%d) exceeded for %s: %w", req.URL.Host, rc.MaxRetries, req.URL.Path, lastErr)
+	return nil, fmt.Errorf("graycode-router: %s: max retries (%d) exceeded for %s: %w", req.URL.Host, rc.MaxRetries, req.URL.Path, lastErr)
 }

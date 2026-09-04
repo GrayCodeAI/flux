@@ -3,7 +3,7 @@ package config
 import (
 	"sort"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog"
 )
 
 // DeploymentConfigFromEnv builds deployment credentials from catalog env_fallbacks and env values.

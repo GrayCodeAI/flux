@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 func TestNewStepFunClient_OpenAI(t *testing.T) {
@@ -39,7 +39,7 @@ func TestStepFunClient_ChatUsesOpenAIPath(t *testing.T) {
 	defer server.Close()
 
 	client := NewStepFunClient("key", server.URL, &StepFunCompat, core.WithRetry(core.NewRetryConfig(0, 0, 0)))
-	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "step-3.5-flash", MaxTokens: 16})
+	resp, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "step-3.5-flash", MaxTokens: 16})
 	if err != nil {
 		t.Fatal(err)
 	}

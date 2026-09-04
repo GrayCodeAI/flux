@@ -3,7 +3,7 @@ package registry_test
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // Official protocol surfaces (validated against provider docs, Jul 2026):

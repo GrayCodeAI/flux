@@ -1,8 +1,8 @@
 {
-  "name": "eyrie-sdk",
-  "version": "0.1.0",
-  "description": "Eyrie conversation DAG HTTP API client",
-  "main": "eyrie.ts",
-  "types": "eyrie.ts",
+  "name": "graycode-router-sdk",
+  "version": "0.0.1",
+  "description": "GraycodeRouter conversation DAG HTTP API client",
+  "main": "graycode-router.ts",
+  "types": "graycode-router.ts",
   "license": "MIT"
 }

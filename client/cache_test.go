@@ -7,7 +7,7 @@ import (
 
 func TestBuildAnthropicCachedRequest_BasicMessages(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "system", Content: "You are helpful."},
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi there!"},
@@ -45,7 +45,7 @@ func TestBuildAnthropicCachedRequest_BasicMessages(t *testing.T) {
 
 func TestBuildAnthropicCachedRequest_ToolUsePropagated(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "read file.go"},
 		{Role: "assistant", Content: "", ToolUse: []ToolCall{
 			{ID: "tc1", Name: "read", Arguments: map[string]interface{}{"path": "file.go"}},
@@ -90,7 +90,7 @@ func TestBuildAnthropicCachedRequest_ToolUsePropagated(t *testing.T) {
 
 func TestBuildAnthropicCachedRequest_ToolsAnnotated(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 	}
 	tools := []anthropicTool{
@@ -143,8 +143,8 @@ func TestCacheUsageParsing(t *testing.T) {
 		t.Fatalf("expected cache_read=800, got %d", ar.Usage.CacheReadInputTokens)
 	}
 
-	// Verify it propagates to EyrieUsage
-	usage := &EyrieUsage{
+	// Verify it propagates to GraycodeRouterUsage
+	usage := &GraycodeRouterUsage{
 		PromptTokens:        ar.Usage.InputTokens,
 		CompletionTokens:    ar.Usage.OutputTokens,
 		TotalTokens:         ar.Usage.InputTokens + ar.Usage.OutputTokens,
@@ -158,7 +158,7 @@ func TestCacheUsageParsing(t *testing.T) {
 
 func TestBuildAnthropicCachedRequest_NoSystem(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi"},
 		{Role: "user", Content: "Bye"},
@@ -172,7 +172,7 @@ func TestBuildAnthropicCachedRequest_NoSystem(t *testing.T) {
 
 func TestBuildAnthropicCachedRequest_StreamFlag(t *testing.T) {
 	t.Parallel()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}
 	req := buildAnthropicCachedRequest(messages, "claude-sonnet-4-20250514", 4096, nil, true, nil, nil, nil, nil, nil, nil)

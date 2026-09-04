@@ -1,4 +1,4 @@
-# Contributing to eyrie
+# Contributing to graycode-router
 
 Thanks for your interest! This guide covers the conventions used across the
 hawk-eco. The eco-wide standards (versioning, release tooling, repo layout)
@@ -120,8 +120,8 @@ Before requesting review:
 
 ## Reporting bugs
 
-Open an issue using the bug-report template. Include the `eyrie`
-version (`eyrie --version` for binaries, `eyrie.Version` for
+Open an issue using the bug-report template. Include the `graycode-router`
+version (`graycode-router --version` for binaries, `graycode-router.Version` for
 libraries — see this repo's `VERSION` file), reproduction steps, expected
 behaviour, and actual behaviour.
 

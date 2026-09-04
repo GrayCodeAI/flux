@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eyrie/graph"
-	llmcontracts "github.com/GrayCodeAI/eyrie/llm"
-	"github.com/GrayCodeAI/eyrie/operationsgraph"
+	graphcontracts "github.com/GrayCodeAI/graycode-router/graph"
+	llmcontracts "github.com/GrayCodeAI/graycode-router/llm"
+	"github.com/GrayCodeAI/graycode-router/operationsgraph"
 )
 
 func TestBuildPrivacySafeOperationsProjection(t *testing.T) {
@@ -18,7 +18,7 @@ func TestBuildPrivacySafeOperationsProjection(t *testing.T) {
 		Route: &llmcontracts.ResolvedRoute{
 			Provider: "private-provider", Model: "private/model", DeploymentRouting: true,
 		},
-		Usage: &llmcontracts.EyrieUsage{
+		Usage: &llmcontracts.GraycodeRouterUsage{
 			PromptTokens: 100, CompletionTokens: 20, TotalTokens: 120,
 		},
 		FinishReason: "stop", RequestID: "private-request-id",

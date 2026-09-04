@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("eyrie/internal/api")
+var tracer = otel.Tracer("graycode-router/internal/api")
 
 // statusRecorder wraps http.ResponseWriter to capture the status code.
 // It also passes through Flusher and Hijacker interfaces when the underlying

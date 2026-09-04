@@ -11,7 +11,7 @@ import (
 
 func TestAnthropicBuildMessages_TextOnly(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "system", Content: "You are helpful."},
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi there!"},
@@ -40,7 +40,7 @@ func TestAnthropicBuildMessages_TextOnly(t *testing.T) {
 
 func TestAnthropicBuildMessages_ToolUse(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", Content: "Let me check.", ToolUse: []ToolCall{
 			{ID: "call_1", Name: "get_weather", Arguments: map[string]interface{}{"city": "NYC"}},
 		}},
@@ -72,7 +72,7 @@ func TestAnthropicBuildMessages_ToolUse(t *testing.T) {
 
 func TestAnthropicBuildMessages_ToolUseNoText(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "call_2", Name: "read_file", Arguments: map[string]interface{}{"path": "/tmp/x"}},
 		}},
@@ -90,7 +90,7 @@ func TestAnthropicBuildMessages_ToolUseNoText(t *testing.T) {
 
 func TestAnthropicBuildMessages_ToolResult(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", ToolResults: []ToolResult{{
 			ToolUseID: "call_1",
 			Content:   "Temperature: 72F",
@@ -122,7 +122,7 @@ func TestAnthropicBuildMessages_ToolResult(t *testing.T) {
 
 func TestAnthropicBuildMessages_ToolResultError(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", ToolResults: []ToolResult{{
 			ToolUseID: "call_err",
 			Content:   "connection refused",
@@ -138,7 +138,7 @@ func TestAnthropicBuildMessages_ToolResultError(t *testing.T) {
 
 func TestAnthropicBuildMessages_ImageBase64(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "What is this?", Images: []string{
 			"data:image/png;base64,iVBORw0KGgoAAAANS",
 		}},
@@ -177,7 +177,7 @@ func TestAnthropicBuildMessages_ImageBase64(t *testing.T) {
 
 func TestAnthropicBuildMessages_ImageURL(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Describe this", Images: []string{
 			"https://example.com/image.jpg",
 		}},
@@ -198,7 +198,7 @@ func TestAnthropicBuildMessages_ImageURL(t *testing.T) {
 
 func TestAnthropicBuildMessages_ImageNoText(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Images: []string{"https://example.com/pic.png"}},
 	}
 	result, _ := buildAnthropicMessages(msgs)
@@ -214,7 +214,7 @@ func TestAnthropicBuildMessages_ImageNoText(t *testing.T) {
 
 func TestAnthropicBuildMessages_MultipleImages(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Compare these", Images: []string{
 			"data:image/jpeg;base64,/9j/4AAQ",
 			"https://example.com/other.png",
@@ -243,7 +243,7 @@ func TestAnthropicBuildMessages_MultipleImages(t *testing.T) {
 
 func TestAnthropicBuildMessages_NoSystem(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}
 	result, system := buildAnthropicMessages(msgs)
@@ -270,7 +270,7 @@ func TestAnthropicBuildMessages_EmptyInput(t *testing.T) {
 
 func TestAnthropicConvertTools(t *testing.T) {
 	t.Parallel()
-	tools := []EyrieTool{
+	tools := []GraycodeRouterTool{
 		{
 			Name:        "get_weather",
 			Description: "Get weather for a city",
@@ -321,7 +321,7 @@ func TestAnthropicConvertTools_Empty(t *testing.T) {
 	if result != nil {
 		t.Errorf("expected nil for empty tools, got %v", result)
 	}
-	result = convertToAnthropicTools([]EyrieTool{})
+	result = convertToAnthropicTools([]GraycodeRouterTool{})
 	if result != nil {
 		t.Errorf("expected nil for empty slice, got %v", result)
 	}

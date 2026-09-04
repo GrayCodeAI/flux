@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // ClinePassClient uses the OpenAI-compatible ClinePass endpoint.
@@ -24,11 +24,11 @@ func NewClinePassClient(apiKey, openAIBase string, compat *OpenAICompatConfig, o
 
 func (c *ClinePassClient) Name() string { return "clinepass" }
 
-func (c *ClinePassClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *ClinePassClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *ClinePassClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *ClinePassClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.openAI.StreamChat(ctx, messages, opts)
 }
 

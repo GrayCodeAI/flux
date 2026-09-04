@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/discover"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/discover"
 )
 
 func TestMergeCatalogWithPolicy_ReplacesDeploymentOfferings(t *testing.T) {

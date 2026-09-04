@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // GrokClient uses the OpenAI-compatible xAI (Grok) endpoint.
@@ -24,11 +24,11 @@ func NewGrokClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts .
 
 func (c *GrokClient) Name() string { return "grok" }
 
-func (c *GrokClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *GrokClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *GrokClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *GrokClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.openAI.StreamChat(ctx, messages, opts)
 }
 

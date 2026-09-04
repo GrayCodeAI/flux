@@ -171,7 +171,7 @@ func TestThinkingForBudget(t *testing.T) {
 }
 
 // TestBuildRequestBase_DeepSeekForwardsReasoningContent verifies that the
-// EyrieMessage.Thinking field (which carries reasoning_content captured from a
+// GraycodeRouterMessage.Thinking field (which carries reasoning_content captured from a
 // prior DeepSeek response) IS forwarded back into assistant messages for the
 // DeepSeek provider. DeepSeek requires the assistant's reasoning_content to be
 // passed back whenever that turn performed a tool call — otherwise the API
@@ -180,7 +180,7 @@ func TestBuildRequestBase_DeepSeekForwardsReasoningContent(t *testing.T) {
 	t.Parallel()
 	compat := &DeepSeekCompat
 
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "What is 2+2?"},
 		{Role: "assistant", Content: "4", Thinking: "Let me compute: 2+2 = 4"},
 		{Role: "user", Content: "Are you sure?"},
@@ -222,7 +222,7 @@ func TestBuildRequestBase_NonDeepSeekDoesNotForwardReasoningContent(t *testing.T
 	t.Parallel()
 	compat := &OpenAICompat // requires passback false
 
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "What is 2+2?"},
 		{Role: "assistant", Content: "4", Thinking: "Let me compute: 2+2 = 4"},
 		{Role: "user", Content: "Are you sure?"},

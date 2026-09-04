@@ -73,7 +73,7 @@ type GuardrailError struct {
 }
 
 func (e *GuardrailError) Error() string {
-	return fmt.Sprintf("eyrie: guardrail blocked: %s (%d violation(s))", e.Message, len(e.Violations))
+	return fmt.Sprintf("graycode-router: guardrail blocked: %s (%d violation(s))", e.Message, len(e.Violations))
 }
 
 // Guardrails holds registered rules and runs them against LLM responses.
@@ -100,7 +100,7 @@ func (g *Guardrails) AddRule(r GuardrailRule) {
 	if r.Pattern != "" {
 		compiled, err := regexp.Compile(r.Pattern)
 		if err != nil {
-			panic(fmt.Sprintf("eyrie: guardrails: invalid regex %q in rule %q: %v", r.Pattern, r.Name, err))
+			panic(fmt.Sprintf("graycode-router: guardrails: invalid regex %q in rule %q: %v", r.Pattern, r.Name, err))
 		}
 		r.compiled = compiled
 	}
@@ -116,7 +116,7 @@ func (g *Guardrails) AddRuleSafe(r GuardrailRule) error {
 	if r.Pattern != "" {
 		compiled, err := regexp.Compile(r.Pattern)
 		if err != nil {
-			return fmt.Errorf("eyrie: guardrails: invalid regex %q in rule %q: %w", r.Pattern, r.Name, err)
+			return fmt.Errorf("graycode-router: guardrails: invalid regex %q in rule %q: %w", r.Pattern, r.Name, err)
 		}
 		r.compiled = compiled
 	}
@@ -442,7 +442,7 @@ func RulesForType(t GuardrailType) []GuardrailRule {
 
 // ApplyGuardrails runs guardrail checks on the response and applies redactions.
 // This is called by provider Chat methods after receiving the LLM response.
-func ApplyGuardrails(ctx context.Context, resp *EyrieResponse, g *Guardrails) error {
+func ApplyGuardrails(ctx context.Context, resp *GraycodeRouterResponse, g *Guardrails) error {
 	if g == nil || resp == nil || resp.Content == "" {
 		return nil
 	}

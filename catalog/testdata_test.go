@@ -11,7 +11,7 @@ import (
 func TestExportHawkCatalogFixture(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("EXPORT_HAWK_FIXTURE") != "1" {
-		t.Skip("set EXPORT_HAWK_FIXTURE=1 to export") // TODO: https://github.com/GrayCodeAI/eyrie/issues/30
+		t.Skip("set EXPORT_HAWK_FIXTURE=1 to export") // TODO: https://github.com/GrayCodeAI/graycode-router/issues/30
 	}
 	c := SeedCatalog()
 	data, err := json.MarshalIndent(c, "", "  ")

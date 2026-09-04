@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // OllamaClient uses the OpenAI-compatible local Ollama endpoint.
@@ -24,11 +24,11 @@ func NewOllamaClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts
 
 func (c *OllamaClient) Name() string { return "ollama" }
 
-func (c *OllamaClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *OllamaClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *OllamaClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *OllamaClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.openAI.StreamChat(ctx, messages, opts)
 }
 

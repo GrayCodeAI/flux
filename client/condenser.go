@@ -24,7 +24,7 @@ type ConversationCondenser interface {
 	// Condense returns a reduced copy of messages according to opts. It must
 	// not mutate the input slice. When no reduction is needed it may return the
 	// input slice unchanged.
-	Condense(ctx context.Context, messages []EyrieMessage, opts CondenseOptions) ([]EyrieMessage, error)
+	Condense(ctx context.Context, messages []GraycodeRouterMessage, opts CondenseOptions) ([]GraycodeRouterMessage, error)
 }
 
 // LLMSummarizingCondenser condenses a conversation by summarizing its middle
@@ -94,7 +94,7 @@ func NewLLMSummarizingCondenser(provider Provider, opts ...CondenserOption) *LLM
 // Condense implements ConversationCondenser. When len(messages) exceeds
 // MaxSize, it keeps the first KeepFirst messages, summarizes the middle span,
 // inserts the summary as a system note, and keeps the remaining tail.
-func (c *LLMSummarizingCondenser) Condense(ctx context.Context, messages []EyrieMessage, opts CondenseOptions) ([]EyrieMessage, error) {
+func (c *LLMSummarizingCondenser) Condense(ctx context.Context, messages []GraycodeRouterMessage, opts CondenseOptions) ([]GraycodeRouterMessage, error) {
 	if opts.MaxSize <= 0 || len(messages) <= opts.MaxSize {
 		return messages, nil
 	}
@@ -129,12 +129,12 @@ func (c *LLMSummarizingCondenser) Condense(ctx context.Context, messages []Eyrie
 		return nil, err
 	}
 
-	note := EyrieMessage{
+	note := GraycodeRouterMessage{
 		Role:    "system",
 		Content: "[summary of earlier conversation]\n" + summary,
 	}
 
-	out := make([]EyrieMessage, 0, keepFirst+1+tailCount)
+	out := make([]GraycodeRouterMessage, 0, keepFirst+1+tailCount)
 	out = append(out, messages[:keepFirst]...)
 	out = append(out, note)
 	out = append(out, messages[middleEnd:]...)
@@ -143,7 +143,7 @@ func (c *LLMSummarizingCondenser) Condense(ctx context.Context, messages []Eyrie
 
 // summarize asks the provider (via the Weak role when available) to summarize
 // the given span of messages.
-func (c *LLMSummarizingCondenser) summarize(ctx context.Context, span []EyrieMessage) (string, error) {
+func (c *LLMSummarizingCondenser) summarize(ctx context.Context, span []GraycodeRouterMessage) (string, error) {
 	var b strings.Builder
 	for _, m := range span {
 		b.WriteString(m.Role)
@@ -156,7 +156,7 @@ func (c *LLMSummarizingCondenser) summarize(ctx context.Context, span []EyrieMes
 		b.WriteByte('\n')
 	}
 
-	req := []EyrieMessage{{Role: "user", Content: b.String()}}
+	req := []GraycodeRouterMessage{{Role: "user", Content: b.String()}}
 	opts := ChatOptions{
 		Model:     ResolveRole(c.roles, RoleWeak),
 		System:    c.prompt,
@@ -205,7 +205,7 @@ func (p *CondensingProvider) Name() string { return p.inner.Name() }
 func (p *CondensingProvider) Ping(ctx context.Context) error { return p.inner.Ping(ctx) }
 
 // Chat condenses the messages, then delegates to the inner provider.
-func (p *CondensingProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (p *CondensingProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	msgs, err := p.condense(ctx, messages)
 	if err != nil {
 		return nil, err
@@ -214,7 +214,7 @@ func (p *CondensingProvider) Chat(ctx context.Context, messages []EyrieMessage, 
 }
 
 // StreamChat condenses the messages, then delegates to the inner provider.
-func (p *CondensingProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (p *CondensingProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	msgs, err := p.condense(ctx, messages)
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func (p *CondensingProvider) StreamChat(ctx context.Context, messages []EyrieMes
 	return p.inner.StreamChat(ctx, msgs, opts)
 }
 
-func (p *CondensingProvider) condense(ctx context.Context, messages []EyrieMessage) ([]EyrieMessage, error) {
+func (p *CondensingProvider) condense(ctx context.Context, messages []GraycodeRouterMessage) ([]GraycodeRouterMessage, error) {
 	if p.condenser == nil || p.opts.MaxSize <= 0 {
 		return messages, nil
 	}

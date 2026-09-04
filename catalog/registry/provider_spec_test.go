@@ -3,8 +3,8 @@ package registry_test
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 func TestAllProviders_Count(t *testing.T) {

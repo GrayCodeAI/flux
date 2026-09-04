@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/setup"
 )
 
 // ModelEntriesForProvider returns models for a provider from this runtime's catalog snapshot.
@@ -40,7 +40,7 @@ func ModelsForProvider(ctx context.Context, provider string) ([]catalog.ModelCat
 	}
 	entries := rt.ModelEntriesForProvider(provider)
 	if len(entries) == 0 {
-		return nil, fmt.Errorf("runtime: no models for provider %q in eyrie catalog (add deployment/model in eyrie catalog source)", provider)
+		return nil, fmt.Errorf("runtime: no models for provider %q in graycode-router catalog (add deployment/model in graycode-router catalog source)", provider)
 	}
 	return entries, nil
 }

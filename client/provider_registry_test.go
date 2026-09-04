@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 func TestGetOrCreateProvider_VertexUsesAnthropicVertexClient(t *testing.T) {
@@ -25,7 +25,7 @@ func TestGetOrCreateProvider_VertexUsesAnthropicVertexClient(t *testing.T) {
 		t.Fatalf("set VERTEX_REGION: %v", err)
 	}
 
-	c := Client(&EyrieConfig{Provider: "vertex", APIKey: "test-bearer-token"})
+	c := Client(&GraycodeRouterConfig{Provider: "vertex", APIKey: "test-bearer-token"})
 	p, err := c.getOrCreateProvider("vertex")
 	if err != nil {
 		t.Fatalf("getOrCreateProvider: %v", err)
@@ -55,7 +55,7 @@ func TestGetOrCreateProvider_VertexRegionDefaultsToUsCentral1(t *testing.T) {
 		t.Fatalf("set VERTEX_PROJECT_ID: %v", err)
 	}
 
-	c := Client(&EyrieConfig{Provider: "vertex", APIKey: "test-token"})
+	c := Client(&GraycodeRouterConfig{Provider: "vertex", APIKey: "test-token"})
 	p, err := c.getOrCreateProvider("vertex")
 	if err != nil {
 		t.Fatalf("getOrCreateProvider: %v", err)
@@ -74,17 +74,17 @@ func TestGetOrCreateProvider_VertexRequiresProjectID(t *testing.T) {
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 
-	c := Client(&EyrieConfig{Provider: "vertex", APIKey: "test-token"})
+	c := Client(&GraycodeRouterConfig{Provider: "vertex", APIKey: "test-token"})
 	_, err := c.getOrCreateProvider("vertex")
 	if err == nil {
 		t.Fatal("expected error when VERTEX_PROJECT_ID is missing, got nil")
 	}
-	if got := err.Error(); got != "eyrie: vertex requires VERTEX_PROJECT_ID" {
-		t.Errorf("error = %q, want %q", got, "eyrie: vertex requires VERTEX_PROJECT_ID")
+	if got := err.Error(); got != "graycode-router: vertex requires VERTEX_PROJECT_ID" {
+		t.Errorf("error = %q, want %q", got, "graycode-router: vertex requires VERTEX_PROJECT_ID")
 	}
 }
 
-// TestDynamicProvider_DefaultDeny: when EYRIE_ALLOW_DYNAMIC_PROVIDERS is
+// TestDynamicProvider_DefaultDeny: when GRAYCODE_ROUTER_ALLOW_DYNAMIC_PROVIDERS is
 // unset (the default), an unknown provider name is NOT auto-registered
 // from OPENAI_API_BASE. The caller receives ErrUnknownProvider. This is
 // the safe-by-default behavior that prevents a poisoned OPENAI_API_BASE
@@ -93,7 +93,7 @@ func TestDynamicProvider_DefaultDeny(t *testing.T) {
 	_ = os.Unsetenv(dynamicProviderEnvVar)
 	t.Setenv("OPENAI_API_BASE", "http://attacker.example/v1")
 
-	c := Client(&EyrieConfig{Provider: "openai", APIKey: "test-key"})
+	c := Client(&GraycodeRouterConfig{Provider: "openai", APIKey: "test-key"})
 	_, err := c.getOrCreateProvider("ghost-default-deny")
 	if err == nil {
 		t.Fatal("expected ErrUnknownProvider when opt-in is not set, got nil")
@@ -106,7 +106,7 @@ func TestDynamicProvider_DefaultDeny(t *testing.T) {
 	}
 }
 
-// TestDynamicProvider_OptIn_Registers: with EYRIE_ALLOW_DYNAMIC_PROVIDERS=1
+// TestDynamicProvider_OptIn_Registers: with GRAYCODE_ROUTER_ALLOW_DYNAMIC_PROVIDERS=1
 // and OPENAI_API_BASE set, the unknown provider IS auto-registered as an
 // OpenAI-compatible client pointed at the base URL. The subsequent lookup
 // sees the registered provider.
@@ -121,7 +121,7 @@ func TestDynamicProvider_OptIn_Registers(t *testing.T) {
 		t.Fatalf("set OPENAI_API_KEY: %v", err)
 	}
 
-	c := Client(&EyrieConfig{Provider: "openai", APIKey: "test-key"})
+	c := Client(&GraycodeRouterConfig{Provider: "openai", APIKey: "test-key"})
 	p, err := c.getOrCreateProvider("ghost-optin-registers")
 	if err != nil {
 		t.Fatalf("getOrCreateProvider: %v", err)
@@ -144,7 +144,7 @@ func TestDynamicProvider_OptInRequiresBaseURL(t *testing.T) {
 	_ = os.Unsetenv("OPENAI_API_BASE")
 	_ = os.Unsetenv("OPENAI_BASE_URL")
 
-	c := Client(&EyrieConfig{Provider: "openai", APIKey: "test-key"})
+	c := Client(&GraycodeRouterConfig{Provider: "openai", APIKey: "test-key"})
 	_, err := c.getOrCreateProvider("ghost-optin-no-base")
 	if err == nil {
 		t.Fatal("expected ErrUnknownProvider when base URL is missing, got nil")
@@ -173,7 +173,7 @@ func TestDynamicProvider_LogsWarning(t *testing.T) {
 		t.Fatalf("set OPENAI_API_KEY: %v", err)
 	}
 
-	c := Client(&EyrieConfig{Provider: "openai", APIKey: "test-key"})
+	c := Client(&GraycodeRouterConfig{Provider: "openai", APIKey: "test-key"})
 	_, _ = c.getOrCreateProvider("ghost-logs-warning")
 
 	output := buf.String()

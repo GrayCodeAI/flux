@@ -12,7 +12,7 @@ import (
 // This file implements POST /rerank: given a query and a set of candidate
 // documents, it returns the documents ranked by relevance to the query.
 //
-// When no provider-backed reranker is configured (the default), eyrie falls
+// When no provider-backed reranker is configured (the default), graycode-router falls
 // back to a zero-dependency lexical scorer (cosine similarity over
 // term-frequency vectors) so the endpoint is always functional. A
 // provider-backed path (e.g. Cohere rerank) can be injected via Config.Reranker.

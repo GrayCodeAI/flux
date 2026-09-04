@@ -5,11 +5,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // ModelEntriesForProvider lists models from a compiled v1 catalog for one provider.
-// New models appear here automatically when the eyrie catalog is updated — hosts must not hardcode IDs.
+// New models appear here automatically when the graycode-router catalog is updated — hosts must not hardcode IDs.
 func ModelEntriesForProvider(compiled *CompiledCatalog, provider string) []ModelCatalogEntry {
 	if compiled == nil {
 		return nil

@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/internal/httputil"
+	"github.com/GrayCodeAI/graycode-router/internal/httputil"
 )
 
 func TestConstantTimeEqual(t *testing.T) {

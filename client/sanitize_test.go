@@ -6,7 +6,7 @@ import (
 
 func TestSanitizeMessagesEmpty(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{}
+	msgs := []GraycodeRouterMessage{}
 	result := SanitizeMessages(msgs)
 	if len(result) != 0 {
 		t.Errorf("SanitizeMessages(empty) returned %d messages, want 0", len(result))
@@ -23,7 +23,7 @@ func TestSanitizeMessagesNil(t *testing.T) {
 
 func TestSanitizeMessagesNoOrphans(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{{ID: "tc-1", Name: "search", Arguments: map[string]interface{}{"q": "test"}}}},
 		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "tc-1", Content: "result"}}},
 	}
@@ -35,7 +35,7 @@ func TestSanitizeMessagesNoOrphans(t *testing.T) {
 
 func TestSanitizeMessagesOrphanedToolUse(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Do something"},
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "orphan-1", Name: "search", Arguments: map[string]interface{}{"q": "test"}},
@@ -68,7 +68,7 @@ func TestSanitizeMessagesOrphanedToolUse(t *testing.T) {
 
 func TestSanitizeMessagesMultipleOrphans(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "tc-a", Name: "tool_a", Arguments: map[string]interface{}{}},
 			{ID: "tc-b", Name: "tool_b", Arguments: map[string]interface{}{}},
@@ -90,7 +90,7 @@ func TestSanitizeMessagesMultipleOrphans(t *testing.T) {
 
 func TestSanitizeMessagesMixedOrphanAndMatched(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "matched", Name: "tool1", Arguments: map[string]interface{}{}},
 			{ID: "orphan", Name: "tool2", Arguments: map[string]interface{}{}},
@@ -116,7 +116,7 @@ func TestSanitizeMessagesMixedOrphanAndMatched(t *testing.T) {
 
 func TestSanitizeMessagesPreservesOrder(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "first"},
 		{Role: "assistant", Content: "second"},
 		{Role: "user", Content: "third"},
@@ -134,7 +134,7 @@ func TestSanitizeMessagesPreservesOrder(t *testing.T) {
 
 func TestSanitizeMessagesNoToolUse(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi there"},
 	}
@@ -146,7 +146,7 @@ func TestSanitizeMessagesNoToolUse(t *testing.T) {
 
 func TestSanitizeMessagesEmptyToolUse(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{}},
 	}
 	result := SanitizeMessages(msgs)
@@ -158,7 +158,7 @@ func TestSanitizeMessagesEmptyToolUse(t *testing.T) {
 func TestSanitizeMessagesOrphanWithEmptyID(t *testing.T) {
 	t.Parallel()
 	// Tool call with empty ID should not be injected (tc.ID != "" guard)
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{
 			{Name: "tool", Arguments: map[string]interface{}{}},
 		}},
@@ -172,7 +172,7 @@ func TestSanitizeMessagesOrphanWithEmptyID(t *testing.T) {
 func TestSanitizeMessagesDeduplicatesInjections(t *testing.T) {
 	t.Parallel()
 	// If the same ID appears in two assistant messages, only inject once
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{{ID: "dup-1", Name: "t1", Arguments: map[string]interface{}{}}}},
 		{Role: "assistant", ToolUse: []ToolCall{{ID: "dup-1", Name: "t1", Arguments: map[string]interface{}{}}}},
 	}

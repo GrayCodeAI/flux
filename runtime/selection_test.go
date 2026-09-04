@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/config"
 )
 
 // --- SetActiveModel ---
@@ -125,7 +125,7 @@ func TestSetActiveProvider_RoundTrip(t *testing.T) {
 func TestActiveModel_NoConfig(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 	got := ActiveModel(context.Background())
 	if got != "" {
 		t.Fatalf("expected empty active model with no config, got %q", got)
@@ -135,7 +135,7 @@ func TestActiveModel_NoConfig(t *testing.T) {
 func TestActiveProvider_NoConfig(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 	got := ActiveProvider(context.Background())
 	if got != "" {
 		t.Fatalf("expected empty active provider with no config, got %q", got)
@@ -231,7 +231,7 @@ func TestClearActiveSelection_Idempotent(t *testing.T) {
 func TestInferProviderForModel_WithPrefix(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	// With no catalog loaded, inferProviderForModel falls back to prefix parsing.
 	got := inferProviderForModel(context.Background(), "anthropic/claude-opus-4-6")
@@ -243,7 +243,7 @@ func TestInferProviderForModel_WithPrefix(t *testing.T) {
 func TestInferProviderForModel_OpenAIPrefix(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	got := inferProviderForModel(context.Background(), "openai/gpt-4o")
 	if got != "openai" {
@@ -254,7 +254,7 @@ func TestInferProviderForModel_OpenAIPrefix(t *testing.T) {
 func TestInferProviderForModel_NoPrefix(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	// Without a known prefix, should return empty when catalog is unavailable.
 	got := inferProviderForModel(context.Background(), "gpt-4o")
@@ -266,7 +266,7 @@ func TestInferProviderForModel_NoPrefix(t *testing.T) {
 func TestInferProviderForModel_EmptyModel(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	got := inferProviderForModel(context.Background(), "")
 	if got != "" {

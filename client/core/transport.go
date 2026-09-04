@@ -10,7 +10,7 @@ import (
 // DefaultTimeout is the default end-to-end HTTP timeout for provider clients.
 const DefaultTimeout = 10 * time.Minute
 
-// Version is set by the root eyrie package's init() from the VERSION file
+// Version is set by the root graycode-router package's init() from the VERSION file
 // (via the client facade's SetVersion). Default is "dev".
 var Version = "dev"
 
@@ -18,7 +18,7 @@ var Version = "dev"
 func SetVersion(v string) { Version = v }
 
 // UserAgent returns the User-Agent string for HTTP requests.
-func UserAgent() string { return "eyrie/" + Version }
+func UserAgent() string { return "graycode-router/" + Version }
 
 var (
 	sharedTransport *http.Transport

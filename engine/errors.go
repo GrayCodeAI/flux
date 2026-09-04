@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog"
 )
 
 // ErrorCode is a stable, machine-readable engine failure category.
@@ -44,9 +44,9 @@ func (e *Error) Error() string {
 		return e.Message
 	}
 	if e.Operation != "" {
-		return fmt.Sprintf("eyrie engine: %s failed", e.Operation)
+		return fmt.Sprintf("graycode-router engine: %s failed", e.Operation)
 	}
-	return "eyrie engine error"
+	return "graycode-router engine error"
 }
 
 func (e *Error) Unwrap() error {

@@ -14,7 +14,7 @@ type OpenAICompatConfig struct {
 	RequiresThinkingAsText           bool   `json:"requires_thinking_as_text,omitempty"`
 	ThinkingFormat                   string `json:"thinking_format,omitempty"` // "openai", "zai", "qwen", "openrouter"
 	// RequiresReasoningPassback instructs buildRequestBase to forward the
-	// reasoning_content captured from a prior assistant turn (core.EyrieMessage.Thinking)
+	// reasoning_content captured from a prior assistant turn (core.GraycodeRouterMessage.Thinking)
 	// back into the request's assistant messages. DeepSeek requires the assistant's
 	// reasoning_content to be passed back whenever that turn performed a tool call,
 	// otherwise the API returns HTTP 400. When no tool call happened the field is

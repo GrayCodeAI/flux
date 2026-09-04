@@ -8,11 +8,11 @@ import (
 )
 
 // ErrBudgetExceeded is returned when a virtual key has exhausted its budget.
-var ErrBudgetExceeded = errors.New("eyrie: virtual key budget exceeded")
+var ErrBudgetExceeded = errors.New("graycode-router: virtual key budget exceeded")
 
 // ErrUnknownVirtualKey is returned when a request references a virtual key that
 // the store does not recognize.
-var ErrUnknownVirtualKey = errors.New("eyrie: unknown virtual key")
+var ErrUnknownVirtualKey = errors.New("graycode-router: unknown virtual key")
 
 // virtualKeyCtxKey is the context key under which a virtual key id is carried.
 type virtualKeyCtxKey struct{}
@@ -72,7 +72,7 @@ func (bp *BudgetProvider) Ping(ctx context.Context) error { return bp.inner.Ping
 
 // Chat enforces the budget for the request's virtual key, calls the inner
 // provider, then records actual spend.
-func (bp *BudgetProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (bp *BudgetProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	vk := resolveVirtualKey(ctx, opts)
 	if vk == "" || bp.store == nil {
 		return bp.inner.Chat(ctx, messages, opts)
@@ -93,7 +93,7 @@ func (bp *BudgetProvider) Chat(ctx context.Context, messages []EyrieMessage, opt
 
 // StreamChat enforces budget up-front, then streams. Actual streamed usage is
 // recorded from the final usage event if present.
-func (bp *BudgetProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (bp *BudgetProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	vk := resolveVirtualKey(ctx, opts)
 	if vk == "" || bp.store == nil {
 		return bp.inner.StreamChat(ctx, messages, opts)
@@ -113,7 +113,7 @@ func (bp *BudgetProvider) StreamChat(ctx context.Context, messages []EyrieMessag
 	// event. Without this, streamed calls under a virtual key never debit the
 	// budget (unlike the non-streaming Chat path), so streaming-heavy clients
 	// would underreport spend. Mirrors UsageLimitProvider.StreamChat.
-	wrappedCh := make(chan EyrieStreamEvent, cap(result.Events))
+	wrappedCh := make(chan GraycodeRouterStreamEvent, cap(result.Events))
 	go func() {
 		defer close(wrappedCh)
 		for evt := range result.Events {
@@ -133,7 +133,7 @@ func (bp *BudgetProvider) StreamChat(ctx context.Context, messages []EyrieMessag
 	return NewStreamResult(wrappedCh, result.Close), nil
 }
 
-func (bp *BudgetProvider) recordUsage(ctx context.Context, vk, model string, resp *EyrieResponse) {
+func (bp *BudgetProvider) recordUsage(ctx context.Context, vk, model string, resp *GraycodeRouterResponse) {
 	if resp == nil || resp.Usage == nil {
 		return
 	}
@@ -151,7 +151,7 @@ func resolveVirtualKey(ctx context.Context, opts ChatOptions) string {
 
 // ActualCostUSD computes the realized USD cost of a completed call from token
 // usage using the same per-model pricing as the cost estimator.
-func ActualCostUSD(model string, usage *EyrieUsage) float64 {
+func ActualCostUSD(model string, usage *GraycodeRouterUsage) float64 {
 	if usage == nil {
 		return 0
 	}

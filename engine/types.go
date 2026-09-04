@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 // Intent expresses a host's semantic preference without naming a provider.
@@ -26,18 +26,18 @@ type ToolCall = llm.ToolCall
 type ToolResult = llm.ToolResult
 
 // Message is the stable conversation DTO at the host boundary.
-type Message = llm.EyrieMessage
+type Message = llm.GraycodeRouterMessage
 
-// Tool is a model-visible tool definition. Eyrie emits requests for these
+// Tool is a model-visible tool definition. GraycodeRouter emits requests for these
 // tools; the host remains responsible for permission checks and execution.
-type Tool = llm.EyrieTool
+type Tool = llm.GraycodeRouterTool
 
 // ToolChoice controls whether and how the model may request tools.
 type ToolChoice = llm.ToolChoiceOption
 
 // GenerationOptions contains model-generation controls that have equivalent
 // semantics across one or more provider adapters. Provider-specific wire
-// formats remain internal to Eyrie.
+// formats remain internal to GraycodeRouter.
 type GenerationOptions = llm.GenerationOptions
 
 // Limits bounds a generation request.
@@ -50,14 +50,14 @@ type Metadata = llm.Metadata
 // GenerateRequest is the provider-neutral request accepted by Engine.
 type GenerateRequest = llm.GenerateRequest
 
-// Route is the concrete model/deployment decision made by Eyrie.
+// Route is the concrete model/deployment decision made by GraycodeRouter.
 type Route = llm.ResolvedRoute
 
 // Usage is normalized token accounting.
-type Usage = llm.EyrieUsage
+type Usage = llm.GraycodeRouterUsage
 
 // GenerateResponse is a normalized blocking response.
-type GenerateResponse = llm.EyrieResponse
+type GenerateResponse = llm.GraycodeRouterResponse
 
 // Event type names. These are the stable stream vocabulary shared by the
 // engine and its hosts; new types are additive and hosts must safely ignore
@@ -80,7 +80,7 @@ const (
 
 // Event is a normalized model stream event. New optional fields and event
 // types are additive; hosts must safely ignore unknown event types.
-type Event = llm.EyrieStreamEvent
+type Event = llm.GraycodeRouterStreamEvent
 
 // Model is a host-facing catalog row.
 type Model = llm.Model

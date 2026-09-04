@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/discover"
-	"github.com/GrayCodeAI/eyrie/catalog/live"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/discover"
+	"github.com/GrayCodeAI/graycode-router/catalog/live"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 func TestRun_DisableCredentialFallbackIgnoresAmbientStoreAndConfigPath(t *testing.T) {
@@ -24,8 +24,8 @@ func TestRun_DisableCredentialFallbackIgnoresAmbientStoreAndConfigPath(t *testin
 		return []live.Entry{{ID: "ambient/model"}}, nil
 	})
 
-	t.Setenv("EYRIE_CONFIG_DIR", t.TempDir())
-	if err := eyriecfg.SaveProviderConfig(&eyriecfg.ProviderConfig{
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", t.TempDir())
+	if err := graycoderoutercfg.SaveProviderConfig(&graycoderoutercfg.ProviderConfig{
 		Version:           "1",
 		CanopyWaveBaseURL: "https://ambient-canopy.invalid/v1",
 	}, ""); err != nil {
@@ -37,7 +37,7 @@ func TestRun_DisableCredentialFallbackIgnoresAmbientStoreAndConfigPath(t *testin
 	if err := store.Set(context.Background(), credentials.AccountForEnv("CANOPYWAVE_API_KEY"), "ambient-canopy-key-1234567890"); err != nil {
 		t.Fatal(err)
 	}
-	if eyriecfg.DiscoveryCredentials(context.Background()).APIKeys["CANOPYWAVE_API_KEY"] == "" {
+	if graycoderoutercfg.DiscoveryCredentials(context.Background()).APIKeys["CANOPYWAVE_API_KEY"] == "" {
 		t.Fatal("test setup: ambient fallback credential is not visible")
 	}
 
@@ -90,8 +90,8 @@ func TestRefreshProviderWithOptions_DisableCredentialFallback(t *testing.T) {
 		return []live.Entry{{ID: "ambient/model"}}, nil
 	})
 
-	t.Setenv("EYRIE_CONFIG_DIR", t.TempDir())
-	if err := eyriecfg.SaveProviderConfig(&eyriecfg.ProviderConfig{
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", t.TempDir())
+	if err := graycoderoutercfg.SaveProviderConfig(&graycoderoutercfg.ProviderConfig{
 		Version:           "1",
 		CanopyWaveBaseURL: "https://ambient-canopy.invalid/v1",
 	}, ""); err != nil {
@@ -136,7 +136,7 @@ func TestRefreshProviderWithOptions_UsesOnlyScopedCachePath(t *testing.T) {
 	dir := t.TempDir()
 	globalPath := filepath.Join(dir, "global-catalog.json")
 	scopedPath := filepath.Join(dir, "engine-a", "catalog.json")
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", globalPath)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", globalPath)
 
 	global := catalog.SeedCatalog()
 	global.Aliases["global-cache-marker"] = "global-only"

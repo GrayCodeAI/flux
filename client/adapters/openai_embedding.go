@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // Compile-time check that OpenAIClient implements core.Embedder.
@@ -43,7 +43,7 @@ type OpenAIEmbeddingResponse = openaiEmbeddingResponse
 // CreateEmbedding sends an embedding request to the OpenAI-compatible API endpoint.
 func (c *OpenAIClient) CreateEmbedding(ctx context.Context, req core.EmbeddingRequest) (*core.EmbeddingResponse, error) {
 	if req.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for %s embeddings", c.providerName)
+		return nil, fmt.Errorf("graycode-router: model is required for %s embeddings", c.providerName)
 	}
 
 	bodyMap := map[string]interface{}{
@@ -56,12 +56,12 @@ func (c *OpenAIClient) CreateEmbedding(ctx context.Context, req core.EmbeddingRe
 
 	body, err := json.Marshal(bodyMap)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: failed to marshal embedding request: %w", err)
+		return nil, fmt.Errorf("graycode-router: failed to marshal embedding request: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/embeddings", bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: failed to create embedding request: %w", err)
+		return nil, fmt.Errorf("graycode-router: failed to create embedding request: %w", err)
 	}
 	c.setHeaders(httpReq)
 	httpReq.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
@@ -70,7 +70,7 @@ func (c *OpenAIClient) CreateEmbedding(ctx context.Context, req core.EmbeddingRe
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, httpReq, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: %s embedding request failed: %w", c.providerName, err)
+		return nil, fmt.Errorf("graycode-router: %s embedding request failed: %w", c.providerName, err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -86,7 +86,7 @@ func (c *OpenAIClient) CreateEmbedding(ctx context.Context, req core.EmbeddingRe
 
 	var or openaiEmbeddingResponse
 	if err := json.NewDecoder(resp.Body).Decode(&or); err != nil {
-		return nil, fmt.Errorf("eyrie: failed to decode %s embedding response: %w", c.providerName, err)
+		return nil, fmt.Errorf("graycode-router: failed to decode %s embedding response: %w", c.providerName, err)
 	}
 
 	result := &core.EmbeddingResponse{
@@ -103,7 +103,7 @@ func (c *OpenAIClient) CreateEmbedding(ctx context.Context, req core.EmbeddingRe
 		}
 	}
 	if or.Usage.PromptTokens > 0 || or.Usage.TotalTokens > 0 {
-		result.Usage = &core.EyrieUsage{
+		result.Usage = &core.GraycodeRouterUsage{
 			PromptTokens: or.Usage.PromptTokens,
 			TotalTokens:  or.Usage.TotalTokens,
 		}

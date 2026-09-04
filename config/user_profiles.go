@@ -11,7 +11,7 @@ import (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ProviderProfiles — saved, named provider configurations that users can
-// switch between. Stored at ~/.eyrie/profiles.json.
+// switch between. Stored at ~/.graycode-router/profiles.json.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ProviderProfile is a saved provider configuration.
@@ -30,7 +30,7 @@ type ProviderProfile struct {
 // ProfilesPath returns the path to the profiles file.
 func ProfilesPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".eyrie", "profiles.json")
+	return filepath.Join(home, ".graycode-router", "profiles.json")
 }
 
 // LoadProfiles reads saved provider profiles.

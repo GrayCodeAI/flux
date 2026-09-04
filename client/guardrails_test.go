@@ -321,7 +321,7 @@ func TestPIIRules_SSN(t *testing.T) {
 func TestPIIRules_SSNRedacted(t *testing.T) {
 	t.Parallel()
 	g := NewGuardrails(DefaultPIIRules()...)
-	resp := &EyrieResponse{Content: "SSN: 123-45-6789 done"}
+	resp := &GraycodeRouterResponse{Content: "SSN: 123-45-6789 done"}
 	err := applyGuardrails(context.Background(), resp, g)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)

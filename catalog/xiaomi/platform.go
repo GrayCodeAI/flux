@@ -63,7 +63,7 @@ func FetchPlatformModelsIndex(ctx context.Context, catalogURL string) (map[strin
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := platformHTTPClient.Do(req)
 	if err != nil {

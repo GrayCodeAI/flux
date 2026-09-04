@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 func TestSupportsAnthropicCompactionSelection(t *testing.T) {
@@ -25,7 +25,7 @@ func TestSupportsAnthropicCompactionSelection(t *testing.T) {
 }
 
 func TestAnthropicCompactionMessagesPreservesTools(t *testing.T) {
-	messages, system := anthropicCompactionMessages([]client.EyrieMessage{
+	messages, system := anthropicCompactionMessages([]client.GraycodeRouterMessage{
 		{Role: "system", Content: "system prompt"},
 		{Role: "assistant", Content: "calling", ToolUse: []client.ToolCall{{ID: "tool-1", Name: "read"}}},
 		{Role: "user", ToolResults: []client.ToolResult{{ToolUseID: "tool-1", Content: "result", IsError: true}}},

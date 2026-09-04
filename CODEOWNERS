@@ -1,4 +1,4 @@
-# CODEOWNERS for eyrie (LLM client library)
+# CODEOWNERS for graycode-router (LLM client library)
 * @GrayCodeAI/maintainers
 
 # Provider integration (security-sensitive — handles API keys)
@@ -9,7 +9,7 @@
 /types/       @GrayCodeAI/llm-team
 /catalog/     @GrayCodeAI/llm-team
 /router/      @GrayCodeAI/llm-team
-/eyrie.go     @GrayCodeAI/llm-team
+/graycode-router.go     @GrayCodeAI/llm-team
 /VERSION      @GrayCodeAI/maintainers
 
 # CI / release

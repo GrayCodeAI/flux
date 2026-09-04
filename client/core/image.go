@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-// supportedImageMediaTypes is the allow-list of image formats eyrie will encode
+// supportedImageMediaTypes is the allow-list of image formats graycode-router will encode
 // from a local file or validate from a data-URL. Keeping the set explicit means
-// an unsupported type fails fast with a readable error at eyrie's boundary
+// an unsupported type fails fast with a readable error at graycode-router's boundary
 // rather than as an opaque 400 from the upstream provider.
 var supportedImageMediaTypes = map[string]bool{
 	"image/jpeg": true,
@@ -39,16 +39,16 @@ var extToMediaType = map[string]string{
 // It is the single entry point for image handling so the provider clients and
 // hawk no longer each carry their own divergent encoder. Local files and
 // data-URLs are validated against supportedImageMediaTypes; HTTP URLs are left
-// for the provider to fetch (avoiding an SSRF surface inside eyrie).
+// for the provider to fetch (avoiding an SSRF surface inside graycode-router).
 func NormalizeImageSource(src string) (mediaType, data string, isBase64 bool, err error) {
 	switch {
 	case strings.HasPrefix(src, "data:"):
 		mt, d, ok := parseDataURL(src)
 		if !ok {
-			return "", "", false, fmt.Errorf("eyrie: malformed image data URL")
+			return "", "", false, fmt.Errorf("graycode-router: malformed image data URL")
 		}
 		if mt != "" && !supportedImageMediaTypes[mt] {
-			return "", "", false, fmt.Errorf("eyrie: unsupported image format %q (supported: jpeg, png, webp, gif)", mt)
+			return "", "", false, fmt.Errorf("graycode-router: unsupported image format %q (supported: jpeg, png, webp, gif)", mt)
 		}
 		return mt, d, true, nil
 
@@ -59,7 +59,7 @@ func NormalizeImageSource(src string) (mediaType, data string, isBase64 bool, er
 	default:
 		// A string with a recognized image extension is a local file path; read
 		// and encode it. Anything else is treated as raw base64 image data
-		// (preserving eyrie's long-standing default), so a bare token is not
+		// (preserving graycode-router's long-standing default), so a bare token is not
 		// mistaken for a missing file.
 		ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(src), "."))
 		mt, ok := extToMediaType[ext]
@@ -69,7 +69,7 @@ func NormalizeImageSource(src string) (mediaType, data string, isBase64 bool, er
 		}
 		raw, readErr := os.ReadFile(src) // #nosec G304 -- src is a caller-supplied local image path, an intentional API input, not untrusted request data
 		if readErr != nil {
-			return "", "", false, fmt.Errorf("eyrie: reading image file %q: %w", src, readErr)
+			return "", "", false, fmt.Errorf("graycode-router: reading image file %q: %w", src, readErr)
 		}
 		return mt, base64.StdEncoding.EncodeToString(raw), true, nil
 	}
@@ -88,7 +88,7 @@ func parseDataURL(src string) (mediaType, data string, ok bool) {
 // OpenAI-compatible image_url field expects: an http(s) URL or a data URL are
 // passed through; a local file is read and encoded into a data URL. On any
 // normalization error it falls back to the raw input so the request is not
-// dropped (the provider will surface a clearer error than eyrie can here).
+// dropped (the provider will surface a clearer error than graycode-router can here).
 func OpenAIImageURL(src string) string {
 	// Already a usable URL form: pass through unchanged.
 	if strings.HasPrefix(src, "data:") || strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
@@ -105,7 +105,7 @@ func OpenAIImageURL(src string) string {
 		return fmt.Sprintf("data:%s;base64,%s", mt, data)
 	}
 	// A bare token that is neither a path nor a URL is treated as raw base64,
-	// defaulting to PNG (eyrie's long-standing behavior).
+	// defaulting to PNG (graycode-router's long-standing behavior).
 	return "data:image/png;base64," + data
 }
 

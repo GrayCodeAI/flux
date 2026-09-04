@@ -41,16 +41,16 @@ var (
 )
 
 // cacheDir returns the directory for storing the pricing cache.
-// Uses $XDG_CACHE_HOME/eyrie/ or ~/.cache/eyrie/ as fallback.
+// Uses $XDG_CACHE_HOME/graycode-router/ or ~/.cache/graycode-router/ as fallback.
 func cacheDir() string {
 	if d := os.Getenv("XDG_CACHE_HOME"); d != "" {
-		return filepath.Join(d, "eyrie")
+		return filepath.Join(d, "graycode-router")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(os.TempDir(), "eyrie-cache")
+		return filepath.Join(os.TempDir(), "graycode-router-cache")
 	}
-	return filepath.Join(home, ".cache", "eyrie")
+	return filepath.Join(home, ".cache", "graycode-router")
 }
 
 // getCache returns the shared pricing cache instance.

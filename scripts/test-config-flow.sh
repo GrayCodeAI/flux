@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # E2E test: /config flow — hub → credential → discover → picker → chat
-# Run from eyrie root: bash scripts/test-config-flow.sh
+# Run from graycode-router root: bash scripts/test-config-flow.sh
 set -euo pipefail
 
 PASS=0
@@ -14,7 +14,7 @@ echo
 
 # 1. Verify provider registry has all 11 providers
 echo "--- provider registry ---"
-count=$(cd .. && grep -c "ProviderID:" eyrie/catalog/registry/providers.go 2>/dev/null || echo 0)
+count=$(cd .. && grep -c "ProviderID:" graycode-router/catalog/registry/providers.go 2>/dev/null || echo 0)
 if [ "$count" -ge 11 ]; then
   pass "registry has $count provider specs"
 else
@@ -41,7 +41,7 @@ fi
 
 # 4. Verify all providers have live fetchers
 echo "--- live fetchers ---"
-cd /Users/lakshmanpatel/Desktop/OSS2026/RealWork/hawk-eco/eyrie
+cd /Users/lakshmanpatel/Desktop/OSS2026/RealWork/hawk-eco/graycode-router
 fetchers=$(grep -c '".*":\s*Fetch' catalog/live/fetchers.go 2>/dev/null || echo 0)
 if [ "$fetchers" -ge 11 ]; then
   pass "all 11 providers have live fetchers"

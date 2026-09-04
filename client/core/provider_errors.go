@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// ProviderErrorDetail holds the structured fields eyrie can extract from a
+// ProviderErrorDetail holds the structured fields graycode-router can extract from a
 // provider's error body. Providers vary (OpenAI nests under "error", some put
 // a top-level "code"); the parser is lenient and fills what it can.
 type ProviderErrorDetail struct {
@@ -21,7 +21,7 @@ type ProviderErrorDetail struct {
 // ParseProviderError reads and classifies an error response body. It
 // never returns a zero detail: on a read failure the detail is filled
 // with a placeholder message and the read error is returned alongside
-// so callers can attach it to the structured *EyrieError.
+// so callers can attach it to the structured *GraycodeRouterError.
 func ParseProviderError(body io.ReadCloser) (ProviderErrorDetail, error) {
 	defer func() { _ = body.Close() }()
 	data, err := io.ReadAll(io.LimitReader(body, 8192))
@@ -71,7 +71,7 @@ func rawToString(raw json.RawMessage) string {
 //
 // It is intentionally small and keyed on portable signals (HTTP status plus the
 // common cross-provider code/type/message strings) rather than a per-provider
-// table, to avoid becoming a maintenance sink across eyrie's many providers.
+// table, to avoid becoming a maintenance sink across graycode-router's many providers.
 func classifyProviderError(statusCode int, d ProviderErrorDetail) string {
 	code := strings.ToLower(d.Code)
 	typ := strings.ToLower(d.Type)
@@ -120,20 +120,20 @@ func classifyProviderError(statusCode int, d ProviderErrorDetail) string {
 	return ""
 }
 
-// FormatAPIError builds the *EyrieError used across every provider
+// FormatAPIError builds the *GraycodeRouterError used across every provider
 // request path (chat, stream, embeddings). It always includes the
 // provider name, the operation (e.g. "chat", "stream"), the HTTP
 // status, the upstream correlation id (for support tickets), a
 // classified actionable hint when one applies, and the raw detail.
 //
-// Returning *EyrieError (rather than a plain fmt.Errorf) lets
+// Returning *GraycodeRouterError (rather than a plain fmt.Errorf) lets
 // downstream code use errors.As to dispatch on the structured type
 // — retry middleware checks IsRetriable(), fallback chains check
 // IsRetriable()/IsAuthError(), observability code can pull the
 // provider/status/request-id without re-parsing the message.
 //
 // inner is the read error from ParseProviderError (when the body
-// could not be read). It is attached via EyrieError.Err so
+// could not be read). It is attached via GraycodeRouterError.Err so
 // errors.Is(err, io.EOF) and similar checks succeed; pass nil when
 // the body was read cleanly.
 func FormatAPIError(provider, op string, statusCode int, requestID string, d ProviderErrorDetail, inner error) error {
@@ -151,7 +151,7 @@ func FormatAPIError(provider, op string, statusCode int, requestID string, d Pro
 		msg = fmt.Sprintf("%s — %s", hint, detail)
 	}
 
-	return &EyrieError{
+	return &GraycodeRouterError{
 		Provider:   provider,
 		Op:         op,
 		StatusCode: statusCode,

@@ -24,7 +24,7 @@ type EmbeddingRequest struct {
 
 // EmbeddingResponse holds embedding results.
 type EmbeddingResponse struct {
-	Embeddings [][]float32 `json:"embeddings"`
-	Model      string      `json:"model"`
-	Usage      *EyrieUsage `json:"usage,omitempty"`
+	Embeddings [][]float32          `json:"embeddings"`
+	Model      string               `json:"model"`
+	Usage      *GraycodeRouterUsage `json:"usage,omitempty"`
 }

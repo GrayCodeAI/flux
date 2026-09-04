@@ -1,6 +1,6 @@
 package client
 
-import "github.com/GrayCodeAI/eyrie/client/adapters"
+import "github.com/GrayCodeAI/graycode-router/client/adapters"
 
 // FreezeRegistry prevents further provider registrations.
 func FreezeRegistry() { adapters.FreezeRegistry() }

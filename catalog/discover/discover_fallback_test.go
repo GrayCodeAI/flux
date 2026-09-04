@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/discover"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/discover"
 )
 
 func TestDiscoverRun_RemoteFailureUsesCacheFallback(t *testing.T) {
@@ -24,7 +24,7 @@ func TestDiscoverRun_RemoteFailureUsesCacheFallback(t *testing.T) {
 	}))
 	defer failServer.Close()
 
-	t.Setenv("EYRIE_MODEL_CATALOG_URL", failServer.URL)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_URL", failServer.URL)
 
 	result, err := discover.Run(context.Background(), discover.Options{
 		LoadCatalogOptions: catalog.LoadCatalogOptions{

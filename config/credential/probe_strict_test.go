@@ -3,7 +3,7 @@ package credential
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 func TestStrictMimoProbeRoutingIgnoresAmbientEnvironment(t *testing.T) {

@@ -1,14 +1,14 @@
 # Dynamic Model Discovery
 
-Status: implemented through the `eyrie/engine` contract v2.
+Status: implemented through the `graycode-router/engine` contract v2.
 
-This guide describes the host-facing path used by Hawk. Hawk is the face; Eyrie
+This guide describes the host-facing path used by Hawk. Hawk is the face; GraycodeRouter
 is the engine and source of truth for provider metadata, credentials, live
 model discovery, catalog compilation, selection, and provider transport.
 
 ## Ownership
 
-| Hawk owns | Eyrie owns |
+| Hawk owns | GraycodeRouter owns |
 |---|---|
 | credential and model-picker UX | safe credential resolution and persistence |
 | conversation/session state | provider registry and deployment metadata |
@@ -17,8 +17,8 @@ model discovery, catalog compilation, selection, and provider transport.
 | product settings and lifecycle | model ownership, aliases, selection, and routing |
 | normalized request construction | provider adapters, streams, usage, and errors |
 
-Hawk calls its integration wrapper, which delegates to `eyrie/engine`. Hawk UI,
-command, and conversation packages do not call Eyrie's lower-level runtime or
+Hawk calls its integration wrapper, which delegates to `graycode-router/engine`. Hawk UI,
+command, and conversation packages do not call GraycodeRouter's lower-level runtime or
 client packages.
 
 ## End-to-end path
@@ -76,7 +76,7 @@ e, err := engine.New(engine.Options{
 ```
 
 - `StateDir` derives default catalog and provider paths; explicit paths win.
-- An empty `RemoteCatalogURL` selects Eyrie's compiled-in HTTPS seed and does
+- An empty `RemoteCatalogURL` selects GraycodeRouter's compiled-in HTTPS seed and does
   not consult a process-environment override.
 - Custom gateways are normalized, validated, and snapshotted per Engine.
 - `UseRegisteredCustomGateways` exists only for callers that deliberately opt
@@ -89,7 +89,7 @@ custom gateways to coexist safely in one process.
 
 ## Catalog sources
 
-Eyrie keeps three complementary sources:
+GraycodeRouter keeps three complementary sources:
 
 ```text
 published remote catalog
@@ -110,7 +110,7 @@ that do not require the host to reproduce provider logic.
 The stable model DTO intentionally distinguishes:
 
 - `ID`: provider-native/listed model identifier.
-- `CanonicalID`: Eyrie's canonical alias target where known.
+- `CanonicalID`: GraycodeRouter's canonical alias target where known.
 - `Owner`: catalog model owner.
 - `ProviderID`: provider associated with the offering.
 - `GatewayID`: selected/listed gateway or deployment identity.
@@ -181,7 +181,7 @@ failed live response is not silently represented as successful live readiness.
 
 ## Selection and conversation handoff
 
-Hawk persists a choice through `Engine.SetSelection(provider, model)`. Eyrie
+Hawk persists a choice through `Engine.SetSelection(provider, model)`. GraycodeRouter
 validates provider/model ownership, preserves custom model IDs, canonicalizes
 built-in aliases, and stores routing metadata at the injected provider path.
 
@@ -246,25 +246,25 @@ the safe credential/gateway reports without reading either file directly.
 | custom gateway URL contains embedded data | reject configuration |
 | stream caller exits | close/cancel the Engine stream |
 
-Provider-specific friendly error formatting remains Eyrie-owned; Hawk decides
+Provider-specific friendly error formatting remains GraycodeRouter-owned; Hawk decides
 where and how to display it.
 
 ## Release order for Hawk
 
-Eyrie is changed and released before Hawk advances its dependency:
+GraycodeRouter is changed and released before Hawk advances its dependency:
 
 ```text
-standalone Eyrie change
-  --> Eyrie tests (two passes)
-  --> signed Eyrie commit
-  --> publish a resolvable Eyrie module release/commit
+standalone GraycodeRouter change
+  --> GraycodeRouter tests (two passes)
+  --> signed GraycodeRouter commit
+  --> publish a resolvable GraycodeRouter module release/commit
   --> update Hawk module dependency when needed
-  --> update Hawk's Eyrie module pin to the same published commit
+  --> update Hawk's GraycodeRouter module pin to the same published commit
   --> Hawk integration + boundary + clean-clone verification (two passes)
   --> commit Hawk code and gitlink together
 ```
 
-The parent workspace must use a committed Eyrie checkout, never working-tree-
+The parent workspace must use a committed GraycodeRouter checkout, never working-tree-
 only code, and Hawk's module pin must resolve to that same published commit.
 Both workspace builds and `GOWORK=off` builds must expose the same Engine
 contract.

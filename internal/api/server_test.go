@@ -11,22 +11,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/storage"
 )
 
 type mockProv struct{}
 
 func (m *mockProv) Name() string                 { return "mock" }
 func (m *mockProv) Ping(_ context.Context) error { return nil }
-func (m *mockProv) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
-	return &client.EyrieResponse{Content: "hi", FinishReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 2}}, nil
+func (m *mockProv) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
+	return &client.GraycodeRouterResponse{Content: "hi", FinishReason: "end_turn", Usage: &client.GraycodeRouterUsage{CompletionTokens: 2}}, nil
 }
 
-func (m *mockProv) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 2)
-	ch <- client.EyrieStreamEvent{Type: "content", Content: "hi"}
-	ch <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 2}}
+func (m *mockProv) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.GraycodeRouterStreamEvent, 2)
+	ch <- client.GraycodeRouterStreamEvent{Type: "content", Content: "hi"}
+	ch <- client.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.GraycodeRouterUsage{CompletionTokens: 2}}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }

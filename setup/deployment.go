@@ -1,4 +1,4 @@
-// Package setup wires catalog-backed deployment routing for hawk and eyrie CLIs.
+// Package setup wires catalog-backed deployment routing for hawk and graycode-router CLIs.
 package setup
 
 import (
@@ -7,14 +7,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	"github.com/GrayCodeAI/eyrie/catalog/zai"
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/router"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/xiaomi"
+	"github.com/GrayCodeAI/graycode-router/catalog/zai"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/graycode-router/router"
 )
 
 // oidcBedrockCreds and oidcVertexToken are injectable seams over the
@@ -26,10 +26,10 @@ var (
 )
 
 // oidcEnabled reports whether the OIDC opt-in branch should be considered for
-// the given deployment. It is gated by EYRIE_OIDC=1 (or true/yes/on) OR by the
+// the given deployment. It is gated by GRAYCODE_ROUTER_OIDC=1 (or true/yes/on) OR by the
 // deployment specifying a roleARN / WIF audience. It is OFF by default.
 func oidcEnabled(deployment config.DeploymentConfig) bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("EYRIE_OIDC"))) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("GRAYCODE_ROUTER_OIDC"))) {
 	case "1", "true", "yes", "on":
 		return true
 	}
@@ -46,9 +46,9 @@ func storeSecret(envKeys ...string) string {
 	return ""
 }
 
-// UseDeploymentRouting mirrors eyrie CLI behavior: env override, then provider.json shape.
+// UseDeploymentRouting mirrors graycode-router CLI behavior: env override, then provider.json shape.
 func UseDeploymentRouting(cfg *config.ProviderConfig) bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("EYRIE_DEPLOYMENT_ROUTING"))) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING"))) {
 	case "1", "true", "yes", "on":
 		return true
 	case "0", "false", "no", "off":
@@ -67,7 +67,7 @@ func DeploymentRoutingFromState(cfg *config.ProviderConfig) bool {
 func DeploymentProvider(ctx context.Context, cfg *config.ProviderConfig) (client.Provider, error) {
 	compiled, err := catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{
 		CachePath:     catalog.DefaultCachePath(),
-		RefreshRemote: strings.EqualFold(os.Getenv("EYRIE_MODEL_CATALOG_REFRESH"), "true"),
+		RefreshRemote: strings.EqualFold(os.Getenv("GRAYCODE_ROUTER_MODEL_CATALOG_REFRESH"), "true"),
 	})
 	if err != nil {
 		return nil, err

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 func TestMiMoClientChatUsesOpenAIEndpoint(t *testing.T) {
@@ -27,7 +27,7 @@ func TestMiMoClientChatUsesOpenAIEndpoint(t *testing.T) {
 
 	client := NewMiMoClient("tp-test-key", "https://openai.example/v1", &XiaomiCompat, "xiaomi_mimo_token_plan")
 	client.openAI.httpClient = &http.Client{Transport: transport}
-	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+	response, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
 		Model:     "mimo-v2.5-pro",
 		MaxTokens: 1024,
 	})
@@ -47,7 +47,7 @@ func TestMiMoClientNoAnthropicFallback(t *testing.T) {
 
 	client := NewMiMoClient("tp-test-key", "https://openai.example/v1", &XiaomiCompat, "xiaomi_mimo_token_plan")
 	client.openAI.httpClient = &http.Client{Transport: transport}
-	_, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+	_, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
 		Model: "mimo-v2.5-pro",
 	})
 	if err == nil {

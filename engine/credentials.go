@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 // SaveCredential validates, stores, and probes a provider credential. The
@@ -20,7 +20,7 @@ func (e *Engine) SaveCredential(ctx context.Context, providerID, secret string) 
 	ctx = nonNilContext(ctx)
 	providerID = strings.TrimSpace(providerID)
 	if providerID == "" {
-		return CredentialStatus{}, invalid("save_credential", "eyrie engine: provider id is required")
+		return CredentialStatus{}, invalid("save_credential", "graycode-router engine: provider id is required")
 	}
 	if gateway, ok := e.customGateway(providerID); ok {
 		return e.saveCustomGatewayCredential(ctx, gateway, secret)
@@ -39,10 +39,10 @@ func (e *Engine) SaveCredential(ctx context.Context, providerID, secret string) 
 	}
 	envKey := strings.TrimSpace(inference.EnvVar)
 	if envKey == "" {
-		return CredentialStatus{}, invalid("save_credential", "eyrie engine: provider has no credential target")
+		return CredentialStatus{}, invalid("save_credential", "graycode-router engine: provider has no credential target")
 	}
 	if err := e.secretStore.Set(ctx, credentials.AccountForEnv(envKey), prepared); err != nil {
-		return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "save_credential", Provider: providerID, Message: "eyrie engine: could not save credential", Cause: err}
+		return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "save_credential", Provider: providerID, Message: "graycode-router engine: could not save credential", Cause: err}
 	}
 	status := CredentialStatus{ProviderID: providerID, EnvVar: envKey, Configured: true}
 	if spec, ok := registry.DefaultRegistry.Get(providerID); ok && !spec.RequiresKey {
@@ -67,7 +67,7 @@ func (e *Engine) RemoveCredential(ctx context.Context, providerID string) error 
 			return nil
 		}
 		if err := e.secretStore.Delete(ctx, credentials.AccountForEnv(gateway.CredentialEnv)); err != nil && !errors.Is(err, credentials.ErrNotFound) {
-			return &Error{Code: ErrorInternal, Operation: "remove_credential", Provider: gateway.ID, Message: "eyrie engine: could not remove credential", Cause: err}
+			return &Error{Code: ErrorInternal, Operation: "remove_credential", Provider: gateway.ID, Message: "graycode-router engine: could not remove credential", Cause: err}
 		}
 		return nil
 	}
@@ -76,7 +76,7 @@ func (e *Engine) RemoveCredential(ctx context.Context, providerID string) error 
 	}
 	for _, envKey := range e.CredentialEnvKeys(providerID) {
 		if err := e.secretStore.Delete(ctx, credentials.AccountForEnv(envKey)); err != nil && !errors.Is(err, credentials.ErrNotFound) {
-			return &Error{Code: ErrorInternal, Operation: "remove_credential", Provider: providerID, Message: "eyrie engine: could not remove credential", Cause: err}
+			return &Error{Code: ErrorInternal, Operation: "remove_credential", Provider: providerID, Message: "graycode-router engine: could not remove credential", Cause: err}
 		}
 	}
 	return nil
@@ -92,7 +92,7 @@ func (e *Engine) CredentialStatus(ctx context.Context, providerID string) (Crede
 		}
 		secret, err := e.credentialValue(ctx, gateway.CredentialEnv)
 		if err != nil {
-			return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "credential_status", Provider: gateway.ID, Message: "eyrie engine: could not read credential status", Cause: err}
+			return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "credential_status", Provider: gateway.ID, Message: "graycode-router engine: could not read credential status", Cause: err}
 		}
 		configured := strings.TrimSpace(secret) != "" && !config.LooksLikePlaceholderSecret(secret)
 		return credentialStatusWithEnvironment(CredentialStatus{
@@ -107,7 +107,7 @@ func (e *Engine) CredentialStatus(ctx context.Context, providerID string) (Crede
 	for _, envKey := range e.CredentialEnvKeys(providerID) {
 		secret, err := e.credentialValue(ctx, envKey)
 		if err != nil {
-			return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "credential_status", Provider: providerID, Message: "eyrie engine: could not read credential status", Cause: err}
+			return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "credential_status", Provider: providerID, Message: "graycode-router engine: could not read credential status", Cause: err}
 		}
 		if strings.TrimSpace(secret) != "" && !config.LooksLikePlaceholderSecret(secret) {
 			return credentialStatusWithEnvironment(CredentialStatus{
@@ -153,7 +153,7 @@ func (e *Engine) saveCustomGatewayCredential(ctx context.Context, gateway Custom
 		return CredentialStatus{}, &Error{Code: ErrorInvalidRequest, Operation: "save_credential", Provider: gateway.ID, Message: err.Error(), Cause: err}
 	}
 	if err := e.secretStore.Set(ctx, credentials.AccountForEnv(gateway.CredentialEnv), secret); err != nil {
-		return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "save_credential", Provider: gateway.ID, Message: "eyrie engine: could not save credential", Cause: err}
+		return CredentialStatus{}, &Error{Code: ErrorInternal, Operation: "save_credential", Provider: gateway.ID, Message: "graycode-router engine: could not save credential", Cause: err}
 	}
 	status := CredentialStatus{ProviderID: gateway.ID, EnvVar: gateway.CredentialEnv, Configured: true}
 	if err := e.probeCustomGateway(ctx, gateway, secret); err != nil {

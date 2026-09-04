@@ -3,18 +3,18 @@ package client
 import (
 	"testing"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
 )
 
 func TestGetOrCreateProvider_XiaomiTokenPlanUsesMimoBase(t *testing.T) {
 	t.Setenv("HAWK_CONFIG_DIR", t.TempDir())
-	if err := eyriecfg.SaveProviderConfig(&eyriecfg.ProviderConfig{
+	if err := graycoderoutercfg.SaveProviderConfig(&graycoderoutercfg.ProviderConfig{
 		XiaomiMimoTokenPlanRegion: "sgp",
 	}, ""); err != nil {
 		t.Fatalf("SaveProviderConfig: %v", err)
 	}
 
-	c := Client(&EyrieConfig{Provider: "xiaomi_mimo_token_plan", APIKey: "tp-test-key"})
+	c := Client(&GraycodeRouterConfig{Provider: "xiaomi_mimo_token_plan", APIKey: "tp-test-key"})
 	p, err := c.getOrCreateProvider("xiaomi_mimo_token_plan")
 	if err != nil {
 		t.Fatalf("getOrCreateProvider: %v", err)

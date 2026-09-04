@@ -1,4 +1,4 @@
-package eyrie
+package graycoderouter
 
 import (
 	"bufio"
@@ -76,7 +76,7 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	return fmt.Sprintf("eyrie: %s %s: %d %s", e.Method, e.Path, e.StatusCode, e.Body)
+	return fmt.Sprintf("graycode-router: %s %s: %d %s", e.Method, e.Path, e.StatusCode, e.Body)
 }
 
 func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResponse, error) {

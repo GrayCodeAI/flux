@@ -3,7 +3,7 @@ package catalog
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 func TestSpecByProviderID_RegisteredProviders(t *testing.T) {

@@ -79,9 +79,9 @@ Rules:
 // over ChatWithStructuredOutput, modeled on CocoIndex's ExtractByLlm; Harrier and
 // other knowledge-graph consumers can call it instead of hand-rolling extraction
 // prompts and JSON parsing.
-func (c *EyrieClient) ExtractRelationships(ctx context.Context, text string, opts ExtractOptions) ([]Relationship, error) {
+func (c *GraycodeRouterClient) ExtractRelationships(ctx context.Context, text string, opts ExtractOptions) ([]Relationship, error) {
 	if strings.TrimSpace(text) == "" {
-		return nil, fmt.Errorf("eyrie: extract: text must not be empty")
+		return nil, fmt.Errorf("graycode-router: extract: text must not be empty")
 	}
 
 	instruction := opts.Instruction
@@ -97,7 +97,7 @@ func (c *EyrieClient) ExtractRelationships(ctx context.Context, text string, opt
 		maxRetries = 2
 	}
 
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "system", Content: instruction},
 		{Role: "user", Content: text},
 	}
@@ -108,14 +108,14 @@ func (c *EyrieClient) ExtractRelationships(ctx context.Context, text string, opt
 		MaxRetries: maxRetries,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: extract relationships: %w", err)
+		return nil, fmt.Errorf("graycode-router: extract relationships: %w", err)
 	}
 
 	var parsed struct {
 		Relationships []Relationship `json:"relationships"`
 	}
 	if err := json.Unmarshal([]byte(resp.Content), &parsed); err != nil {
-		return nil, fmt.Errorf("eyrie: extract relationships: decode: %w", err)
+		return nil, fmt.Errorf("graycode-router: extract relationships: decode: %w", err)
 	}
 
 	return filterRelationships(parsed.Relationships, opts.AllowedPredicates), nil

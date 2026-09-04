@@ -9,8 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 // maxVertexRequestSize is the maximum request body size for Vertex AI (30 MB).
@@ -45,10 +45,10 @@ func (c *VertexClient) baseURL() string {
 	return fmt.Sprintf("https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/anthropic/models", c.region, c.projectID, c.region)
 }
 
-func (c *VertexClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *VertexClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	messages = core.SanitizeMessages(messages)
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for vertex")
+		return nil, fmt.Errorf("graycode-router: model is required for vertex")
 	}
 	body, err := c.buildBody(messages, opts, false)
 	if err != nil {
@@ -57,20 +57,20 @@ func (c *VertexClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 
 	// Check request size (30 MB Vertex limit)
 	if len(body) > maxVertexRequestSize {
-		return nil, fmt.Errorf("eyrie: request size %d bytes exceeds Vertex limit of %d bytes", len(body), maxVertexRequestSize)
+		return nil, fmt.Errorf("graycode-router: request size %d bytes exceeds Vertex limit of %d bytes", len(body), maxVertexRequestSize)
 	}
 
 	url := fmt.Sprintf("%s/%s:rawPredict", c.baseURL(), opts.Model)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: vertex request creation failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: vertex request creation failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: vertex request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: vertex request failed: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -87,22 +87,22 @@ func (c *VertexClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 
 	var ar anthropicResponse
 	if err := json.NewDecoder(resp.Body).Decode(&ar); err != nil {
-		return nil, fmt.Errorf("eyrie: vertex decode failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: vertex decode failed: %w", err)
 	}
 
-	eyrieResp := ParseAnthropicResponse(ar, requestID, "")
+	graycodeRouterResp := ParseAnthropicResponse(ar, requestID, "")
 
-	if err := core.ApplyGuardrails(ctx, eyrieResp, c.guardrails); err != nil {
+	if err := core.ApplyGuardrails(ctx, graycodeRouterResp, c.guardrails); err != nil {
 		return nil, err
 	}
 
-	return eyrieResp, nil
+	return graycodeRouterResp, nil
 }
 
-func (c *VertexClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *VertexClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	messages = core.SanitizeMessages(messages)
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for vertex")
+		return nil, fmt.Errorf("graycode-router: model is required for vertex")
 	}
 	body, err := c.buildBody(messages, opts, true)
 	if err != nil {
@@ -111,13 +111,13 @@ func (c *VertexClient) StreamChat(ctx context.Context, messages []core.EyrieMess
 
 	// Check request size (30 MB Vertex limit)
 	if len(body) > maxVertexRequestSize {
-		return nil, fmt.Errorf("eyrie: request size %d bytes exceeds Vertex limit of %d bytes", len(body), maxVertexRequestSize)
+		return nil, fmt.Errorf("graycode-router: request size %d bytes exceeds Vertex limit of %d bytes", len(body), maxVertexRequestSize)
 	}
 
 	url := fmt.Sprintf("%s/%s:streamRawPredict", c.baseURL(), opts.Model)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: vertex stream request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: vertex stream request failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.Header.Set("Accept", "text/event-stream")
@@ -125,7 +125,7 @@ func (c *VertexClient) StreamChat(ctx context.Context, messages []core.EyrieMess
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: vertex stream request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: vertex stream request failed: %w", err)
 	}
 
 	if resp.StatusCode != 200 {
@@ -152,11 +152,11 @@ func (c *VertexClient) Ping(ctx context.Context) error {
 	c.setHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("eyrie: vertex ping failed: %w", err)
+		return fmt.Errorf("graycode-router: vertex ping failed: %w", err)
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		return fmt.Errorf("eyrie: vertex: invalid credentials")
+		return fmt.Errorf("graycode-router: vertex: invalid credentials")
 	}
 	return nil
 }
@@ -167,7 +167,7 @@ func (c *VertexClient) setHeaders(req *http.Request) {
 	req.Header.Set("User-Agent", core.UserAgent())
 }
 
-func (c *VertexClient) buildBody(messages []core.EyrieMessage, opts core.ChatOptions, stream bool) ([]byte, error) {
+func (c *VertexClient) buildBody(messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool) ([]byte, error) {
 	msgs, system := buildAnthropicMessages(messages)
 	if opts.System != "" {
 		if system != "" {
@@ -227,7 +227,7 @@ func (c *VertexClient) HTTPClient() *http.Client { return c.httpClient }
 func (c *VertexClient) BaseURL() string { return c.baseURL() }
 
 // BuildBody constructs the request body for Vertex API calls.
-func (c *VertexClient) BuildBody(messages []core.EyrieMessage, opts core.ChatOptions, stream bool) ([]byte, error) {
+func (c *VertexClient) BuildBody(messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool) ([]byte, error) {
 	return c.buildBody(messages, opts, stream)
 }
 

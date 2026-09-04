@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Eyrie is host-neutral: it must not depend on any Hawk package. Shared
+# GraycodeRouter is host-neutral: it must not depend on any Hawk package. Shared
 # ecosystem vocabulary belongs in eagle, whose module path does
 # not match this expression.
 FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk(/|")'
@@ -24,7 +24,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden Hawk imports found:"
   echo "${violations}"
   echo
-  echo "eyrie must use eagle or local contracts, never the Hawk product module"
+  echo "graycode-router must use eagle or local contracts, never the Hawk product module"
   exit_code=1
 fi
 

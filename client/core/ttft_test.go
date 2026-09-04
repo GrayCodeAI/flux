@@ -19,7 +19,7 @@ func TestTTFTEventFiresBeforeContent(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessOpenAIStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
@@ -66,7 +66,7 @@ func TestTTFTEventFiresOnToolCallDelta(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessOpenAIStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
@@ -123,7 +123,7 @@ func TestTTFTValue(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessOpenAIStreamWithOpts(ctx, events, testLogger(), DefaultRepeatDetector(), start)
 
-	var ttftEvt *EyrieStreamEvent
+	var ttftEvt *GraycodeRouterStreamEvent
 	for evt := range ch {
 		if evt.Type == "ttft" {
 			e := evt

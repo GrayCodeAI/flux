@@ -3,7 +3,7 @@ package catalog
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 func TestDefaultDeploymentEnvFallbacks_HasAllProviderDeployments(t *testing.T) {

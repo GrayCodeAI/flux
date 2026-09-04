@@ -211,7 +211,7 @@ func TestOpenAIChat_ImageContent_DataURI(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestOpenAIClient(srv.URL, nil)
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Describe this image", Images: []string{"data:image/png;base64,iVBORw0KGgoAAAA"}},
 	}
 	resp, err := c.Chat(context.Background(), msgs, defaultChatOpts())
@@ -252,7 +252,7 @@ func TestOpenAIChat_ImageContent_HTTPUrl(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestOpenAIClient(srv.URL, nil)
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Images: []string{"https://example.com/image.png"}},
 	}
 	resp, err := c.Chat(context.Background(), msgs, defaultChatOpts())
@@ -294,7 +294,7 @@ func TestOpenAIChat_ImageContent_RawBase64(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestOpenAIClient(srv.URL, nil)
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Images: []string{"AAAA"}},
 	}
 	resp, err := c.Chat(context.Background(), msgs, defaultChatOpts())
@@ -360,7 +360,7 @@ func TestOpenAIChat_ToolResultMessage(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestOpenAIClient(srv.URL, nil)
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "Read main.go"},
 		{Role: "assistant", ToolUse: []ToolCall{{ID: "call_xyz", Name: "read_file", Arguments: map[string]interface{}{"path": "main.go"}}}},
 		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "call_xyz", Content: "file contents here"}}},
@@ -464,7 +464,7 @@ func TestOpenAIChat_MaxTokensCustom(t *testing.T) {
 	}
 }
 
-func msgs() []EyrieMessage {
+func msgs() []GraycodeRouterMessage {
 	return basicMessages()
 }
 

@@ -6,9 +6,9 @@ import (
 )
 
 // Chat sends a chat request to the specified (or default) provider.
-func (c *EyrieClient) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (c *GraycodeRouterClient) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	if len(messages) == 0 {
-		return nil, fmt.Errorf("eyrie: messages must not be empty")
+		return nil, fmt.Errorf("graycode-router: messages must not be empty")
 	}
 	provider := opts.Provider
 	if provider == "" {
@@ -31,7 +31,7 @@ func (c *EyrieClient) Chat(ctx context.Context, messages []EyrieMessage, opts Ch
 			Temperature: opts.Temperature,
 			MaxTokens:   opts.MaxTokens,
 		}
-		return c.coalescer.Coalesce(ctx, key, func() (*EyrieResponse, error) {
+		return c.coalescer.Coalesce(ctx, key, func() (*GraycodeRouterResponse, error) {
 			return p.Chat(ctx, messages, opts)
 		})
 	}
@@ -40,9 +40,9 @@ func (c *EyrieClient) Chat(ctx context.Context, messages []EyrieMessage, opts Ch
 }
 
 // StreamChat sends a streaming chat request.
-func (c *EyrieClient) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (c *GraycodeRouterClient) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	if len(messages) == 0 {
-		return nil, fmt.Errorf("eyrie: messages must not be empty")
+		return nil, fmt.Errorf("graycode-router: messages must not be empty")
 	}
 	provider := opts.Provider
 	if provider == "" {
@@ -60,9 +60,9 @@ func (c *EyrieClient) StreamChat(ctx context.Context, messages []EyrieMessage, o
 
 // StreamChatContinue is like StreamChat but automatically continues if the response
 // hits max_tokens with text-only content. Continuations are transparent to the caller.
-func (c *EyrieClient) StreamChatContinue(ctx context.Context, messages []EyrieMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error) {
+func (c *GraycodeRouterClient) StreamChatContinue(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error) {
 	if len(messages) == 0 {
-		return nil, fmt.Errorf("eyrie: messages must not be empty")
+		return nil, fmt.Errorf("graycode-router: messages must not be empty")
 	}
 	provider := opts.Provider
 	if provider == "" {

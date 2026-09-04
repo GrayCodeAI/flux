@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/graph"
+	"github.com/GrayCodeAI/graycode-router/graph"
 )
 
 // TestSchemaParity pins the wire schema of graph.Node to the exact JSON the
-// eagle graph contract produces, so a schema drift between eagle and eyrie is
+// eagle graph contract produces, so a schema drift between eagle and graycode-router is
 // caught at build time.
 func TestSchemaParity(t *testing.T) {
 	n := graph.Node{

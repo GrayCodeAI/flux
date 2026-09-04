@@ -61,7 +61,7 @@ func (b *tokenBucket) wait(ctx context.Context) error {
 		// Check context before attempting to acquire token
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("eyrie: rate limiter: %w", ctx.Err())
+			return fmt.Errorf("graycode-router: rate limiter: %w", ctx.Err())
 		default:
 		}
 
@@ -93,7 +93,7 @@ func (b *tokenBucket) wait(ctx context.Context) error {
 						b.mu.Lock()
 						b.tokens++
 						b.mu.Unlock()
-						return fmt.Errorf("eyrie: rate limiter: %w", ctx.Err())
+						return fmt.Errorf("graycode-router: rate limiter: %w", ctx.Err())
 					case <-timer.C:
 					}
 					b.mu.Lock()
@@ -113,7 +113,7 @@ func (b *tokenBucket) wait(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			timer.Stop()
-			return fmt.Errorf("eyrie: rate limiter: %w", ctx.Err())
+			return fmt.Errorf("graycode-router: rate limiter: %w", ctx.Err())
 		case <-timer.C:
 		}
 	}
@@ -168,14 +168,14 @@ func WithRateLimit(p Provider, limiter *RateLimiter) Provider {
 func (r *RateLimitedProvider) Name() string                   { return r.inner.Name() }
 func (r *RateLimitedProvider) Ping(ctx context.Context) error { return r.inner.Ping(ctx) }
 
-func (r *RateLimitedProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (r *RateLimitedProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	if err := r.limiter.Wait(ctx, r.inner.Name()); err != nil {
 		return nil, err
 	}
 	return r.inner.Chat(ctx, messages, opts)
 }
 
-func (r *RateLimitedProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (r *RateLimitedProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	if err := r.limiter.Wait(ctx, r.inner.Name()); err != nil {
 		return nil, err
 	}

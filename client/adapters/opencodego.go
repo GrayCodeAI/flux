@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 
-	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
+	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
 )
 
 // OpenCodeGoClient routes OpenCode Go models through OpenAIClient and
@@ -31,7 +31,7 @@ func NewOpenCodeGoClient(apiKey, baseURL string, opts ...core.ClientOption) *Ope
 
 func (c *OpenCodeGoClient) Name() string { return "opencodego" }
 
-func (c *OpenCodeGoClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *OpenCodeGoClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	opts.Model = opencodego.NativeModelID(opts.Model)
 	if opencodego.UsesMessagesAPI(opts.Model) {
 		return c.router.Chat(ctx, messages, opts, ChatProtocolMessages, openCodeGoMessagesFallback)
@@ -39,7 +39,7 @@ func (c *OpenCodeGoClient) Chat(ctx context.Context, messages []core.EyrieMessag
 	return c.router.OpenAI.Chat(ctx, messages, opts)
 }
 
-func (c *OpenCodeGoClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *OpenCodeGoClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	opts.Model = opencodego.NativeModelID(opts.Model)
 	if opencodego.UsesMessagesAPI(opts.Model) {
 		return c.router.StreamChat(ctx, messages, opts, ProtocolStreamConfig{
@@ -57,7 +57,7 @@ func (c *OpenCodeGoClient) Ping(ctx context.Context) error {
 	return c.router.Anthropic.Ping(ctx)
 }
 
-func openCodeGoMessagesFallback(primaryErr error, primaryResp *core.EyrieResponse) bool {
+func openCodeGoMessagesFallback(primaryErr error, primaryResp *core.GraycodeRouterResponse) bool {
 	if primaryErr != nil {
 		return oaCompatUnsupportedError(primaryErr)
 	}

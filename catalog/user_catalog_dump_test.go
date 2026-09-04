@@ -6,19 +6,19 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 func TestUserCatalog_GatewayCountsMatchDeploymentOfferings(t *testing.T) {
 	t.Parallel()
 	home, err := os.UserHomeDir()
 	if err != nil {
-		t.Skip(err) // TODO: https://github.com/GrayCodeAI/eyrie/issues/31
+		t.Skip(err) // TODO: https://github.com/GrayCodeAI/graycode-router/issues/31
 	}
-	path := filepath.Join(home, ".eyrie", "model_catalog.json")
+	path := filepath.Join(home, ".graycode-router", "model_catalog.json")
 	if _, err := os.Stat(path); err != nil {
-		t.Skip("no user catalog") // TODO: https://github.com/GrayCodeAI/eyrie/issues/31
+		t.Skip("no user catalog") // TODO: https://github.com/GrayCodeAI/graycode-router/issues/31
 	}
 	compiled, err := catalog.LoadCatalog(context.Background(), catalog.LoadCatalogOptions{
 		CachePath:    path,

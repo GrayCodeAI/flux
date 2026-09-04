@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 // Stream is a normalized, pull-based event stream. Next must not be called
@@ -121,7 +121,7 @@ func (s *Stream) setError(err error) {
 	s.mu.Unlock()
 }
 
-func normalizeEvent(event client.EyrieStreamEvent) (Event, error) {
+func normalizeEvent(event client.GraycodeRouterStreamEvent) (Event, error) {
 	out := Event{
 		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
 		Usage: fromClientUsage(event.Usage), StopReason: event.StopReason,

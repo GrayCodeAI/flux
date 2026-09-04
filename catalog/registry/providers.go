@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/GrayCodeAI/eyrie/catalog/opencodego"
+import "github.com/GrayCodeAI/graycode-router/catalog/opencodego"
 
 func init() {
 	for _, spec := range providerSpecs() {

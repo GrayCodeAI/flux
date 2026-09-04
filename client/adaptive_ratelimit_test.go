@@ -13,30 +13,30 @@ import (
 // mockProvider is a minimal Provider for testing.
 type mockProvider struct {
 	name     string
-	chatFn   func(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error)
-	streamFn func(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error)
+	chatFn   func(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error)
+	streamFn func(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error)
 }
 
 func (m *mockProvider) Name() string                   { return m.name }
 func (m *mockProvider) Ping(ctx context.Context) error { return nil }
-func (m *mockProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (m *mockProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	if m.chatFn != nil {
 		return m.chatFn(ctx, messages, opts)
 	}
-	return &EyrieResponse{
+	return &GraycodeRouterResponse{
 		Content: "ok",
-		Usage:   &EyrieUsage{TotalTokens: 100},
+		Usage:   &GraycodeRouterUsage{TotalTokens: 100},
 	}, nil
 }
 
-func (m *mockProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (m *mockProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	if m.streamFn != nil {
 		return m.streamFn(ctx, messages, opts)
 	}
-	ch := make(chan EyrieStreamEvent, 4)
-	ch <- EyrieStreamEvent{Type: "content", Content: "hello"}
-	ch <- EyrieStreamEvent{Type: "usage", Usage: &EyrieUsage{TotalTokens: 50}}
-	ch <- EyrieStreamEvent{Type: "done"}
+	ch := make(chan GraycodeRouterStreamEvent, 4)
+	ch <- GraycodeRouterStreamEvent{Type: "content", Content: "hello"}
+	ch <- GraycodeRouterStreamEvent{Type: "usage", Usage: &GraycodeRouterUsage{TotalTokens: 50}}
+	ch <- GraycodeRouterStreamEvent{Type: "done"}
 	close(ch)
 	return &StreamResult{Events: ch}, nil
 }
@@ -209,7 +209,7 @@ func TestAdaptiveRateLimitProvider_StreamChat(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var events []EyrieStreamEvent
+	var events []GraycodeRouterStreamEvent
 	for evt := range result.Events {
 		events = append(events, evt)
 	}
@@ -516,7 +516,7 @@ func ExampleAdaptiveRateLimitProvider() {
 	}
 
 	// Use the provider normally
-	resp, err := provider.Chat(context.Background(), []EyrieMessage{
+	resp, err := provider.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello!"},
 	}, ChatOptions{Model: "gpt-4"})
 	if err != nil {

@@ -14,16 +14,16 @@ import (
 type ProviderCallback interface {
 	// OnRequest is called before each Chat or StreamChat request.
 	// The messages and opts parameters must not be modified.
-	OnRequest(ctx context.Context, provider string, model string, messages []EyrieMessage, opts ChatOptions)
+	OnRequest(ctx context.Context, provider string, model string, messages []GraycodeRouterMessage, opts ChatOptions)
 
 	// OnResponse is called after a successful Chat request.
-	OnResponse(ctx context.Context, provider string, model string, response *EyrieResponse, duration time.Duration)
+	OnResponse(ctx context.Context, provider string, model string, response *GraycodeRouterResponse, duration time.Duration)
 
 	// OnError is called after a Chat or StreamChat request fails.
 	OnError(ctx context.Context, provider string, model string, err error, duration time.Duration)
 
 	// OnStreamEvent is called for each event emitted during streaming.
-	OnStreamEvent(ctx context.Context, provider string, model string, event EyrieStreamEvent)
+	OnStreamEvent(ctx context.Context, provider string, model string, event GraycodeRouterStreamEvent)
 }
 
 // CallbackProvider wraps any Provider and invokes registered ProviderCallback
@@ -48,7 +48,7 @@ var _ Provider = (*CallbackProvider)(nil)
 // The inner provider must not be nil; an error is returned otherwise.
 func NewCallbackProvider(inner Provider) (*CallbackProvider, error) {
 	if inner == nil {
-		return nil, errors.New("eyrie: NewCallbackProvider inner provider must not be nil")
+		return nil, errors.New("graycode-router: NewCallbackProvider inner provider must not be nil")
 	}
 	return &CallbackProvider{
 		inner:  inner,
@@ -116,7 +116,7 @@ func (cp *CallbackProvider) Ping(ctx context.Context) error {
 
 // Chat sends a non-streaming chat request. OnRequest is called before the
 // request; OnResponse or OnError is called after.
-func (cp *CallbackProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (cp *CallbackProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	model := opts.Model
 	provider := cp.inner.Name()
 
@@ -138,7 +138,7 @@ func (cp *CallbackProvider) Chat(ctx context.Context, messages []EyrieMessage, o
 // StreamChat sends a streaming chat request. OnRequest is called before the
 // request. OnError is called if the initial request fails. OnStreamEvent is
 // called for each event in the resulting stream.
-func (cp *CallbackProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (cp *CallbackProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	model := opts.Model
 	provider := cp.inner.Name()
 
@@ -154,7 +154,7 @@ func (cp *CallbackProvider) StreamChat(ctx context.Context, messages []EyrieMess
 	// Wrap the events channel to invoke OnStreamEvent for each event.
 	cbs := cp.snapshotCallbacks()
 	origEvents := result.Events
-	wrappedEvents := make(chan EyrieStreamEvent, cap(origEvents))
+	wrappedEvents := make(chan GraycodeRouterStreamEvent, cap(origEvents))
 
 	go func() {
 		defer close(wrappedEvents)
@@ -192,7 +192,7 @@ func (cp *CallbackProvider) snapshotCallbacks() []ProviderCallback {
 }
 
 // fireOnRequest invokes OnRequest on all callbacks in goroutines.
-func (cp *CallbackProvider) fireOnRequest(ctx context.Context, provider, model string, messages []EyrieMessage, opts ChatOptions) {
+func (cp *CallbackProvider) fireOnRequest(ctx context.Context, provider, model string, messages []GraycodeRouterMessage, opts ChatOptions) {
 	for _, cb := range cp.snapshotCallbacks() {
 		cp.safeCall("OnRequest", func() {
 			cb.OnRequest(ctx, provider, model, messages, opts)
@@ -201,7 +201,7 @@ func (cp *CallbackProvider) fireOnRequest(ctx context.Context, provider, model s
 }
 
 // fireOnResponse invokes OnResponse on all callbacks in goroutines.
-func (cp *CallbackProvider) fireOnResponse(ctx context.Context, provider, model string, response *EyrieResponse, duration time.Duration) {
+func (cp *CallbackProvider) fireOnResponse(ctx context.Context, provider, model string, response *GraycodeRouterResponse, duration time.Duration) {
 	for _, cb := range cp.snapshotCallbacks() {
 		cp.safeCall("OnResponse", func() {
 			cb.OnResponse(ctx, provider, model, response, duration)
@@ -228,7 +228,7 @@ func (cp *CallbackProvider) safeCall(method string, fn func()) {
 				cp.mu.RUnlock()
 				if logger != nil {
 					logger.Error(
-						"eyrie: callback panic recovered",
+						"graycode-router: callback panic recovered",
 						"method", method,
 						"provider", cp.inner.Name(),
 						"panic", r,

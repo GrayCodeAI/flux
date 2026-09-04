@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 func TestApplyProviderChatDefaults(t *testing.T) {
@@ -24,7 +24,7 @@ func TestApplyProviderChatDefaults(t *testing.T) {
 }
 
 func TestIsContextOverflow(t *testing.T) {
-	typed := &core.EyrieError{Provider: "openai", Message: "input exceeds the model's context window"}
+	typed := &core.GraycodeRouterError{Provider: "openai", Message: "input exceeds the model's context window"}
 	if !IsContextOverflow(typed) {
 		t.Fatal("typed context error was not detected")
 	}

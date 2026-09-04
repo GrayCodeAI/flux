@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 type DeploymentChoice struct {
@@ -130,7 +130,7 @@ func (r *DeploymentRouter) Ping(ctx context.Context) error {
 	return fmt.Errorf("deployment router: no deployments configured")
 }
 
-func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error) {
+func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.GraycodeRouterMessage, opts client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	target, err := r.resolveTarget(opts.Model)
 	if err != nil {
 		return nil, err
@@ -174,13 +174,13 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.EyrieMess
 	return nil, fmt.Errorf("deployment router: all deployments failed for %q: %w", target.canonicalModelID, lastErr)
 }
 
-func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.EyrieMessage, opts client.ChatOptions) (*client.StreamResult, error) {
+func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.GraycodeRouterMessage, opts client.ChatOptions) (*client.StreamResult, error) {
 	target, err := r.resolveTarget(opts.Model)
 	if err != nil {
 		return nil, err
 	}
 	streamCtx, cancel := context.WithCancel(ctx)
-	out := make(chan client.EyrieStreamEvent, 64)
+	out := make(chan client.GraycodeRouterStreamEvent, 64)
 	go func() {
 		defer close(out)
 		var lastErr error
@@ -209,7 +209,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Eyr
 				r.recordFailure(choice.DeploymentID)
 				if !fallback {
 					select {
-					case out <- client.EyrieStreamEvent{Type: "error", Error: err.Error()}:
+					case out <- client.GraycodeRouterStreamEvent{Type: "error", Error: err.Error()}:
 					case <-streamCtx.Done():
 					}
 					return
@@ -219,7 +219,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Eyr
 						break
 					}
 					select {
-					case out <- client.EyrieStreamEvent{Type: "error", Error: err.Error()}:
+					case out <- client.GraycodeRouterStreamEvent{Type: "error", Error: err.Error()}:
 					case <-streamCtx.Done():
 					}
 					return
@@ -231,7 +231,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Eyr
 			lastErr = fmt.Errorf("no route configured")
 		}
 		select {
-		case out <- client.EyrieStreamEvent{Type: "error", Error: fmt.Sprintf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr)}:
+		case out <- client.GraycodeRouterStreamEvent{Type: "error", Error: fmt.Sprintf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr)}:
 		case <-streamCtx.Done():
 		}
 	}()
@@ -400,7 +400,7 @@ func (r *DeploymentRouter) getCircuitBreaker(deploymentID string) *CircuitBreake
 	return cb
 }
 
-func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []client.EyrieMessage, opts client.ChatOptions, target deploymentTarget, deploymentID string) (*client.EyrieResponse, error) {
+func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []client.GraycodeRouterMessage, opts client.ChatOptions, target deploymentTarget, deploymentID string) (*client.GraycodeRouterResponse, error) {
 	offering, adapter, err := r.resolveOffering(target, deploymentID)
 	if err != nil {
 		return nil, err
@@ -409,7 +409,7 @@ func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []cl
 	return adapter.Provider.Chat(ctx, messages, nativeOpts)
 }
 
-func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- client.EyrieStreamEvent, messages []client.EyrieMessage, opts client.ChatOptions, target deploymentTarget, deploymentID string) (fallback bool, err error) {
+func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- client.GraycodeRouterStreamEvent, messages []client.GraycodeRouterMessage, opts client.ChatOptions, target deploymentTarget, deploymentID string) (fallback bool, err error) {
 	offering, adapter, err := r.resolveOffering(target, deploymentID)
 	if err != nil {
 		return true, err
@@ -421,7 +421,7 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 	}
 	defer stream.Close()
 	emitted := false
-	var buffered []client.EyrieStreamEvent
+	var buffered []client.GraycodeRouterStreamEvent
 	flush := func() {
 		for _, event := range buffered {
 			select {
@@ -532,11 +532,11 @@ func optsForOffering(opts client.ChatOptions, offering catalog.ModelOffering) cl
 	return copied
 }
 
-func filterTools(tools []client.EyrieTool, offering catalog.ModelOffering) []client.EyrieTool {
+func filterTools(tools []client.GraycodeRouterTool, offering catalog.ModelOffering) []client.GraycodeRouterTool {
 	if len(offering.Capabilities.ServerTools) == 0 {
 		return tools
 	}
-	filtered := make([]client.EyrieTool, 0, len(tools))
+	filtered := make([]client.GraycodeRouterTool, 0, len(tools))
 	for _, tool := range tools {
 		if offering.Capabilities.ServerTools[tool.Name] == catalog.CapabilityUnsupported ||
 			offering.Capabilities.ServerTools[tool.Name] == catalog.CapabilityUnknown {
@@ -547,7 +547,7 @@ func filterTools(tools []client.EyrieTool, offering catalog.ModelOffering) []cli
 	return filtered
 }
 
-func requestedServerTools(tools []client.EyrieTool) []string {
+func requestedServerTools(tools []client.GraycodeRouterTool) []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, tool := range tools {
@@ -607,7 +607,7 @@ func selectDeploymentChoice(choices []DeploymentChoice, exclude string) Deployme
 	return alternatives[len(alternatives)-1]
 }
 
-func isOutputEvent(event client.EyrieStreamEvent) bool {
+func isOutputEvent(event client.GraycodeRouterStreamEvent) bool {
 	return event.Content != "" || event.Thinking != "" || event.ToolCall != nil || event.Type == "content" || event.Type == "thinking" || event.Type == "tool_call"
 }
 

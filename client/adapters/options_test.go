@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 type (

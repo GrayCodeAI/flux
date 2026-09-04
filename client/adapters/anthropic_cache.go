@@ -1,12 +1,12 @@
 package adapters
 
-import "github.com/GrayCodeAI/eyrie/client/core"
+import "github.com/GrayCodeAI/graycode-router/client/core"
 
 // buildAnthropicCachedRequest builds an Anthropic request body with cache_control.
 //   - System prompt gets cache_control (cached for all turns)
 //   - Second-to-last message gets cache_control (caches conversation prefix)
 //   - Last tool definition gets cache_control (caches tool schema)
-func buildAnthropicCachedRequest(messages []core.EyrieMessage, model string, maxTokens int, temperature *float64, stream bool, tools []anthropicTool,
+func buildAnthropicCachedRequest(messages []core.GraycodeRouterMessage, model string, maxTokens int, temperature *float64, stream bool, tools []anthropicTool,
 	thinking *anthropicThinking, toolChoice *anthropicToolChoice, topP *float64, topK *int, stopSequences []string,
 ) map[string]interface{} {
 	msgs, system := buildAnthropicMessages(messages)
@@ -86,7 +86,7 @@ func applyCacheBreakpointToMessage(msg map[string]interface{}) {
 }
 
 // BuildAnthropicCachedRequest creates an Anthropic request with cache breakpoints.
-func BuildAnthropicCachedRequest(messages []core.EyrieMessage, model string, maxTokens int, temperature *float64, stream bool, tools []AnthropicTool,
+func BuildAnthropicCachedRequest(messages []core.GraycodeRouterMessage, model string, maxTokens int, temperature *float64, stream bool, tools []AnthropicTool,
 	thinking *AnthropicThinking, toolChoice *AnthropicToolChoice, topP *float64, topK *int, stopSequences []string,
 ) map[string]interface{} {
 	return buildAnthropicCachedRequest(messages, model, maxTokens, temperature, stream, tools, thinking, toolChoice, topP, topK, stopSequences)

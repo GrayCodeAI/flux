@@ -1,4 +1,4 @@
-// Package probehttp contains shared helpers for the eyrie credential-probe
+// Package probehttp contains shared helpers for the graycode-router credential-probe
 // and catalog-probe call sites. It centralises the HTTP-client configuration
 // and the HTTP-status-to-error mapping that probe code reaches for on every
 // request. Keeping it in one place means timeout policy and error wording
@@ -20,7 +20,7 @@ import (
 // and the like even if the caller's context deadline is missing.
 const DefaultRequestTimeout = 15 * time.Second
 
-// DefaultClient is the shared *http.Client used by probe code in the eyrie
+// DefaultClient is the shared *http.Client used by probe code in the graycode-router
 // repo. Callers should reuse it instead of http.DefaultClient so the
 // per-request timeout policy stays consistent.
 var DefaultClient = &http.Client{Timeout: DefaultRequestTimeout}
@@ -79,8 +79,8 @@ func DoGet(ctx context.Context, url string, headers map[string]string) (int, []b
 	return resp.StatusCode, body, nil
 }
 
-// UserAgent returns the standard eyrie User-Agent string for probe traffic.
-func UserAgent() string { return "eyrie-probe/1.0" }
+// UserAgent returns the standard graycode-router User-Agent string for probe traffic.
+func UserAgent() string { return "graycode-router-probe/1.0" }
 
 // JoinURL trims a trailing slash from base and joins it with the supplied
 // path. It's a tiny helper kept here so the various probe call sites stop

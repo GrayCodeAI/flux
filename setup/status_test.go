@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 func TestFormatStatus_DisabledRouting(t *testing.T) {
@@ -18,12 +18,12 @@ func TestFormatStatus_DisabledRouting(t *testing.T) {
 		ProviderConfig:    "/home/user/.hawk/provider.json",
 		ConfigVersion:     2,
 		Configured:        []string{},
-		CatalogCache:      "/home/user/.eyrie/model_catalog.json",
+		CatalogCache:      "/home/user/.graycode-router/model_catalog.json",
 		CatalogExists:     false,
 		CatalogModels:     10,
 	}
 	out := FormatStatus(report)
-	if !strings.Contains(out, "disabled (single-route Eyrie transport)") {
+	if !strings.Contains(out, "disabled (single-route GraycodeRouter transport)") {
 		t.Fatal("expected engine-owned disabled-routing description")
 	}
 	if strings.Contains(out, "legacy provider client") {
@@ -43,7 +43,7 @@ func TestFormatStatus_EnabledRouting(t *testing.T) {
 		ProviderConfig:     "/home/user/.hawk/provider.json",
 		ConfigVersion:      2,
 		Configured:         []string{"anthropic-direct", "openai-direct"},
-		CatalogCache:       "/home/user/.eyrie/model_catalog.json",
+		CatalogCache:       "/home/user/.graycode-router/model_catalog.json",
 		CatalogExists:      true,
 		CatalogModified:    time.Now().UTC().Add(-5 * time.Minute),
 		CatalogModels:      50,
@@ -72,7 +72,7 @@ func TestFormatStatus_StaleCatalog(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: true,
 		ProviderConfig:    "/home/user/.hawk/provider.json",
-		CatalogCache:      "/home/user/.eyrie/model_catalog.json",
+		CatalogCache:      "/home/user/.graycode-router/model_catalog.json",
 		CatalogExists:     true,
 		CatalogModified:   time.Now().UTC().Add(-1 * time.Hour),
 		CatalogStale:      true,
@@ -87,7 +87,7 @@ func TestFormatStatus_ActiveModel(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: true,
 		ProviderConfig:    "/home/user/.hawk/provider.json",
-		CatalogCache:      "/home/user/.eyrie/model_catalog.json",
+		CatalogCache:      "/home/user/.graycode-router/model_catalog.json",
 		ActiveModel:       "anthropic/claude-sonnet-4",
 		RoutingSource:     "model",
 		RoutingStages:     2,
@@ -105,7 +105,7 @@ func TestFormatStatus_NoActiveModel(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: true,
 		ProviderConfig:    "/home/user/.hawk/provider.json",
-		CatalogCache:      "/home/user/.eyrie/model_catalog.json",
+		CatalogCache:      "/home/user/.graycode-router/model_catalog.json",
 	}
 	out := FormatStatus(report)
 	if strings.Contains(out, "Active canonical model") {
@@ -171,7 +171,7 @@ func TestDeploymentStatusFromPathsIgnoresAmbientRoutingAndCredentials(t *testing
 	if err := catalog.WriteCatalogCache(catalogPath, &seed); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "true")
+	t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", "true")
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })

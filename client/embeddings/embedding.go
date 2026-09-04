@@ -1,6 +1,6 @@
 package embeddings
 
-import "github.com/GrayCodeAI/eyrie/client/core"
+import "github.com/GrayCodeAI/graycode-router/client/core"
 
 // The embedding DTOs and the Embedder interface live in client/core because
 // the protocol adapters implement Embedder. Aliased here so this package's

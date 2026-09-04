@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/adapters"
+	"github.com/GrayCodeAI/graycode-router/client/adapters"
 )
 
 // Vertex AI provider tests live in cloud_providers_vertex_test.go and
@@ -119,7 +119,7 @@ func TestAzureChat_Success(t *testing.T) {
 	defer server.Close()
 
 	c := newTestAzureClient(server.URL)
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello Azure"},
 	}, ChatOptions{Model: "gpt-4o-deployment"})
 	if err != nil {
@@ -176,7 +176,7 @@ func TestAzureChat_Success(t *testing.T) {
 func TestAzureChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	c := newTestAzureClient("http://localhost")
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{}) // No model
 	if err == nil {
@@ -209,7 +209,7 @@ func TestAzureChat_CacheReadTokens(t *testing.T) {
 	defer server.Close()
 
 	c := newTestAzureClient(server.URL)
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "cache test"},
 	}, ChatOptions{Model: "gpt-4o"})
 	if err != nil {
@@ -252,7 +252,7 @@ func TestAzureChat_ToolCallsInResponse(t *testing.T) {
 	defer server.Close()
 
 	c := newTestAzureClient(server.URL)
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "What are Azure prices?"},
 	}, ChatOptions{Model: "gpt-4o"})
 	if err != nil {
@@ -285,7 +285,7 @@ func TestAzureChat_ErrorResponse(t *testing.T) {
 	defer server.Close()
 
 	c := newTestAzureClient(server.URL)
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "gpt-4o"})
 	if err == nil {
@@ -317,11 +317,11 @@ func TestAzureChat_ToolsIncludedInRequest(t *testing.T) {
 	defer server.Close()
 
 	c := newTestAzureClient(server.URL)
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{
 		Model: "gpt-4o",
-		Tools: []EyrieTool{
+		Tools: []GraycodeRouterTool{
 			{Name: "get_weather", Description: "Get weather", Parameters: map[string]interface{}{"type": "object"}},
 		},
 	})
@@ -374,7 +374,7 @@ func TestAzureStreamChat_Success(t *testing.T) {
 	defer server.Close()
 
 	c := newTestAzureClient(server.URL)
-	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
+	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello Azure"},
 	}, ChatOptions{Model: "gpt-4o"})
 	if err != nil {
@@ -409,7 +409,7 @@ func TestAzureStreamChat_Success(t *testing.T) {
 func TestAzureStreamChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	c := newTestAzureClient("http://localhost")
-	_, err := c.StreamChat(context.Background(), []EyrieMessage{
+	_, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{})
 	if err == nil {
@@ -476,7 +476,7 @@ func TestAzureChat_EmptyChoices(t *testing.T) {
 	defer server.Close()
 
 	c := newTestAzureClient(server.URL)
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "gpt-4o"})
 	if err != nil {

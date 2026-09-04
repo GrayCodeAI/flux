@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // OpenRouterClient uses the OpenAI-compatible OpenRouter endpoint.
@@ -24,11 +24,11 @@ func NewOpenRouterClient(apiKey, openAIBase string, compat *OpenAICompatConfig, 
 
 func (c *OpenRouterClient) Name() string { return "openrouter" }
 
-func (c *OpenRouterClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *OpenRouterClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *OpenRouterClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *OpenRouterClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.openAI.StreamChat(ctx, messages, opts)
 }
 

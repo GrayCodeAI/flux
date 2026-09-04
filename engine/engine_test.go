@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 func TestNewUsesInjectedCredentialStore(t *testing.T) {
@@ -28,7 +28,7 @@ func TestContractVersionAndRemoteCatalogIsolation(t *testing.T) {
 	if ContractVersion != "2" {
 		t.Fatalf("ContractVersion = %q, want 2", ContractVersion)
 	}
-	t.Setenv("EYRIE_MODEL_CATALOG_URL", "https://ambient.invalid/catalog.json")
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_URL", "https://ambient.invalid/catalog.json")
 	eng, err := New(Options{SecretStore: &credentials.MapStore{}, StateDir: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
@@ -149,10 +149,10 @@ func TestMessageConversionPreservesToolsAndMultimodalParts(t *testing.T) {
 }
 
 func TestNormalizedStreamContract(t *testing.T) {
-	sourceEvents := make(chan client.EyrieStreamEvent, 3)
-	sourceEvents <- client.EyrieStreamEvent{Type: "content", Content: "hello"}
-	sourceEvents <- client.EyrieStreamEvent{Type: "tool_call", ToolCall: &client.ToolCall{ID: "1", Name: "read"}}
-	sourceEvents <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.EyrieUsage{PromptTokens: 2, CompletionTokens: 3, TotalTokens: 5}}
+	sourceEvents := make(chan client.GraycodeRouterStreamEvent, 3)
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "content", Content: "hello"}
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "tool_call", ToolCall: &client.ToolCall{ID: "1", Name: "read"}}
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.GraycodeRouterUsage{PromptTokens: 2, CompletionTokens: 3, TotalTokens: 5}}
 	close(sourceEvents)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -183,10 +183,10 @@ func TestNormalizedStreamContract(t *testing.T) {
 // them as warning events and still deliver the done/usage event without
 // setting Err().
 func TestStreamDiagnosticErrorEventIsNonFatal(t *testing.T) {
-	sourceEvents := make(chan client.EyrieStreamEvent, 3)
-	sourceEvents <- client.EyrieStreamEvent{Type: "content", Content: "answer"}
-	sourceEvents <- client.EyrieStreamEvent{Type: "error", Error: "model produced reasoning tokens but no answer", Warning: "model produced reasoning tokens but no answer"}
-	sourceEvents <- client.EyrieStreamEvent{Type: "done", StopReason: "stop", Usage: &client.EyrieUsage{PromptTokens: 1, CompletionTokens: 2, TotalTokens: 3}}
+	sourceEvents := make(chan client.GraycodeRouterStreamEvent, 3)
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "content", Content: "answer"}
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "error", Error: "model produced reasoning tokens but no answer", Warning: "model produced reasoning tokens but no answer"}
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "done", StopReason: "stop", Usage: &client.GraycodeRouterUsage{PromptTokens: 1, CompletionTokens: 2, TotalTokens: 3}}
 	close(sourceEvents)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -217,9 +217,9 @@ func TestStreamDiagnosticErrorEventIsNonFatal(t *testing.T) {
 // Genuinely fatal error events (no Warning marker) keep the previous
 // behavior: the stream terminates and Err() carries the classified error.
 func TestStreamFatalErrorEventStillTerminal(t *testing.T) {
-	sourceEvents := make(chan client.EyrieStreamEvent, 2)
-	sourceEvents <- client.EyrieStreamEvent{Type: "content", Content: "partial"}
-	sourceEvents <- client.EyrieStreamEvent{Type: "error", Error: "connection reset"}
+	sourceEvents := make(chan client.GraycodeRouterStreamEvent, 2)
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "content", Content: "partial"}
+	sourceEvents <- client.GraycodeRouterStreamEvent{Type: "error", Error: "connection reset"}
 	close(sourceEvents)
 
 	ctx, cancel := context.WithCancel(context.Background())

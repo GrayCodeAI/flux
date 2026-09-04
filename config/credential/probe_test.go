@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/config/credential"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/config/credential"
 )
 
 func TestProbeGemini_UsesHeaderNotQuery(t *testing.T) {
@@ -51,11 +51,11 @@ func TestProbeCredential_XiaomiTokenPlan_ResolvesBaseFromProviderConfig(t *testi
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
 	mockBase := strings.TrimRight(srv.URL, "/") + "/v1"
-	cfg := &eyriecfg.ProviderConfig{
+	cfg := &graycoderoutercfg.ProviderConfig{
 		Version:                    "1",
 		XiaomiMimoTokenPlanBaseURL: mockBase,
 	}
-	if err := eyriecfg.SaveProviderConfig(cfg, ""); err != nil {
+	if err := graycoderoutercfg.SaveProviderConfig(cfg, ""); err != nil {
 		t.Fatal(err)
 	}
 

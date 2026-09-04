@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 func TestDetectProvider(t *testing.T) {
@@ -80,7 +80,7 @@ func TestParseCustomHeaders(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	c := Client(&EyrieConfig{Provider: "openai", APIKey: "test-key"})
+	c := Client(&GraycodeRouterConfig{Provider: "openai", APIKey: "test-key"})
 	if c.defaultProvider != "openai" {
 		t.Errorf("expected openai, got %s", c.defaultProvider)
 	}
@@ -91,7 +91,7 @@ func TestClient(t *testing.T) {
 }
 
 func TestClientConfigBaseURL_OpenAICompatible(t *testing.T) {
-	c := Client(&EyrieConfig{Provider: "openrouter", APIKey: "test-key", BaseURL: "https://proxy.example/v1"})
+	c := Client(&GraycodeRouterConfig{Provider: "openrouter", APIKey: "test-key", BaseURL: "https://proxy.example/v1"})
 	p, err := c.getOrCreateProvider("openrouter")
 	if err != nil {
 		t.Fatalf("getOrCreateProvider: %v", err)
@@ -106,7 +106,7 @@ func TestClientConfigBaseURL_OpenAICompatible(t *testing.T) {
 }
 
 func TestClientConfigBaseURL_Anthropic(t *testing.T) {
-	c := Client(&EyrieConfig{Provider: "anthropic", APIKey: "test-key", BaseURL: "https://anthropic-proxy.example"})
+	c := Client(&GraycodeRouterConfig{Provider: "anthropic", APIKey: "test-key", BaseURL: "https://anthropic-proxy.example"})
 	p, err := c.getOrCreateProvider("anthropic")
 	if err != nil {
 		t.Fatalf("getOrCreateProvider: %v", err)
@@ -157,7 +157,7 @@ func TestAnthropicClientChat(t *testing.T) {
 	defer server.Close()
 
 	ac := NewAnthropicClient("test-key", server.URL)
-	resp, err := ac.Chat(context.Background(), []EyrieMessage{
+	resp, err := ac.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6", MaxTokens: 100})
 	if err != nil {
@@ -196,7 +196,7 @@ func TestOpenAIClientChat(t *testing.T) {
 	defer server.Close()
 
 	oc := NewOpenAIClient("test-key", server.URL, &OpenAICompat)
-	resp, err := oc.Chat(context.Background(), []EyrieMessage{
+	resp, err := oc.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "gpt-4o", MaxTokens: 100})
 	if err != nil {
@@ -265,7 +265,7 @@ func TestStreamParsing(t *testing.T) {
 	defer server.Close()
 
 	oc := NewOpenAIClient("test-key", server.URL, &OpenAICompat)
-	sr, err := oc.StreamChat(context.Background(), []EyrieMessage{
+	sr, err := oc.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "gpt-4o"})
 	if err != nil {
@@ -284,8 +284,8 @@ func TestStreamParsing(t *testing.T) {
 	}
 }
 
-func TestEyrieClientEmptyMessages(t *testing.T) {
-	c := Client(&EyrieConfig{Provider: "openai", APIKey: "test"})
+func TestGraycodeRouterClientEmptyMessages(t *testing.T) {
+	c := Client(&GraycodeRouterConfig{Provider: "openai", APIKey: "test"})
 	_, err := c.Chat(context.Background(), nil, ChatOptions{Model: "gpt-4o"})
 	if err == nil {
 		t.Error("expected error for empty messages")

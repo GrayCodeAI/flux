@@ -85,7 +85,7 @@ func TestVertexChat_Success(t *testing.T) {
 	// For an integration-level test, we use a custom approach.
 
 	// Let's test by verifying the buildBody output and header behavior separately.
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello Vertex"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"}, false)
 	if err != nil {
@@ -122,7 +122,7 @@ func TestVertexChat_Success(t *testing.T) {
 func TestVertexChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	c := newTestVertexClient("http://localhost", "proj", "us-central1", "token")
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{})
 	if err == nil {
@@ -137,7 +137,7 @@ func TestVertexBuildBody_WithSystemPrompt(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "system", Content: "You are a helpful assistant."},
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"}, false)
@@ -161,7 +161,7 @@ func TestVertexBuildBody_SystemMerge(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "system", Content: "From messages"},
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6", System: "From opts"}, false)
@@ -185,7 +185,7 @@ func TestVertexBuildBody_CustomMaxTokens(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6", MaxTokens: 8192}, false)
 	if err != nil {
@@ -205,7 +205,7 @@ func TestVertexBuildBody_WithTemperature(t *testing.T) {
 	c := NewVertexClient("proj", "us-central1", "token")
 	temp := 0.5
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6", Temperature: &temp}, false)
 	if err != nil {
@@ -224,11 +224,11 @@ func TestVertexBuildBody_WithTools(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{
 		Model: "claude-sonnet-4-6",
-		Tools: []EyrieTool{
+		Tools: []GraycodeRouterTool{
 			{Name: "search", Description: "Search the web", Parameters: map[string]interface{}{"type": "object"}},
 		},
 	}, false)
@@ -259,7 +259,7 @@ func TestVertexBuildBody_StreamFlag(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"}, true)
 	if err != nil {
@@ -278,7 +278,7 @@ func TestVertexBuildBody_ToolResultMessage(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "What is the weather?"},
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "toolu_1", Name: "get_weather", Arguments: map[string]interface{}{"city": "NYC"}},
@@ -302,7 +302,7 @@ func TestVertexBuildBody_VertexVersionField(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"}, false)
 	if err != nil {
@@ -366,7 +366,7 @@ func TestVertexChat_SuccessWithFullResponse(t *testing.T) {
 		Transport: &vertexRewriteTransport{target: server.URL, originalHost: "us-central1-aiplatform.googleapis.com"},
 	})
 
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -417,7 +417,7 @@ func TestVertexChat_ToolUseResponse(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Search for vertex pricing"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -458,7 +458,7 @@ func TestVertexChat_ErrorResponse(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -505,7 +505,7 @@ func TestVertexStreamChat_Success(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
+	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -539,7 +539,7 @@ func TestVertexStreamChat_Success(t *testing.T) {
 func TestVertexStreamChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	c := NewVertexClient("proj", "us-central1", "token")
-	_, err := c.StreamChat(context.Background(), []EyrieMessage{
+	_, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{})
 	if err == nil {

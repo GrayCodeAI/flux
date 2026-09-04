@@ -1,4 +1,4 @@
-// Package operationsgraph projects Eyrie routing and normalized generation
+// Package operationsgraph projects GraycodeRouter routing and normalized generation
 // telemetry into the portable hawk-eco graph contract.
 package operationsgraph
 
@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eyrie/graph"
-	llmcontracts "github.com/GrayCodeAI/eyrie/llm"
+	graphcontracts "github.com/GrayCodeAI/graycode-router/graph"
+	llmcontracts "github.com/GrayCodeAI/graycode-router/llm"
 )
 
-const SchemaVersion = "eyrie.graph/v1"
+const SchemaVersion = "graycode-router.graph/v1"
 
 type Input struct {
 	Route           *llmcontracts.ResolvedRoute
-	Usage           *llmcontracts.EyrieUsage
+	Usage           *llmcontracts.GraycodeRouterUsage
 	FinishReason    string
 	RequestID       string
 	Content         string
@@ -95,14 +95,14 @@ func Build(input Input) (*Export, error) {
 		}
 		if routeRef.ID != "" {
 			edge := graphcontracts.Edge{
-				ID:        "eyrie/edge/" + digest(generationRef.ID, routeRef.ID),
+				ID:        "graycode-router/edge/" + digest(generationRef.ID, routeRef.ID),
 				Kind:      graphcontracts.EdgeDependsOn,
 				From:      generationRef,
 				To:        routeRef,
 				Scope:     input.Scope,
 				CreatedAt: at,
 				Provenance: graphcontracts.Provenance{
-					Producer: "eyrie",
+					Producer: "graycode-router",
 					Version:  strings.TrimSpace(input.ProducerVersion),
 					SourceID: observationDigest,
 				},
@@ -127,13 +127,13 @@ func addNode(
 	input Input,
 	at time.Time,
 ) (graphcontracts.Ref, error) {
-	id := "eyrie/" + entity + "/" + digest(observationDigest, entity)
+	id := "graycode-router/" + entity + "/" + digest(observationDigest, entity)
 	ref := graphcontracts.Ref{Kind: graphcontracts.NodeOperations, ID: id}
 	provenance := graphcontracts.Provenance{
-		Producer: "eyrie",
+		Producer: "graycode-router",
 		Version:  strings.TrimSpace(input.ProducerVersion),
 		SourceID: observationDigest,
-		Evidence: []graphcontracts.ArtifactRef{{URI: "eyrie://" + entity + "/" + observationDigest}},
+		Evidence: []graphcontracts.ArtifactRef{{URI: "graycode-router://" + entity + "/" + observationDigest}},
 	}
 	node := graphcontracts.Node{
 		ID: id, Kind: ref.Kind, Scope: input.Scope, CreatedAt: at,
@@ -143,7 +143,7 @@ func addNode(
 		return graphcontracts.Ref{}, fmt.Errorf("operationsgraph: %s node: %w", entity, err)
 	}
 	event := graphcontracts.Event{
-		ID:   "eyrie/observed/" + digest(id, at.Format(time.RFC3339Nano)),
+		ID:   "graycode-router/observed/" + digest(id, at.Format(time.RFC3339Nano)),
 		Type: graphcontracts.EventObserved, Subject: ref, Scope: input.Scope,
 		OccurredAt: at, CorrelationID: strings.TrimSpace(input.CorrelationID),
 		IdempotencyKey: digest(id, at.Format(time.RFC3339Nano)), Provenance: provenance,

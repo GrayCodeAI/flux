@@ -128,7 +128,7 @@ func TestNewAudioMessageWithText(t *testing.T) {
 
 func TestOpenAI_ContentParts_ImageURL(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewImageMessage("https://example.com/cat.jpg"),
 	}
 	req := buildRequestBase(msgs, ChatOptions{Model: "gpt-4o"}, false, nil)
@@ -156,7 +156,7 @@ func TestOpenAI_ContentParts_ImageURL(t *testing.T) {
 
 func TestOpenAI_ContentParts_ImageURLWithDetail(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{
+	msgs := []GraycodeRouterMessage{{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "image_url", ImageURL: &ImageURLPart{URL: "https://example.com/cat.jpg", Detail: "high"}},
@@ -172,7 +172,7 @@ func TestOpenAI_ContentParts_ImageURLWithDetail(t *testing.T) {
 
 func TestOpenAI_ContentParts_TextPlusImage(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewImageMessageWithText("What is this?", "https://example.com/pic.png"),
 	}
 	req := buildRequestBase(msgs, ChatOptions{Model: "gpt-4o"}, false, nil)
@@ -190,7 +190,7 @@ func TestOpenAI_ContentParts_TextPlusImage(t *testing.T) {
 
 func TestOpenAI_ContentParts_Audio(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewAudioMessage("UklGRiQAAABXQVZF", "wav"),
 	}
 	req := buildRequestBase(msgs, ChatOptions{Model: "gpt-4o-audio-preview"}, false, nil)
@@ -215,7 +215,7 @@ func TestOpenAI_ContentParts_Audio(t *testing.T) {
 
 func TestOpenAI_ContentParts_TextPlusAudio(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewAudioMessageWithText("Transcribe this audio", "SGVsbG8=", "mp3"),
 	}
 	req := buildRequestBase(msgs, ChatOptions{Model: "gpt-4o-audio-preview"}, false, nil)
@@ -233,7 +233,7 @@ func TestOpenAI_ContentParts_TextPlusAudio(t *testing.T) {
 
 func TestOpenAI_ContentParts_MixedImageAndAudio(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{
+	msgs := []GraycodeRouterMessage{{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "text", Text: "Analyze this"},
@@ -260,7 +260,7 @@ func TestOpenAI_ContentParts_MixedImageAndAudio(t *testing.T) {
 // Test that ContentParts take precedence over Images
 func TestOpenAI_ContentParts_PrecedenceOverImages(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{
+	msgs := []GraycodeRouterMessage{{
 		Role:         "user",
 		Content:      "Old text",
 		Images:       []string{"https://example.com/old.jpg"},
@@ -279,7 +279,7 @@ func TestOpenAI_ContentParts_PrecedenceOverImages(t *testing.T) {
 // Test that legacy Images still work
 func TestOpenAI_LegacyImages_StillWork(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{
+	msgs := []GraycodeRouterMessage{{
 		Role:    "user",
 		Content: "Describe this",
 		Images:  []string{"https://example.com/cat.jpg"},
@@ -301,7 +301,7 @@ func TestOpenAI_LegacyImages_StillWork(t *testing.T) {
 
 func TestAnthropic_ContentParts_ImageURL(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewImageMessage("https://example.com/cat.jpg"),
 	}
 	result, _ := buildAnthropicMessages(msgs)
@@ -329,7 +329,7 @@ func TestAnthropic_ContentParts_ImageURL(t *testing.T) {
 
 func TestAnthropic_ContentParts_ImageBase64(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewBase64ImageMessage("iVBORw0KGgoAAAANS", "image/png"),
 	}
 	result, _ := buildAnthropicMessages(msgs)
@@ -351,7 +351,7 @@ func TestAnthropic_ContentParts_ImageBase64(t *testing.T) {
 
 func TestAnthropic_ContentParts_TextPlusImage(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewImageMessageWithText("What is this?", "https://example.com/pic.png"),
 	}
 	result, _ := buildAnthropicMessages(msgs)
@@ -369,7 +369,7 @@ func TestAnthropic_ContentParts_TextPlusImage(t *testing.T) {
 
 func TestAnthropic_ContentParts_AudioWAV(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewAudioMessage("UklGRiQAAABXQVZF", "wav"),
 	}
 	result, _ := buildAnthropicMessages(msgs)
@@ -394,7 +394,7 @@ func TestAnthropic_ContentParts_AudioWAV(t *testing.T) {
 
 func TestAnthropic_ContentParts_AudioMP3(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewAudioMessage("SGVsbG8=", "mp3"),
 	}
 	result, _ := buildAnthropicMessages(msgs)
@@ -407,7 +407,7 @@ func TestAnthropic_ContentParts_AudioMP3(t *testing.T) {
 
 func TestAnthropic_ContentParts_TextPlusAudio(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		NewAudioMessageWithText("Transcribe this", "SGVsbG8=", "wav"),
 	}
 	result, _ := buildAnthropicMessages(msgs)
@@ -425,7 +425,7 @@ func TestAnthropic_ContentParts_TextPlusAudio(t *testing.T) {
 
 func TestAnthropic_ContentParts_PrecedenceOverImages(t *testing.T) {
 	t.Parallel()
-	msgs := []EyrieMessage{{
+	msgs := []GraycodeRouterMessage{{
 		Role:         "user",
 		Content:      "Old text",
 		Images:       []string{"https://example.com/old.jpg"},
@@ -475,7 +475,7 @@ func TestAudioFormatToMediaType(t *testing.T) {
 
 func TestContentParts_JSONRoundTrip(t *testing.T) {
 	t.Parallel()
-	original := EyrieMessage{
+	original := GraycodeRouterMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "text", Text: "What do you see?"},
@@ -487,7 +487,7 @@ func TestContentParts_JSONRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}
-	var decoded EyrieMessage
+	var decoded GraycodeRouterMessage
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("failed to unmarshal: %v", err)
 	}

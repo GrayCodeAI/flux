@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 func (e *Engine) policyCatalog(ctx context.Context) (*catalog.CompiledCatalog, error) {
@@ -165,7 +165,7 @@ func (e *Engine) ProviderForModel(ctx context.Context, modelID string) string {
 	return catalog.ProviderForModel(compiled, modelID)
 }
 
-// PrimaryModel returns Eyrie's stable best-effort catalog primary model.
+// PrimaryModel returns GraycodeRouter's stable best-effort catalog primary model.
 func (e *Engine) PrimaryModel(ctx context.Context) string {
 	compiled, _ := e.policyCatalog(ctx)
 	if model := catalog.PrimaryModel(compiled); model != "" {

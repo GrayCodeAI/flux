@@ -126,7 +126,7 @@ func TestSSEAnthropicContentBlockDelta(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessAnthropicStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
@@ -167,13 +167,13 @@ func TestSSEAnthropicToolUse(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessAnthropicStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
 
 	// Find the tool_call event
-	var toolCallEvt *EyrieStreamEvent
+	var toolCallEvt *GraycodeRouterStreamEvent
 	for i := range results {
 		if results[i].Type == "tool_call" {
 			toolCallEvt = &results[i]
@@ -208,7 +208,7 @@ func TestSSEAnthropicThinkingDelta(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessAnthropicStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
@@ -265,7 +265,7 @@ func TestSSEAnthropicStopReason(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessAnthropicStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
@@ -297,7 +297,7 @@ func TestSSEOpenAIChoicesDelta(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessOpenAIStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
@@ -344,12 +344,12 @@ func TestSSEOpenAIToolCallsAccumulation(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessOpenAIStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
 
-	var toolCallEvt *EyrieStreamEvent
+	var toolCallEvt *GraycodeRouterStreamEvent
 	for i := range results {
 		if results[i].Type == "tool_call" {
 			toolCallEvt = &results[i]
@@ -381,7 +381,7 @@ func TestSSEOpenAIFinishReason(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessOpenAIStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}
@@ -408,7 +408,7 @@ func TestSSEOpenAIUsage(t *testing.T) {
 	ctx := context.Background()
 	ch := ProcessOpenAIStream(ctx, events, testLogger())
 
-	var results []EyrieStreamEvent
+	var results []GraycodeRouterStreamEvent
 	for evt := range ch {
 		results = append(results, evt)
 	}

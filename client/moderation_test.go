@@ -16,7 +16,7 @@ func TestModerationProvider_AllowsSafe(t *testing.T) {
 		WithModerationMaxTokens(1000),
 	)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "Hello, how are you?"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "Hello, how are you?"}}
 	resp, err := mp.Chat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -37,7 +37,7 @@ func TestModerationProvider_BlocksPattern(t *testing.T) {
 		WithBlockedPatterns([]string{`(?i)\bforbidden\b`}),
 	)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "This contains forbidden content"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "This contains forbidden content"}}
 	_, err := mp.Chat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err == nil {
 		t.Fatal("expected error for blocked pattern, got nil")
@@ -59,7 +59,7 @@ func TestModerationProvider_TokenLimit(t *testing.T) {
 	)
 
 	// 10 words exceeds limit of 5
-	msgs := []EyrieMessage{{Role: "user", Content: "one two three four five six seven eight nine ten"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "one two three four five six seven eight nine ten"}}
 	_, err := mp.Chat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err == nil {
 		t.Fatal("expected error for token limit, got nil")
@@ -80,7 +80,7 @@ func TestModerationProvider_TokenLimitAllowsUnderLimit(t *testing.T) {
 		WithModerationMaxTokens(100),
 	)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "short message"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "short message"}}
 	_, err := mp.Chat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -103,7 +103,7 @@ func TestModerationProvider_CustomChecker(t *testing.T) {
 		}),
 	)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "This has a Banned word"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "This has a Banned word"}}
 	_, err := mp.Chat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err == nil {
 		t.Fatal("expected error from custom checker, got nil")
@@ -126,7 +126,7 @@ func TestModerationProvider_CustomCheckerAllows(t *testing.T) {
 		}),
 	)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "safe content"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "safe content"}}
 	_, err := mp.Chat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -143,7 +143,7 @@ func TestModerationProvider_StreamChat(t *testing.T) {
 	)
 
 	// Safe message should pass through.
-	msgs := []EyrieMessage{{Role: "user", Content: "Hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "Hello"}}
 	result, err := mp.StreamChat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -172,7 +172,7 @@ func TestModerationProvider_StreamChatBlocked(t *testing.T) {
 		WithBlockedPatterns([]string{`(?i)forbidden`}),
 	)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "forbidden content"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "forbidden content"}}
 	_, err := mp.StreamChat(context.Background(), msgs, ChatOptions{Model: "test"})
 	if err == nil {
 		t.Fatal("expected error for blocked pattern in StreamChat, got nil")
@@ -190,7 +190,7 @@ func TestModerationProvider_ContentParts(t *testing.T) {
 		WithBlockedPatterns([]string{`(?i)secret`}),
 	)
 
-	msgs := []EyrieMessage{{
+	msgs := []GraycodeRouterMessage{{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "text", Text: "this has secret info"},

@@ -1,7 +1,7 @@
 package catalog
 
 import (
-	"github.com/GrayCodeAI/eyrie/catalog/live"
+	"github.com/GrayCodeAI/graycode-router/catalog/live"
 )
 
 // LiveEntriesToCatalog converts live fetch rows to catalog entries.

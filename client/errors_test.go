@@ -24,7 +24,7 @@ func TestAnthropicClient401(t *testing.T) {
 	defer server.Close()
 
 	ac := NewAnthropicClient("bad-key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	_, err := ac.Chat(context.Background(), []EyrieMessage{
+	_, err := ac.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -55,7 +55,7 @@ func TestAnthropicClient429WithRetry(t *testing.T) {
 	defer server.Close()
 
 	ac := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(3, time.Millisecond, 10*time.Millisecond, 429, 500)))
-	resp, err := ac.Chat(context.Background(), []EyrieMessage{
+	resp, err := ac.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -78,7 +78,7 @@ func TestAnthropicClient500(t *testing.T) {
 	defer server.Close()
 
 	ac := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(1, time.Millisecond, time.Millisecond, 500)))
-	_, err := ac.Chat(context.Background(), []EyrieMessage{
+	_, err := ac.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -98,7 +98,7 @@ func TestAnthropicClientTimeout(t *testing.T) {
 	defer server.Close()
 
 	ac := NewAnthropicClient("key", server.URL, WithTimeout(50*time.Millisecond), WithRetry(NewRetryConfig(0, 0, 0)))
-	_, err := ac.Chat(context.Background(), []EyrieMessage{
+	_, err := ac.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -115,7 +115,7 @@ func TestAnthropicClientMalformedJSON(t *testing.T) {
 	defer server.Close()
 
 	ac := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	_, err := ac.Chat(context.Background(), []EyrieMessage{
+	_, err := ac.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -137,7 +137,7 @@ func TestAnthropicClientContextCancelled(t *testing.T) {
 	cancel() // cancel immediately
 
 	ac := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	_, err := ac.Chat(ctx, []EyrieMessage{
+	_, err := ac.Chat(ctx, []GraycodeRouterMessage{
 		{Role: "user", Content: "Hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -145,9 +145,9 @@ func TestAnthropicClientContextCancelled(t *testing.T) {
 	}
 }
 
-func TestEyrieErrorStructure(t *testing.T) {
+func TestGraycodeRouterErrorStructure(t *testing.T) {
 	t.Parallel()
-	err := &EyrieError{
+	err := &GraycodeRouterError{
 		Provider:   "anthropic",
 		Op:         "chat",
 		StatusCode: 429,
@@ -164,7 +164,7 @@ func TestEyrieErrorStructure(t *testing.T) {
 		t.Error("429 should not be auth error")
 	}
 
-	authErr := &EyrieError{StatusCode: 401}
+	authErr := &GraycodeRouterError{StatusCode: 401}
 	if !authErr.IsAuthError() {
 		t.Error("401 should be auth error")
 	}
@@ -196,7 +196,7 @@ func TestAnthropicToolCallParsing(t *testing.T) {
 	defer server.Close()
 
 	ac := NewAnthropicClient("key", server.URL, WithRetry(NewRetryConfig(0, 0, 0)))
-	resp, err := ac.Chat(context.Background(), []EyrieMessage{
+	resp, err := ac.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Read file"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -232,7 +232,7 @@ func TestStreamParsingEdgeCases(t *testing.T) {
 		defer server.Close()
 
 		oc := NewOpenAIClient("key", server.URL, &OpenAICompat)
-		sr, err := oc.StreamChat(context.Background(), []EyrieMessage{
+		sr, err := oc.StreamChat(context.Background(), []GraycodeRouterMessage{
 			{Role: "user", Content: "Hi"},
 		}, ChatOptions{Model: "gpt-4o"})
 		if err != nil {
@@ -260,7 +260,7 @@ func TestStreamParsingEdgeCases(t *testing.T) {
 		defer server.Close()
 
 		oc := NewOpenAIClient("key", server.URL, &OpenAICompat)
-		sr, err := oc.StreamChat(context.Background(), []EyrieMessage{
+		sr, err := oc.StreamChat(context.Background(), []GraycodeRouterMessage{
 			{Role: "user", Content: "Hi"},
 		}, ChatOptions{Model: "gpt-4o"})
 		if err != nil {

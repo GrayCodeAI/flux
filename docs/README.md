@@ -1,6 +1,6 @@
-# Eyrie Documentation
+# GraycodeRouter Documentation
 
-Welcome to the Eyrie documentation. This directory contains detailed guides and reference material for the Universal LLM Provider Runtime.
+Welcome to the GraycodeRouter documentation. This directory contains detailed guides and reference material for the Universal LLM Provider Runtime.
 
 ## Documentation Index
 
@@ -13,7 +13,7 @@ Welcome to the Eyrie documentation. This directory contains detailed guides and 
 ### Quick Links
 
 - **[README](../README.md)** — Project overview and quick start
-- **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute to Eyrie
+- **[Contributing Guide](../CONTRIBUTING.md)** — How to contribute to GraycodeRouter
 - **[Security Policy](../SECURITY.md)** — Security reporting and best practices
 - **[Changelog](../CHANGELOG.md)** — Version history and release notes
 
@@ -38,7 +38,7 @@ docs/
 
 ## For Developers
 
-If you're contributing to Eyrie:
+If you're contributing to GraycodeRouter:
 
 1. Read [CONTRIBUTING.md](../CONTRIBUTING.md) for development setup
 2. Review [ARCHITECTURE.md](ARCHITECTURE.md) to understand the system
@@ -47,7 +47,7 @@ If you're contributing to Eyrie:
 
 ## For Users
 
-If you're using Eyrie in your application:
+If you're using GraycodeRouter in your application:
 
 1. Start with the [Quick Start](../README.md#quick-start) in the main README
 2. Review the [Usage examples](../README.md#usage) for common patterns
@@ -57,11 +57,11 @@ If you're using Eyrie in your application:
 ## API Reference
 
 API documentation is available at:
-- **[pkg.go.dev](https://pkg.go.dev/github.com/GrayCodeAI/eyrie)** — Generated Go documentation
+- **[pkg.go.dev](https://pkg.go.dev/github.com/GrayCodeAI/graycode-router)** — Generated Go documentation
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — Core abstractions and interfaces
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/GrayCodeAI/eyrie/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/GrayCodeAI/eyrie/discussions)
+- **Issues**: [GitHub Issues](https://github.com/GrayCodeAI/graycode-router/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/GrayCodeAI/graycode-router/discussions)
 - **Security**: See [SECURITY.md](../SECURITY.md) for vulnerability reporting

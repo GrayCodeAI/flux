@@ -8,7 +8,7 @@ import (
 // ---------- buildRequestBase ----------
 
 func BenchmarkBuildRequestBase_SimpleMessages(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "system", Content: "You are helpful."},
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi there!"},
@@ -27,7 +27,7 @@ func BenchmarkBuildRequestBase_SimpleMessages(b *testing.B) {
 }
 
 func BenchmarkBuildRequestBase_WithToolUse(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "system", Content: "You are helpful."},
 		{Role: "user", Content: "Search for files"},
 		{Role: "assistant", ToolUse: []ToolCall{
@@ -39,7 +39,7 @@ func BenchmarkBuildRequestBase_WithToolUse(b *testing.B) {
 	}
 	opts := ChatOptions{
 		Model: "gpt-4",
-		Tools: []EyrieTool{
+		Tools: []GraycodeRouterTool{
 			{Name: "search", Description: "Search for files", Parameters: map[string]interface{}{"query": map[string]string{"type": "string"}}},
 			{Name: "read", Description: "Read a file", Parameters: map[string]interface{}{"path": map[string]string{"type": "string"}}},
 		},
@@ -53,7 +53,7 @@ func BenchmarkBuildRequestBase_WithToolUse(b *testing.B) {
 }
 
 func BenchmarkBuildRequestBase_WithImages(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "What's in this image?", Images: []string{"data:image/png;base64,iVBORw0KGgo="}},
 	}
 	opts := ChatOptions{Model: "gpt-4-vision", MaxTokens: 4096}
@@ -65,7 +65,7 @@ func BenchmarkBuildRequestBase_WithImages(b *testing.B) {
 }
 
 func BenchmarkBuildRequestBase_Streaming(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Write a long essay"},
 	}
 	opts := ChatOptions{Model: "gpt-4", MaxTokens: 4096}
@@ -79,7 +79,7 @@ func BenchmarkBuildRequestBase_Streaming(b *testing.B) {
 // ---------- buildCacheKey ----------
 
 func BenchmarkBuildCacheKey_Short(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}
 	opts := ChatOptions{Model: "gpt-4"}
@@ -95,7 +95,7 @@ func BenchmarkBuildCacheKey_Long(b *testing.B) {
 	for i := range longContent {
 		longContent[i] = 'a'
 	}
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "system", Content: string(longContent)},
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: string(longContent)},
@@ -110,7 +110,7 @@ func BenchmarkBuildCacheKey_Long(b *testing.B) {
 }
 
 func BenchmarkBuildCacheKey_WithToolCalls(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "tc-1", Name: "search", Arguments: map[string]interface{}{"query": "test"}},
 		}},
@@ -130,7 +130,7 @@ func BenchmarkCachedProvider_CacheHit(b *testing.B) {
 	mock := NewMockProvider(MockModeFixed)
 	mock.Response = "cached response"
 	cp := NewCachedProvider(mock, DefaultCacheConfig())
-	messages := []EyrieMessage{{Role: "user", Content: "Hello"}}
+	messages := []GraycodeRouterMessage{{Role: "user", Content: "Hello"}}
 	opts := ChatOptions{Model: "gpt-4"}
 
 	// Prime the cache
@@ -152,7 +152,7 @@ func BenchmarkCachedProvider_CacheMiss(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		messages := []EyrieMessage{{Role: "user", Content: "unique query"}}
+		messages := []GraycodeRouterMessage{{Role: "user", Content: "unique query"}}
 		_, _ = cp.Chat(context.Background(), messages, opts)
 	}
 }
@@ -160,7 +160,7 @@ func BenchmarkCachedProvider_CacheMiss(b *testing.B) {
 // ---------- SanitizeMessages ----------
 
 func BenchmarkSanitizeMessages_Clean(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi there!"},
 		{Role: "user", Content: "How are you?"},
@@ -174,7 +174,7 @@ func BenchmarkSanitizeMessages_Clean(b *testing.B) {
 }
 
 func BenchmarkSanitizeMessages_WithOrphans(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Search for files"},
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "tc-1", Name: "search", Arguments: map[string]interface{}{"query": "test"}},
@@ -191,12 +191,12 @@ func BenchmarkSanitizeMessages_WithOrphans(b *testing.B) {
 }
 
 func BenchmarkSanitizeMessages_Large(b *testing.B) {
-	messages := make([]EyrieMessage, 50)
+	messages := make([]GraycodeRouterMessage, 50)
 	for i := range messages {
 		if i%3 == 0 {
-			messages[i] = EyrieMessage{Role: "user", Content: "message"}
+			messages[i] = GraycodeRouterMessage{Role: "user", Content: "message"}
 		} else {
-			messages[i] = EyrieMessage{Role: "assistant", Content: "response"}
+			messages[i] = GraycodeRouterMessage{Role: "assistant", Content: "response"}
 		}
 	}
 	b.ReportAllocs()
@@ -209,7 +209,7 @@ func BenchmarkSanitizeMessages_Large(b *testing.B) {
 // ---------- MergeConsecutiveRoles ----------
 
 func BenchmarkMergeConsecutiveRoles_NoMerge(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi"},
 		{Role: "user", Content: "How are you?"},
@@ -223,7 +223,7 @@ func BenchmarkMergeConsecutiveRoles_NoMerge(b *testing.B) {
 }
 
 func BenchmarkMergeConsecutiveRoles_WithMerges(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 		{Role: "user", Content: "World"},
 		{Role: "assistant", Content: "Hi"},
@@ -238,7 +238,7 @@ func BenchmarkMergeConsecutiveRoles_WithMerges(b *testing.B) {
 }
 
 func BenchmarkMergeConsecutiveRoles_WithToolUse(b *testing.B) {
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []ToolCall{{ID: "tc-1", Name: "search"}}},
 		{Role: "assistant", Content: "Let me search"},
 		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "tc-1", Content: "result"}}},

@@ -3,7 +3,7 @@ package runtime
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/graycode-router/setup"
 )
 
 // DeploymentStatus returns deployment-routing diagnostics for host UIs.

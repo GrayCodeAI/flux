@@ -170,8 +170,8 @@ func TestParseCustomHeaders_ControlCharactersDoNotPanic(t *testing.T) {
 // 2. API key serialization: json:"-" tag prevents leaking keys in JSON output
 // ---------------------------------------------------------------------------
 
-func TestEyrieConfig_APIKeyNotSerialized(t *testing.T) {
-	cfg := EyrieConfig{
+func TestGraycodeRouterConfig_APIKeyNotSerialized(t *testing.T) {
+	cfg := GraycodeRouterConfig{
 		Provider:   "anthropic",
 		APIKey:     "sk-ant-super-secret-key-12345",
 		BaseURL:    "https://api.anthropic.com",
@@ -188,13 +188,13 @@ func TestEyrieConfig_APIKeyNotSerialized(t *testing.T) {
 
 	// The API key must NOT appear in the JSON output.
 	if strings.Contains(jsonStr, "sk-ant-super-secret-key-12345") {
-		t.Errorf("EyrieConfig.APIKey leaked into JSON: %s", jsonStr)
+		t.Errorf("GraycodeRouterConfig.APIKey leaked into JSON: %s", jsonStr)
 	}
 	if strings.Contains(jsonStr, "APIKey") {
-		t.Errorf("EyrieConfig.APIKey field name leaked into JSON: %s", jsonStr)
+		t.Errorf("GraycodeRouterConfig.APIKey field name leaked into JSON: %s", jsonStr)
 	}
 	if strings.Contains(jsonStr, "api_key") {
-		t.Errorf("EyrieConfig api_key leaked into JSON: %s", jsonStr)
+		t.Errorf("GraycodeRouterConfig api_key leaked into JSON: %s", jsonStr)
 	}
 
 	// Other fields should still be present.
@@ -231,9 +231,9 @@ func TestAnthropicClientConfig_APIKeyNotSerialized(t *testing.T) {
 	}
 }
 
-func TestEyrieConfig_APIKeyRoundtripOmitted(t *testing.T) {
+func TestGraycodeRouterConfig_APIKeyRoundtripOmitted(t *testing.T) {
 	// Serialize then deserialize: the APIKey should not survive the roundtrip.
-	original := EyrieConfig{
+	original := GraycodeRouterConfig{
 		Provider: "openai",
 		APIKey:   "sk-secret-roundtrip-key",
 		Model:    "gpt-4o",
@@ -244,7 +244,7 @@ func TestEyrieConfig_APIKeyRoundtripOmitted(t *testing.T) {
 		t.Fatalf("json.Marshal failed: %v", err)
 	}
 
-	var decoded EyrieConfig
+	var decoded GraycodeRouterConfig
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
 	}
@@ -263,12 +263,12 @@ func TestEyrieConfig_APIKeyRoundtripOmitted(t *testing.T) {
 
 func TestErrorMessagesDoNotContainAPIKey(t *testing.T) {
 	// The getOrCreateProvider error path says:
-	//   "eyrie: no API key for %s; set %s or call SetAPIKey()"
+	//   "graycode-router: no API key for %s; set %s or call SetAPIKey()"
 	// This should reference the env var name, NOT the actual key value.
 	//
 	// We verify by checking the error format string in the source does not
 	// interpolate the key value. This is a structural test.
-	c := Client(&EyrieConfig{Provider: "anthropic", APIKey: ""})
+	c := Client(&GraycodeRouterConfig{Provider: "anthropic", APIKey: ""})
 
 	// Clear the env so no key can be resolved.
 	t.Setenv("ANTHROPIC_API_KEY", "")
@@ -279,7 +279,7 @@ func TestErrorMessagesDoNotContainAPIKey(t *testing.T) {
 
 	// We can't easily call getOrCreateProvider without a real store,
 	// but we can verify the error format from the source code doesn't
-	// include the key. Instead, verify the EyrieConfig JSON safety above.
+	// include the key. Instead, verify the GraycodeRouterConfig JSON safety above.
 	_ = c
 	_ = store
 }

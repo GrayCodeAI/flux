@@ -3,7 +3,7 @@ package catalog
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // IsSetupGateway reports whether id is a registered API-key gateway (not an aggregator owner slug).

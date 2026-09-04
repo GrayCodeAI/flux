@@ -34,7 +34,7 @@ type cacheControlParam struct {
 //
 // Only applies to messages with role "user" or "assistant".
 // No-op if fewer than 2 messages.
-func AddCacheBreakpoints(messages []EyrieMessage) []AnthropicCachedMessage {
+func AddCacheBreakpoints(messages []GraycodeRouterMessage) []AnthropicCachedMessage {
 	result := make([]AnthropicCachedMessage, len(messages))
 	for i, m := range messages {
 		result[i] = AnthropicCachedMessage{Role: m.Role, Content: m.Content}

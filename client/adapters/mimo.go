@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/catalog/xiaomi"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // MiMoClient uses the OpenAI-compatible MiMo endpoint.
@@ -31,11 +31,11 @@ func NewMiMoClient(apiKey, openAIBase string, compat *OpenAICompatConfig, provid
 
 func (c *MiMoClient) Name() string { return c.openAI.Name() }
 
-func (c *MiMoClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *MiMoClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *MiMoClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *MiMoClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.openAI.StreamChat(ctx, messages, opts)
 }
 

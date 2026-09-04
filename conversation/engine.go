@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/storage"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("eyrie/conversation")
+var tracer = otel.Tracer("graycode-router/conversation")
 
 type Engine struct {
 	store    storage.Store
@@ -30,7 +30,7 @@ func New(store storage.Store, provider client.Provider) *Engine {
 type PromptOpts struct {
 	Model        string
 	SystemPrompt string
-	Tools        []client.EyrieTool
+	Tools        []client.GraycodeRouterTool
 	MaxTokens    int
 	Temperature  *float64
 }
@@ -77,7 +77,7 @@ func (e *Engine) Prompt(ctx context.Context, message string, opts PromptOpts) (<
 		return nil, fmt.Errorf("conversation: create root: %w", err)
 	}
 
-	messages := []client.EyrieMessage{{Role: "user", Content: message}}
+	messages := []client.GraycodeRouterMessage{{Role: "user", Content: message}}
 	ch, err := e.streamAndSave(ctx, rootNode, messages, opts)
 	if err != nil {
 		span.RecordError(err)
@@ -161,7 +161,7 @@ func (e *Engine) PromptFrom(ctx context.Context, parentNodeID, message string, o
 	}
 
 	messages := buildMessages(ancestors)
-	messages = append(messages, client.EyrieMessage{Role: "user", Content: message})
+	messages = append(messages, client.GraycodeRouterMessage{Role: "user", Content: message})
 
 	ch, err := e.streamAndSave(ctx, userNode, messages, opts)
 	if err != nil {
@@ -201,7 +201,7 @@ func (e *Engine) DeleteNode(ctx context.Context, id string) error {
 
 const defaultGroupBudgetMultiplier = 4
 
-func (e *Engine) streamAndSave(ctx context.Context, parentNode *storage.Node, messages []client.EyrieMessage, opts PromptOpts) (<-chan Event, error) {
+func (e *Engine) streamAndSave(ctx context.Context, parentNode *storage.Node, messages []client.GraycodeRouterMessage, opts PromptOpts) (<-chan Event, error) {
 	if e.provider == nil {
 		return nil, fmt.Errorf("conversation: engine has no provider")
 	}
@@ -265,7 +265,7 @@ func (e *Engine) streamAndSave(ctx context.Context, parentNode *storage.Node, me
 
 		for {
 			var fullTextBuilder strings.Builder
-			var usage *client.EyrieUsage
+			var usage *client.GraycodeRouterUsage
 			var stopReason string
 			start := time.Now()
 
@@ -354,9 +354,9 @@ func (e *Engine) streamAndSave(ctx context.Context, parentNode *storage.Node, me
 
 			currentParent = assistantNode
 
-			contMessages := make([]client.EyrieMessage, len(messages), len(messages)+1)
+			contMessages := make([]client.GraycodeRouterMessage, len(messages), len(messages)+1)
 			copy(contMessages, messages)
-			contMessages = append(contMessages, client.EyrieMessage{Role: "assistant", Content: accumulatedText})
+			contMessages = append(contMessages, client.GraycodeRouterMessage{Role: "assistant", Content: accumulatedText})
 
 			contSR, contErr := e.provider.StreamChat(ctx, contMessages, chatOpts)
 			if contErr != nil {
@@ -386,7 +386,7 @@ func (e *Engine) streamAndSave(ctx context.Context, parentNode *storage.Node, me
 	return events, nil
 }
 
-func buildMessages(nodes []*storage.Node) []client.EyrieMessage {
+func buildMessages(nodes []*storage.Node) []client.GraycodeRouterMessage {
 	seen := map[string]bool{}
 	var raw []struct {
 		role string
@@ -420,11 +420,11 @@ func buildMessages(nodes []*storage.Node) []client.EyrieMessage {
 		}{role, n})
 	}
 
-	var messages []client.EyrieMessage
+	var messages []client.GraycodeRouterMessage
 	for _, r := range raw {
 		switch r.role {
 		case "tool_call":
-			msg := client.EyrieMessage{Role: "assistant", Content: r.node.Content}
+			msg := client.GraycodeRouterMessage{Role: "assistant", Content: r.node.Content}
 			if len(r.node.Metadata) > 0 {
 				var meta struct {
 					ToolID   string                 `json:"tool_id"`
@@ -463,13 +463,13 @@ func buildMessages(nodes []*storage.Node) []client.EyrieMessage {
 			if n := len(messages); n > 0 && messages[n-1].Role == "user" && len(messages[n-1].ToolResults) > 0 {
 				messages[n-1].ToolResults = append(messages[n-1].ToolResults, tr)
 			} else {
-				messages = append(messages, client.EyrieMessage{
+				messages = append(messages, client.GraycodeRouterMessage{
 					Role:        "user",
 					ToolResults: []client.ToolResult{tr},
 				})
 			}
 		default:
-			messages = append(messages, client.EyrieMessage{
+			messages = append(messages, client.GraycodeRouterMessage{
 				Role:    r.role,
 				Content: r.node.Content,
 			})

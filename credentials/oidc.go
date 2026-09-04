@@ -157,7 +157,7 @@ func ExchangeForAWSWith(ctx context.Context, roleARN, region, oidcToken string, 
 	form.Set("Action", "AssumeRoleWithWebIdentity")
 	form.Set("Version", awsAssumeRoleWebIdentityVer)
 	form.Set("RoleArn", roleARN)
-	form.Set("RoleSessionName", "eyrie-github-oidc")
+	form.Set("RoleSessionName", "graycode-router-github-oidc")
 	form.Set("WebIdentityToken", oidcToken)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))

@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 const (
@@ -53,24 +53,24 @@ func (c *AzureClient) setHeaders(req *http.Request) {
 	req.Header.Set("User-Agent", core.UserAgent())
 }
 
-func (c *AzureClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *AzureClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	messages = core.SanitizeMessages(messages)
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for azure")
+		return nil, fmt.Errorf("graycode-router: model is required for azure")
 	}
 
 	reqBody := c.buildRequest(messages, opts, false)
 	body, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: azure marshal request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: azure marshal request failed: %w", err)
 	}
 	if len(body) > maxAzureRequestSize {
-		return nil, fmt.Errorf("eyrie: request size %d bytes exceeds Azure limit of %d bytes", len(body), maxAzureRequestSize)
+		return nil, fmt.Errorf("graycode-router: request size %d bytes exceeds Azure limit of %d bytes", len(body), maxAzureRequestSize)
 	}
 	url := fmt.Sprintf("%s/openai/deployments/%s/chat/completions?api-version=%s", c.endpoint, opts.Model, c.apiVersion)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: azure request creation failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: azure request creation failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
@@ -79,7 +79,7 @@ func (c *AzureClient) Chat(ctx context.Context, messages []core.EyrieMessage, op
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: azure request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: azure request failed: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -95,10 +95,10 @@ func (c *AzureClient) Chat(ctx context.Context, messages []core.EyrieMessage, op
 
 	var or openaiResponse
 	if err := json.NewDecoder(resp.Body).Decode(&or); err != nil {
-		return nil, fmt.Errorf("eyrie: azure decode failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: azure decode failed: %w", err)
 	}
 
-	result := &core.EyrieResponse{FinishReason: "unknown", RequestID: requestID}
+	result := &core.GraycodeRouterResponse{FinishReason: "unknown", RequestID: requestID}
 	if len(or.Choices) > 0 {
 		ch := or.Choices[0]
 		result.Content = ch.Message.Content
@@ -110,7 +110,7 @@ func (c *AzureClient) Chat(ctx context.Context, messages []core.EyrieMessage, op
 		}
 	}
 	if or.Usage != nil {
-		result.Usage = &core.EyrieUsage{
+		result.Usage = &core.GraycodeRouterUsage{
 			PromptTokens:     or.Usage.PromptTokens,
 			CompletionTokens: or.Usage.CompletionTokens,
 			TotalTokens:      or.Usage.TotalTokens,
@@ -127,21 +127,21 @@ func (c *AzureClient) Chat(ctx context.Context, messages []core.EyrieMessage, op
 	return result, nil
 }
 
-func (c *AzureClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *AzureClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	messages = core.SanitizeMessages(messages)
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for azure")
+		return nil, fmt.Errorf("graycode-router: model is required for azure")
 	}
 
 	reqBody := c.buildRequest(messages, opts, true)
 	body, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: azure stream marshal request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: azure stream marshal request failed: %w", err)
 	}
 	url := fmt.Sprintf("%s/openai/deployments/%s/chat/completions?api-version=%s", c.endpoint, opts.Model, c.apiVersion)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: azure stream request creation failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: azure stream request creation failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.Header.Set("Accept", "text/event-stream")
@@ -151,7 +151,7 @@ func (c *AzureClient) StreamChat(ctx context.Context, messages []core.EyrieMessa
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: azure stream request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: azure stream request failed: %w", err)
 	}
 
 	requestID := resp.Header.Get("X-Request-Id")
@@ -177,16 +177,16 @@ func (c *AzureClient) Ping(ctx context.Context) error {
 	c.setHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("eyrie: azure ping failed: %w", err)
+		return fmt.Errorf("graycode-router: azure ping failed: %w", err)
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode == 401 {
-		return fmt.Errorf("eyrie: azure: invalid API key")
+		return fmt.Errorf("graycode-router: azure: invalid API key")
 	}
 	return nil
 }
 
-func (c *AzureClient) buildRequest(messages []core.EyrieMessage, opts core.ChatOptions, stream bool) openaiRequest {
+func (c *AzureClient) buildRequest(messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool) openaiRequest {
 	return buildRequestBase(messages, opts, stream, &AzureCompat)
 }
 

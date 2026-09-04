@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/runtime"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/runtime"
 )
 
-// NormalizeProviderID resolves provider aliases to Eyrie's runtime identifier.
+// NormalizeProviderID resolves provider aliases to GraycodeRouter's runtime identifier.
 func NormalizeProviderID(providerID string) string {
 	return runtime.NormalizeProviderID(providerID)
 }
@@ -117,7 +117,7 @@ func (e *Engine) SetActiveProvider(ctx context.Context, providerID string) error
 	ctx = nonNilContext(ctx)
 	providerID = NormalizeProviderID(providerID)
 	if providerID == "" {
-		return invalid("set_active_provider", "eyrie engine: provider id is required")
+		return invalid("set_active_provider", "graycode-router engine: provider id is required")
 	}
 	unlock := lockProviderStatePath(e.providerConfigPath)
 	defer unlock()
@@ -145,7 +145,7 @@ func (e *Engine) SetSelection(ctx context.Context, providerID, modelID string) e
 	providerID = NormalizeProviderID(providerID)
 	modelID = strings.TrimSpace(modelID)
 	if modelID == "" {
-		return invalid("set_selection", "eyrie engine: model id is required")
+		return invalid("set_selection", "graycode-router engine: model id is required")
 	}
 	unlock := lockProviderStatePath(e.providerConfigPath)
 	defer unlock()
@@ -217,9 +217,9 @@ func canonicalSelectionModel(compiled *catalog.CompiledCatalog, providerID, mode
 }
 
 func selectionModelUnavailable(providerID, modelID string) error {
-	message := fmt.Sprintf("eyrie engine: model %q is not available", modelID)
+	message := fmt.Sprintf("graycode-router engine: model %q is not available", modelID)
 	if providerID != "" {
-		message = fmt.Sprintf("eyrie engine: model %q is not available through %q", modelID, providerID)
+		message = fmt.Sprintf("graycode-router engine: model %q is not available through %q", modelID, providerID)
 	}
 	return &Error{Code: ErrorModelUnavailable, Operation: "set_selection", Provider: providerID, Model: modelID, Message: message}
 }

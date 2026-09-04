@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
+	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
 )
 
 func TestFetchOpenCodeGo_MockHTTPServer(t *testing.T) {

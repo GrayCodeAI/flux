@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog/live"
+	"github.com/GrayCodeAI/graycode-router/catalog/live"
 )
 
 type CapabilityState string
@@ -45,7 +45,7 @@ const (
 	CatalogSchemaVersion = "model-catalog/v1"
 	// SeedCatalogURL is the published model-catalog/v1 document.
 	SeedCatalogURL = "https://langdag.com/model-catalog/v1/catalog.json"
-	EnvCatalogURL  = "EYRIE_MODEL_CATALOG_URL"
+	EnvCatalogURL  = "GRAYCODE_ROUTER_MODEL_CATALOG_URL"
 	// LiveStaleDuration is how long a cache remains fresh after live provider APIs were merged.
 	LiveStaleDuration = 24 * time.Hour
 )
@@ -639,7 +639,7 @@ func LoadCatalog(ctx context.Context, opts LoadCatalogOptions) (*CompiledCatalog
 	}
 	compiled.Diagnostics = append(compiled.Diagnostics, CatalogDiagnostic{
 		Code:    "bootstrap_only",
-		Message: "no model catalog cache; run hawk models refresh or eyrie catalog discover",
+		Message: "no model catalog cache; run hawk models refresh or graycode-router catalog discover",
 	})
 	return compiled, nil
 }
@@ -704,7 +704,7 @@ func FetchRemoteCatalog(ctx context.Context, opts LoadCatalogOptions) (*Catalog,
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie/1.0")
+	req.Header.Set("User-Agent", "graycode-router/1.0")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

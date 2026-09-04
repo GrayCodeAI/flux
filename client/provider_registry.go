@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/GrayCodeAI/eyrie/client/adapters"
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/client/adapters"
+	"github.com/GrayCodeAI/graycode-router/config"
 )
 
 // ProviderType classifies providers.
@@ -15,7 +15,7 @@ type ProviderType = adapters.ProviderType
 type ProviderRegistryConfig = adapters.ProviderRegistryConfig
 
 // GetProviders lists all available providers.
-func (c *EyrieClient) GetProviders() []string {
+func (c *GraycodeRouterClient) GetProviders() []string {
 	var providers []string
 	for k := range adapters.CoreProviders {
 		providers = append(providers, k)
@@ -29,7 +29,7 @@ func (c *EyrieClient) GetProviders() []string {
 }
 
 // GetProviderInfo returns config for a provider.
-func (c *EyrieClient) GetProviderInfo(provider string) *ProviderRegistryConfig {
+func (c *GraycodeRouterClient) GetProviderInfo(provider string) *ProviderRegistryConfig {
 	if p, ok := adapters.CoreProviders[provider]; ok {
 		return &p
 	}
@@ -42,7 +42,7 @@ func (c *EyrieClient) GetProviderInfo(provider string) *ProviderRegistryConfig {
 	return nil
 }
 
-func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error) {
+func (c *GraycodeRouterClient) getOrCreateProvider(providerName string) (Provider, error) {
 	c.mu.RLock()
 	if p, ok := c.providers[providerName]; ok {
 		c.mu.RUnlock()
@@ -75,14 +75,14 @@ func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error)
 	if apiKey == "" {
 		info := c.GetProviderInfo(providerName)
 		if info == nil {
-			return nil, fmt.Errorf("eyrie: unknown provider: %s", providerName)
+			return nil, fmt.Errorf("graycode-router: unknown provider: %s", providerName)
 		}
 		apiKey = adapters.ResolveEnvSecret(info.EnvKey)
 	}
 
 	info := c.GetProviderInfo(providerName)
 	if info == nil {
-		return nil, fmt.Errorf("eyrie: unknown provider: %s", providerName)
+		return nil, fmt.Errorf("graycode-router: unknown provider: %s", providerName)
 	}
 	baseURL := c.baseURLs[providerName]
 	if baseURL == "" {
@@ -90,7 +90,7 @@ func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error)
 	}
 
 	if apiKey == "" && providerName != "ollama" {
-		return nil, fmt.Errorf("eyrie: no API key for %s; set %s or call SetAPIKey()", providerName, info.EnvKey)
+		return nil, fmt.Errorf("graycode-router: no API key for %s; set %s or call SetAPIKey()", providerName, info.EnvKey)
 	}
 
 	var p Provider
@@ -118,7 +118,7 @@ func (c *EyrieClient) getOrCreateProvider(providerName string) (Provider, error)
 	case adapters.ProviderTypeVertex:
 		projectID := adapters.ResolveEnvSecret("VERTEX_PROJECT_ID")
 		if projectID == "" {
-			return nil, fmt.Errorf("eyrie: vertex requires VERTEX_PROJECT_ID")
+			return nil, fmt.Errorf("graycode-router: vertex requires VERTEX_PROJECT_ID")
 		}
 		region := adapters.ResolveEnvSecret("VERTEX_REGION")
 		if region == "" {

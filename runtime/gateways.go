@@ -6,13 +6,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	"github.com/GrayCodeAI/eyrie/catalog/zai"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/xiaomi"
+	"github.com/GrayCodeAI/graycode-router/catalog/zai"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/graycode-router/setup"
 )
 
 const (
@@ -388,7 +388,7 @@ func RefreshGatewayCatalog(ctx context.Context, providerID string) (string, erro
 // FormatApplyCredentialsSummary summarizes provider apply results for host UIs.
 func FormatApplyCredentialsSummary(result *setup.ApplyCredentialsResult) string {
 	if result == nil || result.Catalog == nil || result.Catalog.Compiled == nil {
-		return "Eyrie credentials applied"
+		return "GraycodeRouter credentials applied"
 	}
 	models := len(result.Catalog.Compiled.ModelsByID)
 	deployments := 0
@@ -396,7 +396,7 @@ func FormatApplyCredentialsSummary(result *setup.ApplyCredentialsResult) string 
 		deployments = len(result.ProviderConfig.Deployments)
 	}
 	return fmt.Sprintf(
-		"Eyrie: %d models, %d deployments configured, routing updated -> %s",
+		"GraycodeRouter: %d models, %d deployments configured, routing updated -> %s",
 		models, deployments, result.ProviderConfigPath,
 	)
 }

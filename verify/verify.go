@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 // Expectation declares what a correct response to a Case looks like.
@@ -39,8 +39,8 @@ type Expectation struct {
 // Case is a single canonical request plus its expectation.
 type Case struct {
 	ID       string
-	Messages []client.EyrieMessage
-	Tools    []client.EyrieTool
+	Messages []client.GraycodeRouterMessage
+	Tools    []client.GraycodeRouterTool
 	Expect   Expectation
 }
 
@@ -123,7 +123,7 @@ func runCase(ctx context.Context, p client.Provider, c Case) CaseResult {
 
 // scoreResponse checks a response against an expectation, returning the list of
 // unmet expectations (empty == passed).
-func scoreResponse(resp *client.EyrieResponse, exp Expectation) []string {
+func scoreResponse(resp *client.GraycodeRouterResponse, exp Expectation) []string {
 	var fail []string
 
 	if exp.NonEmptyContent && strings.TrimSpace(resp.Content) == "" {

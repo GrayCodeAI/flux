@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/conversation"
-	eyrie "github.com/GrayCodeAI/eyrie/internal/health"
-	"github.com/GrayCodeAI/eyrie/internal/httputil"
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/conversation"
+	graycoderouter "github.com/GrayCodeAI/graycode-router/internal/health"
+	"github.com/GrayCodeAI/graycode-router/internal/httputil"
+	"github.com/GrayCodeAI/graycode-router/storage"
 )
 
 const maxRequestBodyBytes = 1 << 20
@@ -20,7 +20,7 @@ type Server struct {
 	engine        *conversation.Engine
 	store         storage.Store
 	analytics     storage.AnalyticsStore
-	healthChecker *eyrie.HealthChecker
+	healthChecker *graycoderouter.HealthChecker
 	reranker      Reranker // optional: provider-backed /rerank; nil => lexical fallback
 	apiKey        string
 	virtualKeyFor func(token string) string // optional: maps a bearer token to a virtual key id
@@ -35,8 +35,8 @@ type Config struct {
 	Store         storage.Store
 	Analytics     storage.AnalyticsStore // optional: enables /api/usage, /api/costs
 	Provider      client.Provider
-	HealthChecker *eyrie.HealthChecker // optional: enables /api/health/providers
-	Reranker      Reranker             // optional: provider-backed /rerank; nil => lexical fallback
+	HealthChecker *graycoderouter.HealthChecker // optional: enables /api/health/providers
+	Reranker      Reranker                      // optional: provider-backed /rerank; nil => lexical fallback
 	APIKey        string
 	Port          int
 	// VirtualKeyResolver optionally maps an inbound bearer/API-key token to a
@@ -160,12 +160,12 @@ func (s *Server) handleReady(w http.ResponseWriter, _ *http.Request) {
 }
 
 type promptRequest struct {
-	Message      string             `json:"message"`
-	Model        string             `json:"model,omitempty"`
-	SystemPrompt string             `json:"system_prompt,omitempty"`
-	MaxTokens    int                `json:"max_tokens,omitempty"`
-	Stream       bool               `json:"stream,omitempty"`
-	Tools        []client.EyrieTool `json:"tools,omitempty"`
+	Message      string                      `json:"message"`
+	Model        string                      `json:"model,omitempty"`
+	SystemPrompt string                      `json:"system_prompt,omitempty"`
+	MaxTokens    int                         `json:"max_tokens,omitempty"`
+	Stream       bool                        `json:"stream,omitempty"`
+	Tools        []client.GraycodeRouterTool `json:"tools,omitempty"`
 }
 
 func (s *Server) handlePrompt(w http.ResponseWriter, r *http.Request) {

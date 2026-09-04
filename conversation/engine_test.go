@@ -8,22 +8,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/storage"
 )
 
 type mockStreamProvider struct{}
 
 func (m *mockStreamProvider) Name() string                 { return "mock" }
 func (m *mockStreamProvider) Ping(_ context.Context) error { return nil }
-func (m *mockStreamProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
-	return &client.EyrieResponse{Content: "hello", FinishReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 5}}, nil
+func (m *mockStreamProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
+	return &client.GraycodeRouterResponse{Content: "hello", FinishReason: "end_turn", Usage: &client.GraycodeRouterUsage{CompletionTokens: 5}}, nil
 }
 
-func (m *mockStreamProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 3)
-	ch <- client.EyrieStreamEvent{Type: "content", Content: "hello"}
-	ch <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 5}}
+func (m *mockStreamProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.GraycodeRouterStreamEvent, 3)
+	ch <- client.GraycodeRouterStreamEvent{Type: "content", Content: "hello"}
+	ch <- client.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.GraycodeRouterUsage{CompletionTokens: 5}}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }
@@ -139,17 +139,17 @@ type maxTokensMockProvider struct {
 func (m *maxTokensMockProvider) Name() string                 { return "max-tokens-mock" }
 func (m *maxTokensMockProvider) Ping(_ context.Context) error { return nil }
 
-func (m *maxTokensMockProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (m *maxTokensMockProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++
 	if m.callCount == 1 {
-		return &client.EyrieResponse{Content: "part 1 ", FinishReason: "max_tokens", Usage: &client.EyrieUsage{CompletionTokens: 50}}, nil
+		return &client.GraycodeRouterResponse{Content: "part 1 ", FinishReason: "max_tokens", Usage: &client.GraycodeRouterUsage{CompletionTokens: 50}}, nil
 	}
-	return &client.EyrieResponse{Content: "part 2", FinishReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 30}}, nil
+	return &client.GraycodeRouterResponse{Content: "part 2", FinishReason: "end_turn", Usage: &client.GraycodeRouterUsage{CompletionTokens: 30}}, nil
 }
 
-func (m *maxTokensMockProvider) StreamChat(_ context.Context, msgs []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (m *maxTokensMockProvider) StreamChat(_ context.Context, msgs []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++
@@ -161,9 +161,9 @@ func (m *maxTokensMockProvider) StreamChat(_ context.Context, msgs []client.Eyri
 		content = "part 2"
 		stopReason = "end_turn"
 	}
-	ch := make(chan client.EyrieStreamEvent, 4)
-	ch <- client.EyrieStreamEvent{Type: "content", Content: content}
-	ch <- client.EyrieStreamEvent{Type: "done", StopReason: stopReason, Usage: &client.EyrieUsage{CompletionTokens: 30}}
+	ch := make(chan client.GraycodeRouterStreamEvent, 4)
+	ch <- client.GraycodeRouterStreamEvent{Type: "content", Content: content}
+	ch <- client.GraycodeRouterStreamEvent{Type: "done", StopReason: stopReason, Usage: &client.GraycodeRouterUsage{CompletionTokens: 30}}
 	close(ch)
 	sr := &client.StreamResult{Events: ch}
 	// Wrap Close so we can count invocations.
@@ -267,12 +267,12 @@ func (b *blockingMockProvider) Name() string {
 
 func (b *blockingMockProvider) Ping(_ context.Context) error { return nil }
 
-func (b *blockingMockProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
-	return &client.EyrieResponse{Content: "done", FinishReason: "end_turn"}, nil
+func (b *blockingMockProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
+	return &client.GraycodeRouterResponse{Content: "done", FinishReason: "end_turn"}, nil
 }
 
-func (b *blockingMockProvider) StreamChat(ctx context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent)
+func (b *blockingMockProvider) StreamChat(ctx context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.GraycodeRouterStreamEvent)
 	// Close the channel when the context is done — simulating a provider
 	// that respects context cancellation.
 	go func() {

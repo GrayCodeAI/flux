@@ -8,7 +8,7 @@ import (
 func TestCostEstimateForKnownModels(t *testing.T) {
 	t.Parallel()
 	ce := NewCostEstimator()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello, how are you doing today?"},
 	}
 
@@ -47,7 +47,7 @@ func TestCostEstimateForKnownModels(t *testing.T) {
 func TestCostEstimateWithCacheTokens(t *testing.T) {
 	t.Parallel()
 	ce := NewCostEstimator()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello, this is a test message for caching."},
 	}
 
@@ -65,7 +65,7 @@ func TestCostEstimateUnknownModelReturnsNonZero(t *testing.T) {
 	// The code uses default pricing for unknown models ($1/MTok in, $3/MTok out)
 	// so it doesn't return zero. Let's verify it uses the default tier.
 	ce := NewCostEstimator()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "test message here"},
 	}
 
@@ -110,7 +110,7 @@ func TestCostStreamingTokenCounterWithCache(t *testing.T) {
 func TestCostIsExpensive(t *testing.T) {
 	t.Parallel()
 	ce := NewCostEstimator()
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "user", Content: "test"},
 	}
 	est := ce.Estimate(messages, "claude-opus-4-6", 100000)

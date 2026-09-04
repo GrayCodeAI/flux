@@ -77,7 +77,7 @@ func TestBedrockChat_Success(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "Hello Bedrock"},
 	}, ChatOptions{Model: "anthropic.claude-3-5-sonnet-20241022-v2:0"})
 	if err != nil {
@@ -147,7 +147,7 @@ func TestBedrockChat_Success(t *testing.T) {
 func TestBedrockChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	c := newTestBedrockClient("http://localhost", "AKID", "secret", "", "us-east-1")
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{})
 	if err == nil {
@@ -178,7 +178,7 @@ func TestBedrockChat_NoSessionToken(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "anthropic.claude-3-5-sonnet-20241022-v2:0"})
 	if err != nil {
@@ -221,7 +221,7 @@ func TestBedrockChat_ToolUseResponse(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	resp, err := c.Chat(context.Background(), []EyrieMessage{
+	resp, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "What's the weather in Seattle?"},
 	}, ChatOptions{Model: "anthropic.claude-3-5-sonnet-20241022-v2:0"})
 	if err != nil {
@@ -258,7 +258,7 @@ func TestBedrockBuildBody_DefaultMaxTokens(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {
@@ -280,7 +280,7 @@ func TestBedrockBuildBody_CustomMaxTokens(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6", MaxTokens: 8192})
 	if err != nil {
@@ -299,7 +299,7 @@ func TestBedrockBuildBody_WithSystemPrompt(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "system", Content: "Be concise."},
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
@@ -323,11 +323,11 @@ func TestBedrockBuildBody_WithTools(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{
 		Model: "claude-sonnet-4-6",
-		Tools: []EyrieTool{
+		Tools: []GraycodeRouterTool{
 			{Name: "calculator", Description: "Do math", Parameters: map[string]interface{}{"type": "object"}},
 		},
 	})
@@ -358,7 +358,7 @@ func TestBedrockBuildBody_ToolResultMessage(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "user", Content: "What is the weather?"},
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "toolu_1", Name: "get_weather", Arguments: map[string]interface{}{"city": "NYC"}},
@@ -382,7 +382,7 @@ func TestBedrockBuildBody_SystemMerge(t *testing.T) {
 	t.Parallel()
 	c := NewBedrockClient("AKID", "secret", "", "us-east-1")
 
-	body, err := c.BuildBody([]EyrieMessage{
+	body, err := c.BuildBody([]GraycodeRouterMessage{
 		{Role: "system", Content: "From messages"},
 		{Role: "user", Content: "Hello"},
 	}, ChatOptions{Model: "claude-sonnet-4-6", System: "From opts"})
@@ -416,7 +416,7 @@ func TestBedrockChat_ErrorResponse(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "anthropic.claude-3-5-sonnet-20241022-v2:0"})
 	if err == nil {
@@ -433,7 +433,7 @@ func TestBedrockChat_MissingCredentials(t *testing.T) {
 	c.SetHTTPClient(&http.Client{})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -572,7 +572,7 @@ func TestBedrockPing_InvalidCredentials(t *testing.T) {
 func TestBedrockStreamChat_ModelRequired(t *testing.T) {
 	t.Parallel()
 	c := newTestBedrockClient("http://localhost", "AKID", "secret", "", "us-east-1")
-	_, err := c.StreamChat(context.Background(), []EyrieMessage{
+	_, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{})
 	if err == nil {
@@ -589,7 +589,7 @@ func TestBedrockStreamChat_MissingCredentials(t *testing.T) {
 	c.SetHTTPClient(&http.Client{})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	_, err := c.StreamChat(context.Background(), []EyrieMessage{
+	_, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err == nil {
@@ -650,7 +650,7 @@ func TestBedrockChat_RegionInURL(t *testing.T) {
 	})
 	c.SetRetry(NewRetryConfig(0, 0, 0))
 
-	_, err := c.Chat(context.Background(), []EyrieMessage{
+	_, err := c.Chat(context.Background(), []GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "claude-sonnet-4-6"})
 	if err != nil {

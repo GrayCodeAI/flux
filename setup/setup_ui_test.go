@@ -3,7 +3,7 @@ package setup
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog"
 )
 
 func TestBuildSetupUI_NilCatalog(t *testing.T) {

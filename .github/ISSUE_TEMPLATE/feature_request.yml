@@ -7,12 +7,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for proposing a feature. eyrie is the LLM client + skill router
+        Thanks for proposing a feature. graycode-router is the LLM client + skill router
         that backs the hawk-eco ecosystem. Every feature is evaluated against
         whether it serves **a single developer** running an AI agent locally.
 
         Before submitting:
-        - Search [existing issues](https://github.com/GrayCodeAI/eyrie/issues) to avoid duplicates.
+        - Search [existing issues](https://github.com/GrayCodeAI/graycode-router/issues) to avoid duplicates.
         - For new providers, please open a discussion first — adding a provider
           is a long-term maintenance commitment.
 
@@ -39,7 +39,7 @@ body:
     attributes:
       label: What problem are you trying to solve?
       description: Describe the user problem first. Solutions can come later.
-      placeholder: When I'm doing X, eyrie makes me do Y, which costs Z extra tokens / a goroutine leak / ...
+      placeholder: When I'm doing X, graycode-router makes me do Y, which costs Z extra tokens / a goroutine leak / ...
     validations:
       required: true
 
@@ -47,7 +47,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: How would you like eyrie to behave? Snippet of API / config / CLI you'd want.
+      description: How would you like graycode-router to behave? Snippet of API / config / CLI you'd want.
       render: go
     validations:
       required: true
@@ -62,7 +62,7 @@ body:
     id: principles
     attributes:
       label: Developer fit
-      description: eyrie avoids enterprise scope. Confirm this feature respects that.
+      description: graycode-router avoids enterprise scope. Confirm this feature respects that.
       options:
         - label: Works with zero configuration (sensible defaults).
         - label: Does not require a network call to a hawk-eco service.

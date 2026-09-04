@@ -6,15 +6,15 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	llm "github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
+	llm "github.com/GrayCodeAI/graycode-router/llm"
 )
 
 // ResolveCredential validates credential input and returns safe provider
-// choices. Eyrie does not retain or return the supplied secret.
+// choices. GraycodeRouter does not retain or return the supplied secret.
 func (e *Engine) ResolveCredential(ctx context.Context, secret string) CredentialResolution {
 	resolved := config.ResolveCredential(nonNilContext(ctx), secret)
 	out := CredentialResolution{
@@ -67,7 +67,7 @@ func (e *Engine) CredentialProviders(context.Context) []CredentialProvider {
 }
 
 // RegisteredGatewayCount returns the first-class provider count from the
-// provider registry. Hosts derive provider counts from Eyrie instead of
+// provider registry. Hosts derive provider counts from GraycodeRouter instead of
 // hard-coding them, so new providers require no host changes.
 func RegisteredGatewayCount() int {
 	return len(registry.CredentialRegistry())

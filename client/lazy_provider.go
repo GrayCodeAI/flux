@@ -2,16 +2,16 @@ package client
 
 import "context"
 
-// LazyProvider adapts EyrieClient to the Provider interface without eagerly
+// LazyProvider adapts GraycodeRouterClient to the Provider interface without eagerly
 // resolving credentials or constructing a concrete provider.
 type LazyProvider struct {
-	client   *EyrieClient
+	client   *GraycodeRouterClient
 	provider string
 }
 
 // NewLazyProvider creates a provider wrapper that resolves the concrete
 // provider only when chat or ping operations are invoked.
-func NewLazyProvider(cfg *EyrieConfig) *LazyProvider {
+func NewLazyProvider(cfg *GraycodeRouterConfig) *LazyProvider {
 	c := Client(cfg)
 	provider := c.defaultProvider
 	if cfg != nil && cfg.Provider != "" {
@@ -23,14 +23,14 @@ func NewLazyProvider(cfg *EyrieConfig) *LazyProvider {
 	}
 }
 
-func (p *LazyProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (p *LazyProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	if opts.Provider == "" {
 		opts.Provider = p.provider
 	}
 	return p.client.Chat(ctx, messages, opts)
 }
 
-func (p *LazyProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (p *LazyProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	if opts.Provider == "" {
 		opts.Provider = p.provider
 	}

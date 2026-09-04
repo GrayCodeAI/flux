@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bird.svg" width="16" height="16" alt="bird" /> eyrie Architecture
+# <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bird.svg" width="16" height="16" alt="bird" /> graycode-router Architecture
 
 **Universal LLM Provider Runtime**
 
@@ -14,19 +14,19 @@
 
 ## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/target.svg" width="16" height="16" alt="target" /> Overview
 
-eyrie is the LLM provider runtime for the hawk ecosystem. It sits between the application and LLM APIs, handling **authentication**, **model resolution**, **streaming**, **retries**, **rate limiting**, and **caching**.
+graycode-router is the LLM provider runtime for the hawk ecosystem. It sits between the application and LLM APIs, handling **authentication**, **model resolution**, **streaming**, **retries**, **rate limiting**, and **caching**.
 
-> <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> No hawk ecosystem component talks to an LLM API directly — all communication goes through eyrie.
+> <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> No hawk ecosystem component talks to an LLM API directly — all communication goes through graycode-router.
 
 ---
 
 ## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/blocks.svg" width="16" height="16" alt="blocks" /> Components
 
 ```
-eyrie/
+graycode-router/
 ├── api/openapi.yaml         <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/file-text.svg" width="16" height="16" alt="file-text" /> REST API contract (OpenAPI 3.1) — embedded HTTP server surface
 ├── client/
-│   ├── client.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/plug.svg" width="16" height="16" alt="plug" /> Provider interface + EyrieClient factory
+│   ├── client.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/plug.svg" width="16" height="16" alt="plug" /> Provider interface + GraycodeRouterClient factory
 │   ├── anthropic.go         <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> Anthropic Claude provider
 │   ├── openai.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> OpenAI / OpenAI-compat provider
 │   ├── gemini.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> Google Gemini provider
@@ -41,7 +41,7 @@ eyrie/
 │   ├── cache.go             <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/database.svg" width="16" height="16" alt="database" /> Response caching
 │   ├── semantic_cache.go    <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/brain.svg" width="16" height="16" alt="brain" /> Similarity-based cache lookup
 │   ├── fallback.go          <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/shuffle.svg" width="16" height="16" alt="shuffle" /> Provider fallback chains
-│   └── errors.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/x-circle.svg" width="16" height="16" alt="x-circle" /> EyrieError type
+│   └── errors.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/x-circle.svg" width="16" height="16" alt="x-circle" /> GraycodeRouterError type
 ├── catalog/                 <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/list.svg" width="16" height="16" alt="list" /> Model catalog — pricing, context windows, tiers
 ├── config/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/settings.svg" width="16" height="16" alt="settings" /> Configuration and credential resolution
 ├── conversation/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/git-branch.svg" width="16" height="16" alt="git-branch" /> Conversation graph engine (branching DAG)
@@ -64,8 +64,8 @@ eyrie/
 | | |
 |---|---|
 | **Contract** | [`api/openapi.yaml`](../api/openapi.yaml) |
-| **Port** | `:8080` (default). Override: `eyrie serve <port>` |
-| **Auth** | Bearer token or `X-API-Key` header. Set via `EYRIE_API_KEY` |
+| **Port** | `:8080` (default). Override: `graycode-router serve <port>` |
+| **Auth** | Bearer token or `X-API-Key` header. Set via `GRAYCODE_ROUTER_API_KEY` |
 
 <details>
 <summary><b><img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/radio.svg" width="16" height="16" alt="radio" /> Endpoint Summary</b></summary>

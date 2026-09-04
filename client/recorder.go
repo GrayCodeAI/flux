@@ -97,7 +97,7 @@ func (r *RecorderProvider) Ping(ctx context.Context) error {
 }
 
 // Chat either records a new interaction or replays a stored one.
-func (r *RecorderProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (r *RecorderProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -144,7 +144,7 @@ func (r *RecorderProvider) Chat(ctx context.Context, messages []EyrieMessage, op
 // In record mode, the real stream is drained and the accumulated response is saved,
 // then a synthetic stream is created to return to the caller.
 // In replay mode, a synthetic stream is created from the stored response.
-func (r *RecorderProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (r *RecorderProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	hash, replayResult, err := r.checkReplay(messages, opts)
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (r *RecorderProvider) StreamChat(ctx context.Context, messages []EyrieMessa
 
 // checkReplay checks if we're in replay mode and returns the replay result.
 // Returns (hash, nil, nil) if not in replay mode.
-func (r *RecorderProvider) checkReplay(messages []EyrieMessage, opts ChatOptions) (string, *StreamResult, error) {
+func (r *RecorderProvider) checkReplay(messages []GraycodeRouterMessage, opts ChatOptions) (string, *StreamResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -208,7 +208,7 @@ func (r *RecorderProvider) SetRedactor(fn func(string) string) {
 }
 
 // replay finds a matching interaction by hash, falling back to position-based lookup.
-func (r *RecorderProvider) replay(hash string) (*EyrieResponse, error) {
+func (r *RecorderProvider) replay(hash string) (*GraycodeRouterResponse, error) {
 	// First try to find by hash
 	for _, interaction := range r.cassette.Interactions {
 		if interaction.Request.Hash == hash {
@@ -225,12 +225,12 @@ func (r *RecorderProvider) replay(hash string) (*EyrieResponse, error) {
 	return r.interactionToResponse(interaction.Response)
 }
 
-// interactionToResponse converts a RecordedResponse to an EyrieResponse.
-func (r *RecorderProvider) interactionToResponse(resp RecordedResponse) (*EyrieResponse, error) {
+// interactionToResponse converts a RecordedResponse to an GraycodeRouterResponse.
+func (r *RecorderProvider) interactionToResponse(resp RecordedResponse) (*GraycodeRouterResponse, error) {
 	if resp.Error != "" {
 		return nil, fmt.Errorf("recorder: replayed error: %s", resp.Error)
 	}
-	return &EyrieResponse{
+	return &GraycodeRouterResponse{
 		Content:      resp.Content,
 		ToolCalls:    resp.ToolCalls,
 		Usage:        resp.Usage,
@@ -239,15 +239,15 @@ func (r *RecorderProvider) interactionToResponse(resp RecordedResponse) (*EyrieR
 }
 
 // syntheticStream creates a StreamResult that emits stored content as events.
-func (r *RecorderProvider) syntheticStream(ctx context.Context, resp *EyrieResponse) *StreamResult {
+func (r *RecorderProvider) syntheticStream(ctx context.Context, resp *GraycodeRouterResponse) *StreamResult {
 	streamCtx, cancel := context.WithCancel(ctx)
-	ch := make(chan EyrieStreamEvent, 10)
+	ch := make(chan GraycodeRouterStreamEvent, 10)
 
 	go func() {
 		defer close(ch)
 		if resp.Content != "" {
 			select {
-			case ch <- EyrieStreamEvent{Type: "content", Content: resp.Content}:
+			case ch <- GraycodeRouterStreamEvent{Type: "content", Content: resp.Content}:
 			case <-streamCtx.Done():
 				return
 			}
@@ -255,20 +255,20 @@ func (r *RecorderProvider) syntheticStream(ctx context.Context, resp *EyrieRespo
 		for i := range resp.ToolCalls {
 			tc := resp.ToolCalls[i]
 			select {
-			case ch <- EyrieStreamEvent{Type: "tool_call", ToolCall: &tc}:
+			case ch <- GraycodeRouterStreamEvent{Type: "tool_call", ToolCall: &tc}:
 			case <-streamCtx.Done():
 				return
 			}
 		}
 		if resp.Usage != nil {
 			select {
-			case ch <- EyrieStreamEvent{Type: "usage", Usage: resp.Usage}:
+			case ch <- GraycodeRouterStreamEvent{Type: "usage", Usage: resp.Usage}:
 			case <-streamCtx.Done():
 				return
 			}
 		}
 		select {
-		case ch <- EyrieStreamEvent{Type: "done", StopReason: resp.FinishReason}:
+		case ch <- GraycodeRouterStreamEvent{Type: "done", StopReason: resp.FinishReason}:
 		case <-streamCtx.Done():
 		}
 	}()
@@ -278,9 +278,9 @@ func (r *RecorderProvider) syntheticStream(ctx context.Context, resp *EyrieRespo
 
 // recordStream drains the real stream, accumulates data, saves the interaction, and
 // returns a synthetic stream with the accumulated response.
-func (r *RecorderProvider) recordStream(ctx context.Context, result *StreamResult, messages []EyrieMessage, opts ChatOptions, hash string) *StreamResult {
+func (r *RecorderProvider) recordStream(ctx context.Context, result *StreamResult, messages []GraycodeRouterMessage, opts ChatOptions, hash string) *StreamResult {
 	streamCtx, cancel := context.WithCancel(ctx)
-	ch := make(chan EyrieStreamEvent, 64)
+	ch := make(chan GraycodeRouterStreamEvent, 64)
 
 	go func() {
 		defer close(ch)
@@ -288,7 +288,7 @@ func (r *RecorderProvider) recordStream(ctx context.Context, result *StreamResul
 
 		var content string
 		var toolCalls []ToolCall
-		var usage *EyrieUsage
+		var usage *GraycodeRouterUsage
 		var finishReason string
 
 		// Drain the real stream, forwarding events to the caller

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 func classify(operation string, route Route, err error) error {
@@ -22,7 +22,7 @@ func classify(operation string, route Route, err error) error {
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 		code = ErrorCancelled
 	default:
-		var providerErr *client.EyrieError
+		var providerErr *client.GraycodeRouterError
 		if errors.As(err, &providerErr) {
 			retryable = providerErr.IsRetriable()
 			switch {

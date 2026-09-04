@@ -45,14 +45,14 @@ type recordingCallback struct {
 type requestRecord struct {
 	provider string
 	model    string
-	messages []EyrieMessage
+	messages []GraycodeRouterMessage
 	opts     ChatOptions
 }
 
 type responseRecord struct {
 	provider string
 	model    string
-	response *EyrieResponse
+	response *GraycodeRouterResponse
 	duration time.Duration
 }
 
@@ -66,10 +66,10 @@ type errorRecord struct {
 type streamEventRecord struct {
 	provider string
 	model    string
-	event    EyrieStreamEvent
+	event    GraycodeRouterStreamEvent
 }
 
-func (r *recordingCallback) OnRequest(_ context.Context, provider, model string, messages []EyrieMessage, opts ChatOptions) {
+func (r *recordingCallback) OnRequest(_ context.Context, provider, model string, messages []GraycodeRouterMessage, opts ChatOptions) {
 	if r.panicOnRequest {
 		panic("intentional test panic")
 	}
@@ -78,7 +78,7 @@ func (r *recordingCallback) OnRequest(_ context.Context, provider, model string,
 	r.requests = append(r.requests, requestRecord{provider, model, messages, opts})
 }
 
-func (r *recordingCallback) OnResponse(_ context.Context, provider, model string, response *EyrieResponse, duration time.Duration) {
+func (r *recordingCallback) OnResponse(_ context.Context, provider, model string, response *GraycodeRouterResponse, duration time.Duration) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.responses = append(r.responses, responseRecord{provider, model, response, duration})
@@ -90,7 +90,7 @@ func (r *recordingCallback) OnError(_ context.Context, provider, model string, e
 	r.errors = append(r.errors, errorRecord{provider, model, err, duration})
 }
 
-func (r *recordingCallback) OnStreamEvent(_ context.Context, provider, model string, event EyrieStreamEvent) {
+func (r *recordingCallback) OnStreamEvent(_ context.Context, provider, model string, event GraycodeRouterStreamEvent) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.streamEvents = append(r.streamEvents, streamEventRecord{provider, model, event})
@@ -186,7 +186,7 @@ func TestCallbackBasicInvocation(t *testing.T) {
 	cb := &recordingCallback{}
 	cp.AddCallback(cb)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	resp, err := cp.Chat(context.Background(), msgs, opts)
@@ -241,7 +241,7 @@ func TestCallbackErrorInvocation(t *testing.T) {
 	cb := &recordingCallback{}
 	cp.AddCallback(cb)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 	_, err := cp.Chat(context.Background(), msgs, ChatOptions{Model: "m"})
 	if err == nil {
 		t.Fatal("expected error from Chat")
@@ -261,8 +261,8 @@ func TestCallbackErrorInvocation(t *testing.T) {
 	if len(cb.errors) != 1 {
 		t.Fatalf("OnError called %d times, want 1", len(cb.errors))
 	}
-	if cb.errors[0].err == nil || cb.errors[0].err.Error() != "eyrie: mock error" {
-		t.Errorf("OnError err = %v, want %q", cb.errors[0].err, "eyrie: mock error")
+	if cb.errors[0].err == nil || cb.errors[0].err.Error() != "graycode-router: mock error" {
+		t.Errorf("OnError err = %v, want %q", cb.errors[0].err, "graycode-router: mock error")
 	}
 
 	// OnResponse should NOT have been called.
@@ -285,7 +285,7 @@ func TestCallbackMultipleCallbacks(t *testing.T) {
 		t.Fatalf("Callbacks() returned %d, want 2", len(cp.Callbacks()))
 	}
 
-	msgs := []EyrieMessage{{Role: "user", Content: "hi"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	_, err := cp.Chat(context.Background(), msgs, ChatOptions{Model: "m"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
@@ -327,7 +327,7 @@ func TestCallbackRemoveCallback(t *testing.T) {
 	}
 
 	// Only cb2 should fire.
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 	cp.Chat(context.Background(), msgs, ChatOptions{Model: "m"})
 
 	waitUntil(t, 2*time.Second, func() bool {
@@ -355,7 +355,7 @@ func TestCallbackPanicRecovery(t *testing.T) {
 	cp.AddCallback(panicCb)
 	cp.AddCallback(safeCb)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 	resp, err := cp.Chat(context.Background(), msgs, ChatOptions{Model: "m"})
 	if err != nil {
 		t.Fatalf("Chat should succeed despite callback panic: %v", err)
@@ -389,7 +389,7 @@ func TestCallbackPanicRecoveryDefaultLogger(t *testing.T) {
 	cp.SetLogger(nil) // should be a no-op
 
 	// Should not panic.
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 	_, err := cp.Chat(context.Background(), msgs, ChatOptions{})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
@@ -425,7 +425,7 @@ func TestCallbackThreadSafety(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < callsPerGoroutine; j++ {
-				msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+				msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 				cp.Chat(context.Background(), msgs, ChatOptions{Model: "m"})
 			}
 		}()
@@ -500,7 +500,7 @@ func TestCallbackStreamChat(t *testing.T) {
 	cb := &recordingCallback{}
 	cp.AddCallback(cb)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "Hello world"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "Hello world"}}
 	sr, err := cp.StreamChat(context.Background(), msgs, ChatOptions{Model: "stream-model"})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
@@ -545,7 +545,7 @@ func TestCallbackStreamChatError(t *testing.T) {
 	cb := &recordingCallback{}
 	cp.AddCallback(cb)
 
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 	_, err := cp.StreamChat(context.Background(), msgs, ChatOptions{Model: "m"})
 	if err == nil {
 		t.Fatal("expected error from StreamChat")
@@ -583,7 +583,7 @@ func TestCallbackEmptyCallbacksNoop(t *testing.T) {
 	cp := mustCallbackProvider(t, mock)
 
 	// No callbacks registered — should still work fine.
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 	resp, err := cp.Chat(context.Background(), msgs, ChatOptions{Model: "m"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
@@ -608,11 +608,11 @@ type countingCallback struct {
 	errors    *atomic.Int64
 }
 
-func (c *countingCallback) OnRequest(_ context.Context, _, _ string, _ []EyrieMessage, _ ChatOptions) {
+func (c *countingCallback) OnRequest(_ context.Context, _, _ string, _ []GraycodeRouterMessage, _ ChatOptions) {
 	c.requests.Add(1)
 }
 
-func (c *countingCallback) OnResponse(_ context.Context, _, _ string, _ *EyrieResponse, _ time.Duration) {
+func (c *countingCallback) OnResponse(_ context.Context, _, _ string, _ *GraycodeRouterResponse, _ time.Duration) {
 	c.responses.Add(1)
 }
 
@@ -620,7 +620,8 @@ func (c *countingCallback) OnError(_ context.Context, _, _ string, _ error, _ ti
 	c.errors.Add(1)
 }
 
-func (c *countingCallback) OnStreamEvent(_ context.Context, _, _ string, _ EyrieStreamEvent) {}
+func (c *countingCallback) OnStreamEvent(_ context.Context, _, _ string, _ GraycodeRouterStreamEvent) {
+}
 
 // Ensure we're using the fmt package for potential debug printing.
 var _ = fmt.Sprintf

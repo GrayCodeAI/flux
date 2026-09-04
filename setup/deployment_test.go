@@ -5,11 +5,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/client/adapters"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/client/adapters"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 func TestProviderForDeploymentAnthropicBedrockFromConfig(t *testing.T) {
@@ -111,7 +111,7 @@ func TestProviderForDeploymentPoolsideUsesReasoningRecoveryClient(t *testing.T) 
 func TestUseDeploymentRouting_EnvOverrideTrue(t *testing.T) {
 	for _, val := range []string{"1", "true", "yes", "on", "TRUE", "Yes"} {
 		t.Run(val, func(t *testing.T) {
-			t.Setenv("EYRIE_DEPLOYMENT_ROUTING", val)
+			t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", val)
 			if !UseDeploymentRouting(nil) {
 				t.Fatalf("expected true for env %q", val)
 			}
@@ -122,7 +122,7 @@ func TestUseDeploymentRouting_EnvOverrideTrue(t *testing.T) {
 func TestUseDeploymentRouting_EnvOverrideFalse(t *testing.T) {
 	for _, val := range []string{"0", "false", "no", "off", "FALSE", "No"} {
 		t.Run(val, func(t *testing.T) {
-			t.Setenv("EYRIE_DEPLOYMENT_ROUTING", val)
+			t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", val)
 			if UseDeploymentRouting(&config.ProviderConfig{ConfigVersion: 2}) {
 				t.Fatalf("expected false for env %q", val)
 			}
@@ -131,14 +131,14 @@ func TestUseDeploymentRouting_EnvOverrideFalse(t *testing.T) {
 }
 
 func TestUseDeploymentRouting_NilConfig(t *testing.T) {
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
+	t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", "")
 	if UseDeploymentRouting(nil) {
 		t.Fatal("expected false for nil config")
 	}
 }
 
 func TestUseDeploymentRouting_ConfigVersion2(t *testing.T) {
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
+	t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", "")
 	cfg := &config.ProviderConfig{ConfigVersion: 2}
 	if !UseDeploymentRouting(cfg) {
 		t.Fatal("expected true for config_version >= 2")
@@ -146,7 +146,7 @@ func TestUseDeploymentRouting_ConfigVersion2(t *testing.T) {
 }
 
 func TestUseDeploymentRouting_WithDeployments(t *testing.T) {
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
+	t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", "")
 	cfg := &config.ProviderConfig{
 		Deployments: map[string]config.DeploymentConfig{
 			"anthropic-direct": {APIKey: "key"},
@@ -158,7 +158,7 @@ func TestUseDeploymentRouting_WithDeployments(t *testing.T) {
 }
 
 func TestUseDeploymentRouting_WithRouting(t *testing.T) {
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
+	t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", "")
 	cfg := &config.ProviderConfig{
 		Routing: &config.RoutingPolicy{},
 	}
@@ -168,7 +168,7 @@ func TestUseDeploymentRouting_WithRouting(t *testing.T) {
 }
 
 func TestUseDeploymentRouting_FlatConfig(t *testing.T) {
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
+	t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", "")
 	cfg := &config.ProviderConfig{ConfigVersion: 0}
 	if UseDeploymentRouting(cfg) {
 		t.Fatal("expected false for flat config without deployments/routing")
@@ -176,7 +176,7 @@ func TestUseDeploymentRouting_FlatConfig(t *testing.T) {
 }
 
 func TestDeploymentRoutingFromStateIgnoresAmbientOverride(t *testing.T) {
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "true")
+	t.Setenv("GRAYCODE_ROUTER_DEPLOYMENT_ROUTING", "true")
 	if DeploymentRoutingFromState(nil) {
 		t.Fatal("pure deployment routing read process environment")
 	}

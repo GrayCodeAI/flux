@@ -1,13 +1,13 @@
 openapi: "3.1.0"
 info:
-  title: Eyrie API
+  title: GraycodeRouter API
   description: LLM provider runtime — conversation graph, provider routing, streaming, and caching.
-  version: "0.1.0"
+  version: "0.0.1"
   license:
     name: MIT
-    url: https://github.com/GrayCodeAI/eyrie/blob/main/LICENSE
+    url: https://github.com/GrayCodeAI/graycode-router/blob/main/LICENSE
   contact:
-    url: https://github.com/GrayCodeAI/eyrie
+    url: https://github.com/GrayCodeAI/graycode-router
 
 servers:
   - url: http://localhost:8080

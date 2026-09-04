@@ -40,7 +40,7 @@ func TestRecorderRecordMode(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	resp, err := rec.Chat(ctx, msgs, opts)
@@ -97,7 +97,7 @@ func TestRecorderReplayMode(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	opts := ChatOptions{Model: "test-model"}
 
 	_, err = rec.Chat(ctx, msgs, opts)
@@ -149,7 +149,7 @@ func TestRecorderAutoMode_RecordsWhenNoFile(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "test"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "test"}}
 	opts := ChatOptions{Model: "m"}
 
 	resp, err := rec.Chat(ctx, msgs, opts)
@@ -183,7 +183,7 @@ func TestRecorderAutoMode_ReplaysWhenFileExists(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "hi"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	opts := ChatOptions{Model: "m"}
 
 	_, err = rec.Chat(ctx, msgs, opts)
@@ -235,13 +235,13 @@ func TestRecorderHashBasedLookup(t *testing.T) {
 
 	// Record two different interactions
 	mock.Response = "response A"
-	_, err = rec.Chat(ctx, []EyrieMessage{{Role: "user", Content: "question A"}}, opts)
+	_, err = rec.Chat(ctx, []GraycodeRouterMessage{{Role: "user", Content: "question A"}}, opts)
 	if err != nil {
 		t.Fatalf("Chat() A error: %v", err)
 	}
 
 	mock.Response = "response B"
-	_, err = rec.Chat(ctx, []EyrieMessage{{Role: "user", Content: "question B"}}, opts)
+	_, err = rec.Chat(ctx, []GraycodeRouterMessage{{Role: "user", Content: "question B"}}, opts)
 	if err != nil {
 		t.Fatalf("Chat() B error: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestRecorderHashBasedLookup(t *testing.T) {
 	}
 
 	// Request B first (out of order compared to recording)
-	resp, err := rec2.Chat(ctx, []EyrieMessage{{Role: "user", Content: "question B"}}, opts)
+	resp, err := rec2.Chat(ctx, []GraycodeRouterMessage{{Role: "user", Content: "question B"}}, opts)
 	if err != nil {
 		t.Fatalf("Chat() B replay error: %v", err)
 	}
@@ -267,7 +267,7 @@ func TestRecorderHashBasedLookup(t *testing.T) {
 	}
 
 	// Request A second
-	resp, err = rec2.Chat(ctx, []EyrieMessage{{Role: "user", Content: "question A"}}, opts)
+	resp, err = rec2.Chat(ctx, []GraycodeRouterMessage{{Role: "user", Content: "question A"}}, opts)
 	if err != nil {
 		t.Fatalf("Chat() A replay error: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestRecorderStreamRecord(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "stream me"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "stream me"}}
 	opts := ChatOptions{Model: "m"}
 
 	result, err := rec.StreamChat(ctx, msgs, opts)
@@ -342,7 +342,7 @@ func TestRecorderStreamReplay(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "stream"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "stream"}}
 	opts := ChatOptions{Model: "m"}
 
 	result, err := rec.StreamChat(ctx, msgs, opts)
@@ -418,7 +418,7 @@ func TestRecorderRedactor(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	msgs := []EyrieMessage{{Role: "user", Content: "show secret"}}
+	msgs := []GraycodeRouterMessage{{Role: "user", Content: "show secret"}}
 	opts := ChatOptions{Model: "m"}
 
 	_, err = rec.Chat(ctx, msgs, opts)

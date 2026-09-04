@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 // ProviderConfig mirrors the Hawk provider.json file.
@@ -122,7 +122,7 @@ type DeploymentConfig struct {
 	ModelMappings   map[string]string `json:"model_mappings,omitempty"`
 
 	// OIDC keyless auth (opt-in). When RoleARN (Bedrock) or WIFAudience (Vertex)
-	// is set — or EYRIE_OIDC=1 — and the process runs in GitHub Actions, the
+	// is set — or GRAYCODE_ROUTER_OIDC=1 — and the process runs in GitHub Actions, the
 	// deployment obtains short-lived credentials via OIDC instead of stored
 	// secrets. Empty by default; the non-OIDC path is unchanged.
 	RoleARN             string `json:"role_arn,omitempty"`
@@ -394,11 +394,11 @@ var ProviderDetectionOrder = APIProviderDetectionOrder
 // when no configuration directory can be resolved (e.g. unset HOME in a
 // container) so callers degrade gracefully instead of panicking.
 func GetProviderConfigDir() (string, error) {
-	if d := strings.TrimSpace(os.Getenv("EYRIE_CONFIG_DIR")); d != "" {
+	if d := strings.TrimSpace(os.Getenv("GRAYCODE_ROUTER_CONFIG_DIR")); d != "" {
 		return d, nil
 	}
 	// HAWK_CONFIG_DIR is retained as a compatibility fallback for hosts that
-	// predate Eyrie's host-neutral configuration namespace.
+	// predate GraycodeRouter's host-neutral configuration namespace.
 	if d := os.Getenv("HAWK_CONFIG_DIR"); d != "" {
 		return d, nil
 	}
@@ -406,9 +406,9 @@ func GetProviderConfigDir() (string, error) {
 	if err == nil && d != "" {
 		// Host-neutral default. Embedders that migrate from a product-specific
 		// directory should copy existing provider state to this path.
-		return filepath.Join(d, "eyrie"), nil
+		return filepath.Join(d, "graycode-router"), nil
 	}
-	return "", fmt.Errorf("eyrie provider config: user config directory unavailable")
+	return "", fmt.Errorf("graycode-router provider config: user config directory unavailable")
 }
 
 // GetProviderConfigPath returns the full path to provider.json. It returns an
@@ -456,26 +456,26 @@ func LoadProviderConfigWithError(path string) (*ProviderConfig, error) {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("eyrie: failed to read provider config at %s: %w", path, err)
+		return nil, fmt.Errorf("graycode-router: failed to read provider config at %s: %w", path, err)
 	}
 	var wire providerConfigJSON
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&wire); err != nil {
-		return nil, fmt.Errorf("eyrie: corrupt provider config at %s: %w", path, err)
+		return nil, fmt.Errorf("graycode-router: corrupt provider config at %s: %w", path, err)
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		if err == nil {
 			err = fmt.Errorf("multiple JSON values")
 		}
-		return nil, fmt.Errorf("eyrie: corrupt provider config at %s: %w", path, err)
+		return nil, fmt.Errorf("graycode-router: corrupt provider config at %s: %w", path, err)
 	}
 	cfg, err := normalizeProviderConfigVersion(wire)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: corrupt provider config at %s: %w", path, err)
+		return nil, fmt.Errorf("graycode-router: corrupt provider config at %s: %w", path, err)
 	}
 	if cfg.Version != "" && cfg.Version != "1" {
-		return nil, fmt.Errorf("eyrie: unsupported provider config version %q at %s", cfg.Version, path)
+		return nil, fmt.Errorf("graycode-router: unsupported provider config version %q at %s", cfg.Version, path)
 	}
 	return cfg, nil
 }
@@ -499,13 +499,13 @@ func normalizeProviderConfigVersion(wire providerConfigJSON) (*ProviderConfig, e
 // provider.json writes impossible through the public config API.
 func SaveProviderConfig(config *ProviderConfig, path string) (err error) {
 	if config == nil {
-		return fmt.Errorf("eyrie: provider config is nil")
+		return fmt.Errorf("graycode-router: provider config is nil")
 	}
 	if ProviderConfigContainsSecrets(*config) {
-		return fmt.Errorf("eyrie: refusing to persist credential fields in provider config")
+		return fmt.Errorf("graycode-router: refusing to persist credential fields in provider config")
 	}
 	if config.Version != "" && config.Version != "1" {
-		return fmt.Errorf("eyrie: refusing to persist unsupported provider config version %q", config.Version)
+		return fmt.Errorf("graycode-router: refusing to persist unsupported provider config version %q", config.Version)
 	}
 	if path == "" {
 		path, err = GetProviderConfigPath()

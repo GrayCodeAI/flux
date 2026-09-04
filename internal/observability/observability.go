@@ -1,11 +1,11 @@
-// Package eyrie observability provides OpenTelemetry-compatible structured
+// Package graycode-router observability provides OpenTelemetry-compatible structured
 // tracing and metrics collection for all LLM provider calls.
 //
 // Design follows OpenTelemetry Go SDK patterns (TraceID/SpanID, span lifecycle,
 // metric instruments) while remaining zero-dependency (Go stdlib only).
 //
 // Usage is opt-in: a nil *Telemetry adds zero overhead.
-package eyrie
+package graycoderouter
 
 import (
 	"crypto/rand"
@@ -511,59 +511,59 @@ func (mc *MetricsCollector) ExportPrometheus() string {
 	var b strings.Builder
 
 	// Request counts
-	b.WriteString("# HELP eyrie_requests_total Total LLM API requests.\n")
-	b.WriteString("# TYPE eyrie_requests_total counter\n")
+	b.WriteString("# HELP graycode_router_requests_total Total LLM API requests.\n")
+	b.WriteString("# TYPE graycode_router_requests_total counter\n")
 	for key, count := range snap.RequestCounts {
 		provider, model := splitKey(key)
-		_, _ = fmt.Fprintf(&b, "eyrie_requests_total{provider=%q,model=%q} %d\n", provider, model, count)
+		_, _ = fmt.Fprintf(&b, "graycode_router_requests_total{provider=%q,model=%q} %d\n", provider, model, count)
 	}
 
 	// Input tokens
-	b.WriteString("# HELP eyrie_input_tokens_total Total input tokens consumed.\n")
-	b.WriteString("# TYPE eyrie_input_tokens_total counter\n")
+	b.WriteString("# HELP graycode_router_input_tokens_total Total input tokens consumed.\n")
+	b.WriteString("# TYPE graycode_router_input_tokens_total counter\n")
 	for key, tokens := range snap.InputTokens {
 		provider, model := splitKey(key)
-		_, _ = fmt.Fprintf(&b, "eyrie_input_tokens_total{provider=%q,model=%q} %d\n", provider, model, tokens)
+		_, _ = fmt.Fprintf(&b, "graycode_router_input_tokens_total{provider=%q,model=%q} %d\n", provider, model, tokens)
 	}
 
 	// Output tokens
-	b.WriteString("# HELP eyrie_output_tokens_total Total output tokens generated.\n")
-	b.WriteString("# TYPE eyrie_output_tokens_total counter\n")
+	b.WriteString("# HELP graycode_router_output_tokens_total Total output tokens generated.\n")
+	b.WriteString("# TYPE graycode_router_output_tokens_total counter\n")
 	for key, tokens := range snap.OutputTokens {
 		provider, model := splitKey(key)
-		_, _ = fmt.Fprintf(&b, "eyrie_output_tokens_total{provider=%q,model=%q} %d\n", provider, model, tokens)
+		_, _ = fmt.Fprintf(&b, "graycode_router_output_tokens_total{provider=%q,model=%q} %d\n", provider, model, tokens)
 	}
 
 	// Latency histograms (as summary quantiles)
-	b.WriteString("# HELP eyrie_request_duration_ms Request latency in milliseconds.\n")
-	b.WriteString("# TYPE eyrie_request_duration_ms summary\n")
+	b.WriteString("# HELP graycode_router_request_duration_ms Request latency in milliseconds.\n")
+	b.WriteString("# TYPE graycode_router_request_duration_ms summary\n")
 	for key, lat := range snap.Latency {
 		provider, model := splitKey(key)
-		_, _ = fmt.Fprintf(&b, "eyrie_request_duration_ms{provider=%q,model=%q,quantile=\"0.5\"} %.2f\n", provider, model, lat.P50)
-		_, _ = fmt.Fprintf(&b, "eyrie_request_duration_ms{provider=%q,model=%q,quantile=\"0.95\"} %.2f\n", provider, model, lat.P95)
-		_, _ = fmt.Fprintf(&b, "eyrie_request_duration_ms{provider=%q,model=%q,quantile=\"0.99\"} %.2f\n", provider, model, lat.P99)
-		_, _ = fmt.Fprintf(&b, "eyrie_request_duration_ms_count{provider=%q,model=%q} %d\n", provider, model, lat.Samples)
+		_, _ = fmt.Fprintf(&b, "graycode_router_request_duration_ms{provider=%q,model=%q,quantile=\"0.5\"} %.2f\n", provider, model, lat.P50)
+		_, _ = fmt.Fprintf(&b, "graycode_router_request_duration_ms{provider=%q,model=%q,quantile=\"0.95\"} %.2f\n", provider, model, lat.P95)
+		_, _ = fmt.Fprintf(&b, "graycode_router_request_duration_ms{provider=%q,model=%q,quantile=\"0.99\"} %.2f\n", provider, model, lat.P99)
+		_, _ = fmt.Fprintf(&b, "graycode_router_request_duration_ms_count{provider=%q,model=%q} %d\n", provider, model, lat.Samples)
 	}
 
 	// Error rates
-	b.WriteString("# HELP eyrie_error_rate Error rate per provider.\n")
-	b.WriteString("# TYPE eyrie_error_rate gauge\n")
+	b.WriteString("# HELP graycode_router_error_rate Error rate per provider.\n")
+	b.WriteString("# TYPE graycode_router_error_rate gauge\n")
 	for provider, rate := range snap.ErrorRates {
-		_, _ = fmt.Fprintf(&b, "eyrie_error_rate{provider=%q} %.4f\n", provider, rate)
+		_, _ = fmt.Fprintf(&b, "graycode_router_error_rate{provider=%q} %.4f\n", provider, rate)
 	}
 
 	// Cost
-	b.WriteString("# HELP eyrie_cost_usd_total Accumulated cost in USD.\n")
-	b.WriteString("# TYPE eyrie_cost_usd_total counter\n")
+	b.WriteString("# HELP graycode_router_cost_usd_total Accumulated cost in USD.\n")
+	b.WriteString("# TYPE graycode_router_cost_usd_total counter\n")
 	for key, cost := range snap.Costs {
 		provider, model := splitKey(key)
-		_, _ = fmt.Fprintf(&b, "eyrie_cost_usd_total{provider=%q,model=%q} %.6f\n", provider, model, cost)
+		_, _ = fmt.Fprintf(&b, "graycode_router_cost_usd_total{provider=%q,model=%q} %.6f\n", provider, model, cost)
 	}
 
 	// Cache hit rate
-	b.WriteString("# HELP eyrie_cache_hit_rate Ratio of cache hits to total cache-eligible requests.\n")
-	b.WriteString("# TYPE eyrie_cache_hit_rate gauge\n")
-	_, _ = fmt.Fprintf(&b, "eyrie_cache_hit_rate %.4f\n", snap.CacheHitRate)
+	b.WriteString("# HELP graycode_router_cache_hit_rate Ratio of cache hits to total cache-eligible requests.\n")
+	b.WriteString("# TYPE graycode_router_cache_hit_rate gauge\n")
+	_, _ = fmt.Fprintf(&b, "graycode_router_cache_hit_rate %.4f\n", snap.CacheHitRate)
 
 	return b.String()
 }

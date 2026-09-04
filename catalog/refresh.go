@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// RefreshResult summarizes a strict remote catalog refresh (eyrie published catalog).
+// RefreshResult summarizes a strict remote catalog refresh (graycode-router published catalog).
 type RefreshResult struct {
 	Compiled   *CompiledCatalog
 	CachePath  string
@@ -25,11 +25,11 @@ type RefreshResult struct {
 
 // DefaultCachePath returns the shared model catalog cache location.
 func DefaultCachePath() string {
-	if p := strings.TrimSpace(os.Getenv("EYRIE_MODEL_CATALOG_PATH")); p != "" {
+	if p := strings.TrimSpace(os.Getenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH")); p != "" {
 		return p
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".eyrie", "model_catalog.json")
+	return filepath.Join(home, ".graycode-router", "model_catalog.json")
 }
 
 // CacheInfo reports on-disk cache metadata when present.
@@ -96,7 +96,7 @@ func (r *RefreshResult) Summary() string {
 	)
 }
 
-// DiscoverReport returns a multi-line report for `hawk models refresh` / `eyrie catalog discover`.
+// DiscoverReport returns a multi-line report for `hawk models refresh` / `graycode-router catalog discover`.
 func (r *RefreshResult) DiscoverReport() string {
 	if r == nil || r.Compiled == nil {
 		return "Catalog discovery: no data"

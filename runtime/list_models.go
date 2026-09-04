@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/live"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/live"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
 )
 
 // ListModelSource selects cache vs live model listing.
@@ -93,10 +93,10 @@ func listModelsLive(ctx context.Context, spec registry.ProviderSpec) ([]ModelEnt
 	if spec.LiveFetcherKey == "" {
 		return listModelsFromCache(ctx, spec.ProviderID, "cache")
 	}
-	env := eyriecfg.DiscoveryEnvMap(ctx)
+	env := graycoderoutercfg.DiscoveryEnvMap(ctx)
 	if spec.ProviderID == "ollama" && strings.TrimSpace(env["OLLAMA_BASE_URL"]) == "" {
 		env = copyEnvMap(env)
-		env["OLLAMA_BASE_URL"] = eyriecfg.OllamaDefaultBaseURL
+		env["OLLAMA_BASE_URL"] = graycoderoutercfg.OllamaDefaultBaseURL
 	}
 	entries, err := live.Fetch(spec.LiveFetcherKey, env)
 	if err != nil {
@@ -168,7 +168,7 @@ func FormatSetupError(providerID string, err error) error {
 		return nil
 	}
 	if strings.TrimSpace(providerID) == "ollama" {
-		return eyriecfg.FormatOllamaConnectError(err)
+		return graycoderoutercfg.FormatOllamaConnectError(err)
 	}
 	return err
 }
@@ -177,8 +177,8 @@ func FormatSetupError(providerID string, err error) error {
 func ListProviderSetupOptions(ctx context.Context) []ProviderSetupOption {
 	_ = ctx
 	var out []ProviderSetupOption
-	st := eyriecfg.DiscoveryEnvMap(ctx)
-	hasAny := eyriecfg.HasAnyConfiguredDeployment(ctx)
+	st := graycoderoutercfg.DiscoveryEnvMap(ctx)
+	hasAny := graycoderoutercfg.HasAnyConfiguredDeployment(ctx)
 	if hasAny {
 		out = append(out, ProviderSetupOption{Action: "model", Label: "Pick model"})
 	}

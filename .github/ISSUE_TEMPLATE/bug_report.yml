@@ -11,7 +11,7 @@ body:
         of the form as you can — the more we know, the faster we can fix it.
 
         Before submitting:
-        - Search [existing issues](https://github.com/GrayCodeAI/eyrie/issues) to avoid duplicates.
+        - Search [existing issues](https://github.com/GrayCodeAI/graycode-router/issues) to avoid duplicates.
         - If this is a security issue, please **do not** file a public issue. See `SECURITY.md`.
 
   - type: textarea
@@ -19,7 +19,7 @@ body:
     attributes:
       label: What happened?
       description: A clear, concise description of the bug.
-      placeholder: When I call `eyrieClient.Chat(...)` against <provider>, I expected X but got Y.
+      placeholder: When I call `graycode-routerClient.Chat(...)` against <provider>, I expected X but got Y.
     validations:
       required: true
 
@@ -30,8 +30,8 @@ body:
       description: Minimal Go snippet (or curl/CLI invocation) that reliably reproduces the problem.
       render: go
       placeholder: |
-        client := eyrie.New(...)
-        resp, err := client.Chat(ctx, msgs, eyrie.ChatOptions{Model: "..."})
+        client := graycode-router.New(...)
+        resp, err := client.Chat(ctx, msgs, graycode-router.ChatOptions{Model: "..."})
         // ^ panics / returns wrong shape / hangs / etc.
     validations:
       required: true
@@ -68,10 +68,10 @@ body:
       placeholder: "claude-opus-4-20250514"
 
   - type: input
-    id: eyrie-version
+    id: graycode-router-version
     attributes:
-      label: eyrie version
-      description: Output of `eyrie version` or the `eyrie.Version` constant / git SHA you built from.
+      label: graycode-router version
+      description: Output of `graycode-router version` or the `graycode-router.Version` constant / git SHA you built from.
       placeholder: "0.1.0"
     validations:
       required: true

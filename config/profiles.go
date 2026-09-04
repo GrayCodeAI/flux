@@ -1,6 +1,6 @@
 package config
 
-import "github.com/GrayCodeAI/eyrie/catalog/opencodego"
+import "github.com/GrayCodeAI/graycode-router/catalog/opencodego"
 
 // APIProvider is the type for supported LLM providers.
 type APIProvider = string

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 // latencyMockProvider sleeps for a fixed delay before returning, so latency-based
@@ -17,7 +17,7 @@ type latencyMockProvider struct {
 	delay time.Duration
 }
 
-func (m *latencyMockProvider) Chat(ctx context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (m *latencyMockProvider) Chat(ctx context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	if m.delay > 0 {
 		select {
 		case <-time.After(m.delay):
@@ -25,12 +25,12 @@ func (m *latencyMockProvider) Chat(ctx context.Context, _ []client.EyrieMessage,
 			return nil, ctx.Err()
 		}
 	}
-	return &client.EyrieResponse{Content: "from " + m.name}, nil
+	return &client.GraycodeRouterResponse{Content: "from " + m.name}, nil
 }
 
-func (m *latencyMockProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 1)
-	ch <- client.EyrieStreamEvent{Type: "done"}
+func (m *latencyMockProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.GraycodeRouterStreamEvent, 1)
+	ch <- client.GraycodeRouterStreamEvent{Type: "done"}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }
@@ -43,16 +43,16 @@ type usageMockProvider struct {
 	tokens int
 }
 
-func (m *usageMockProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
-	return &client.EyrieResponse{
+func (m *usageMockProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
+	return &client.GraycodeRouterResponse{
 		Content: "from " + m.name,
-		Usage:   &client.EyrieUsage{TotalTokens: m.tokens},
+		Usage:   &client.GraycodeRouterUsage{TotalTokens: m.tokens},
 	}, nil
 }
 
-func (m *usageMockProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 1)
-	ch <- client.EyrieStreamEvent{Type: "done"}
+func (m *usageMockProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.GraycodeRouterStreamEvent, 1)
+	ch <- client.GraycodeRouterStreamEvent{Type: "done"}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }
@@ -87,7 +87,7 @@ func TestSimpleShuffleDistribution(t *testing.T) {
 	counts := map[string]int{}
 	const n = 4000
 	for i := 0; i < n; i++ {
-		resp, _ := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+		resp, _ := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 		counts[resp.Content]++
 	}
 	// Each provider should get roughly half (allow generous slack for randomness).
@@ -144,7 +144,7 @@ func TestLatencyBasedRecordsEWMA(t *testing.T) {
 	p := &latencyMockProvider{name: "p", delay: 5 * time.Millisecond}
 	r := New([]RouteEntry{{Provider: p, Weight: 1}}, nil, nil, WithStrategy(StrategyLatencyBased))
 
-	r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	lat, ok := r.stratState.latency("p")
 	if !ok {
 		t.Fatal("expected a latency sample after Chat")
@@ -205,8 +205,8 @@ func TestUsageBasedRecordsTokens(t *testing.T) {
 	p := &usageMockProvider{name: "p", tokens: 250}
 	r := New([]RouteEntry{{Provider: p, Weight: 1}}, nil, nil, WithStrategy(StrategyUsageBased))
 
-	r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
-	r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 
 	if got := r.stratState.usage["p"].Load(); got != 500 {
 		t.Errorf("recorded usage = %d, want 500", got)
@@ -227,7 +227,7 @@ func TestInFlightDecrementedAfterChat(t *testing.T) {
 	p := &mockProvider{name: "p"}
 	r := New([]RouteEntry{{Provider: p, Weight: 1}}, nil, nil, WithStrategy(StrategyLeastBusy))
 
-	r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if got := r.stratState.inFlight["p"].Load(); got != 0 {
 		t.Errorf("in-flight after Chat = %d, want 0", got)
 	}
@@ -244,7 +244,7 @@ func TestLeastBusyConcurrentSafe(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+			r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 		}()
 	}
 	wg.Wait()

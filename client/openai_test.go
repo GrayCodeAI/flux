@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/adapters"
+	"github.com/GrayCodeAI/graycode-router/client/adapters"
 )
 
 // StreamChat tests live in openai_stream_test.go; Ping, compat, image,
@@ -28,8 +28,8 @@ func defaultChatOpts() ChatOptions {
 	return ChatOptions{Model: "gpt-4o"}
 }
 
-func basicMessages() []EyrieMessage {
-	return []EyrieMessage{{Role: "user", Content: "Hello"}}
+func basicMessages() []GraycodeRouterMessage {
+	return []GraycodeRouterMessage{{Role: "user", Content: "Hello"}}
 }
 
 // --- TestOpenAIChat ---
@@ -230,7 +230,7 @@ func TestOpenAIChat_ToolCallsInResponse(t *testing.T) {
 	c := newTestOpenAIClient(srv.URL, nil)
 	opts := ChatOptions{
 		Model: "gpt-4o",
-		Tools: []EyrieTool{
+		Tools: []GraycodeRouterTool{
 			{
 				Name:        "get_weather",
 				Description: "Get the current weather",

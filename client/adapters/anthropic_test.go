@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 func TestNewAnthropicClient(t *testing.T) {
@@ -58,7 +58,7 @@ func TestAnthropicClient_Chat_Success(t *testing.T) {
 	c := NewAnthropicClient("sk-ant-key", "https://api.anthropic.com")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestAnthropicClient_Chat_Success(t *testing.T) {
 func TestAnthropicClient_Chat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewAnthropicClient("key", "")
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -89,7 +89,7 @@ func TestAnthropicClient_Chat_APIError(t *testing.T) {
 	c := NewAnthropicClient("bad-key", "")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
 	if err == nil {
 		t.Fatal("expected error for forbidden")
 	}
@@ -108,7 +108,7 @@ func TestAnthropicClient_StreamChat_Success(t *testing.T) {
 	c := NewAnthropicClient("key", "")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestAnthropicClient_StreamChat_Success(t *testing.T) {
 func TestAnthropicClient_StreamChat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewAnthropicClient("key", "")
-	_, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -167,7 +167,7 @@ func TestAnthropicClient_CountTokens_Success(t *testing.T) {
 	c := NewAnthropicClient("key", "")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.CountTokens(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Count me"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514"})
+	result, err := c.CountTokens(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Count me"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514"})
 	if err != nil {
 		t.Fatalf("CountTokens: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestAnthropicClient_CountTokens_Success(t *testing.T) {
 func TestAnthropicClient_CountTokens_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewAnthropicClient("key", "")
-	_, err := c.CountTokens(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.CountTokens(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -195,7 +195,7 @@ func TestAnthropicClient_CountTokens_APIError(t *testing.T) {
 	c := NewAnthropicClient("key", "")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.CountTokens(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-invalid"})
+	_, err := c.CountTokens(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-invalid"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -218,7 +218,7 @@ func TestAnthropicClient_SetHTTPClientAndRetry(t *testing.T) {
 
 func TestConvertToAnthropicTools(t *testing.T) {
 	t.Parallel()
-	result := ConvertToAnthropicTools([]core.EyrieTool{
+	result := ConvertToAnthropicTools([]core.GraycodeRouterTool{
 		{Name: "get_weather", Description: "Get weather", Parameters: map[string]interface{}{"type": "object"}},
 	})
 	if len(result) != 1 {
@@ -340,7 +340,7 @@ func TestParseAnthropicResponse_ToolUse(t *testing.T) {
 
 func TestBuildAnthropicMessages_Basic(t *testing.T) {
 	t.Parallel()
-	msgs, system := BuildAnthropicMessages([]core.EyrieMessage{
+	msgs, system := BuildAnthropicMessages([]core.GraycodeRouterMessage{
 		{Role: "system", Content: "Be helpful"},
 		{Role: "user", Content: "Hello"},
 		{Role: "assistant", Content: "Hi there"},
@@ -361,7 +361,7 @@ func TestBuildAnthropicMessages_Basic(t *testing.T) {
 
 func TestBuildAnthropicMessages_ToolUse(t *testing.T) {
 	t.Parallel()
-	msgs, _ := BuildAnthropicMessages([]core.EyrieMessage{
+	msgs, _ := BuildAnthropicMessages([]core.GraycodeRouterMessage{
 		{Role: "assistant", Content: "Let me check", ToolUse: []core.ToolCall{{ID: "tu1", Name: "get_weather", Arguments: map[string]interface{}{"city": "NYC"}}}},
 	})
 	if len(msgs) != 1 {
@@ -378,7 +378,7 @@ func TestBuildAnthropicMessages_ToolUse(t *testing.T) {
 
 func TestBuildAnthropicMessages_ToolResults(t *testing.T) {
 	t.Parallel()
-	msgs, _ := BuildAnthropicMessages([]core.EyrieMessage{
+	msgs, _ := BuildAnthropicMessages([]core.GraycodeRouterMessage{
 		{Role: "user", ToolResults: []core.ToolResult{{ToolUseID: "tu1", Content: "72°F"}}},
 	})
 	if len(msgs) != 1 {
@@ -398,7 +398,7 @@ func TestBuildAnthropicMessages_ToolResults(t *testing.T) {
 
 func TestBuildAnthropicMessages_ToolResultWithError(t *testing.T) {
 	t.Parallel()
-	msgs, _ := BuildAnthropicMessages([]core.EyrieMessage{
+	msgs, _ := BuildAnthropicMessages([]core.GraycodeRouterMessage{
 		{Role: "user", ToolResults: []core.ToolResult{{ToolUseID: "tu1", Content: "error!", IsError: true}}},
 	})
 	content := msgs[0]["content"].([]map[string]interface{})
@@ -409,7 +409,7 @@ func TestBuildAnthropicMessages_ToolResultWithError(t *testing.T) {
 
 func TestBuildAnthropicMessages_ContentParts(t *testing.T) {
 	t.Parallel()
-	msgs, _ := BuildAnthropicMessages([]core.EyrieMessage{
+	msgs, _ := BuildAnthropicMessages([]core.GraycodeRouterMessage{
 		{Role: "user", ContentParts: []core.ContentPart{
 			{Type: "text", Text: "Describe this image"},
 			{Type: "image_url", ImageURL: &core.ImageURLPart{URL: "data:image/png;base64,iVBORw0KGgo="}},
@@ -429,7 +429,7 @@ func TestBuildAnthropicMessages_ContentParts(t *testing.T) {
 
 func TestBuildAnthropicMessages_ContentParts_Audio(t *testing.T) {
 	t.Parallel()
-	msgs, _ := BuildAnthropicMessages([]core.EyrieMessage{
+	msgs, _ := BuildAnthropicMessages([]core.GraycodeRouterMessage{
 		{Role: "user", ContentParts: []core.ContentPart{
 			{Type: "input_audio", InputAudio: &core.InputAudioPart{Data: "base64data", Format: "mp3"}},
 		}},
@@ -445,7 +445,7 @@ func TestBuildAnthropicMessages_ContentParts_Audio(t *testing.T) {
 
 func TestBuildAnthropicMessages_LegacyImages(t *testing.T) {
 	t.Parallel()
-	msgs, _ := BuildAnthropicMessages([]core.EyrieMessage{
+	msgs, _ := BuildAnthropicMessages([]core.GraycodeRouterMessage{
 		{Role: "user", Content: "Check", Images: []string{"data:image/jpeg;base64,/9j/4AAQ=="}},
 	})
 	content := msgs[0]["content"].([]map[string]interface{})
@@ -558,7 +558,7 @@ func TestThinkingForBudget(t *testing.T) {
 func TestBuildAnthropicRequest_ResponseFormat(t *testing.T) {
 	t.Parallel()
 	c := NewAnthropicClient("key", "")
-	_, _, err := c.BuildAnthropicRequest(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, _, err := c.BuildAnthropicRequest(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		ResponseFormat: &core.ResponseFormat{Type: "json_object"},
@@ -571,7 +571,7 @@ func TestBuildAnthropicRequest_ResponseFormat(t *testing.T) {
 func TestBuildAnthropicRequest_ResponseFormatJSONSchema(t *testing.T) {
 	t.Parallel()
 	c := NewAnthropicClient("key", "")
-	req, _, err := c.BuildAnthropicRequest(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	req, _, err := c.BuildAnthropicRequest(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		ResponseFormat: &core.ResponseFormat{Type: "json_schema", Schema: `{"type":"object"}`},
@@ -587,7 +587,7 @@ func TestBuildAnthropicRequest_ResponseFormatJSONSchema(t *testing.T) {
 func TestBuildAnthropicRequest_Headers(t *testing.T) {
 	t.Parallel()
 	c := NewAnthropicClient("sk-ant-key", "https://api.anthropic.com")
-	req, _, err := c.BuildAnthropicRequest(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	req, _, err := c.BuildAnthropicRequest(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "claude-sonnet-4-20250514", MaxTokens: 256,
 	}, false)
 	if err != nil {
@@ -629,7 +629,7 @@ func TestAnthropicClient_MimoAuthRetry(t *testing.T) {
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.SetMimoAuth()
 	c.httpClient = &http.Client{Transport: transport}
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -661,7 +661,7 @@ func TestAnthropicClient_Chat_DefaultMaxTokens(t *testing.T) {
 	c := NewAnthropicClient("sk-ant-key", "https://api.anthropic.com")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514"})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "claude-sonnet-4-20250514"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -687,7 +687,7 @@ func TestAnthropicClient_Chat_ResponseFormatJSONSchema(t *testing.T) {
 	c := NewAnthropicClient("sk-ant-key", "https://api.anthropic.com")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		ResponseFormat: &core.ResponseFormat{Type: "json_schema", Schema: `{"type":"object","properties":{"name":{"type":"string"}}}`},
@@ -704,7 +704,7 @@ func TestAnthropicClient_Chat_ResponseFormatEmptySchema(t *testing.T) {
 	c.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return jsonResponse(http.StatusOK, map[string]any{}), nil
 	})}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		ResponseFormat: &core.ResponseFormat{Type: "json_schema", Schema: ""},
@@ -721,7 +721,7 @@ func TestAnthropicClient_Chat_ResponseFormatInvalidSchema(t *testing.T) {
 	c.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return jsonResponse(http.StatusOK, map[string]any{}), nil
 	})}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		ResponseFormat: &core.ResponseFormat{Type: "json_schema", Schema: "not valid json"},
@@ -738,7 +738,7 @@ func TestAnthropicClient_Chat_ResponseFormatJSONObject(t *testing.T) {
 	c.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return jsonResponse(http.StatusOK, map[string]any{}), nil
 	})}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		ResponseFormat: &core.ResponseFormat{Type: "json_object"},
@@ -755,7 +755,7 @@ func TestAnthropicClient_Chat_ResponseFormatUnknown(t *testing.T) {
 	c.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return jsonResponse(http.StatusOK, map[string]any{}), nil
 	})}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		ResponseFormat: &core.ResponseFormat{Type: "unknown_type"},
@@ -792,7 +792,7 @@ func TestAnthropicClient_Chat_SystemPrompt(t *testing.T) {
 	c := NewAnthropicClient("sk-ant-key", "https://api.anthropic.com")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{
 		{Role: "system", Content: "from message"},
 		{Role: "user", Content: "Hi"},
 	}, core.ChatOptions{Model: "claude-sonnet-4-20250514", MaxTokens: 256, System: "custom system"})
@@ -821,7 +821,7 @@ func TestAnthropicClient_Chat_EnableCaching(t *testing.T) {
 	c := NewAnthropicClient("sk-ant-key", "https://api.anthropic.com")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:         "claude-sonnet-4-20250514",
 		MaxTokens:     256,
 		EnableCaching: true,
@@ -855,7 +855,7 @@ func TestAnthropicClient_Chat_MetadataUserID(t *testing.T) {
 	c := NewAnthropicClient("sk-ant-key", "https://api.anthropic.com")
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:          "claude-sonnet-4-20250514",
 		MaxTokens:      256,
 		MetadataUserID: "user-123",
@@ -868,7 +868,7 @@ func TestAnthropicClient_Chat_MetadataUserID(t *testing.T) {
 func TestBuildAnthropicCachedRequest_Basic(t *testing.T) {
 	t.Parallel()
 	req := BuildAnthropicCachedRequest(
-		[]core.EyrieMessage{{Role: "user", Content: "Hello"}},
+		[]core.GraycodeRouterMessage{{Role: "user", Content: "Hello"}},
 		"claude-3", 256, nil, false, nil, nil, nil, nil, nil, nil,
 	)
 	if req["model"] != "claude-3" {
@@ -885,7 +885,7 @@ func TestBuildAnthropicCachedRequest_Basic(t *testing.T) {
 func TestBuildAnthropicCachedRequest_WithSystem(t *testing.T) {
 	t.Parallel()
 	req := BuildAnthropicCachedRequest(
-		[]core.EyrieMessage{{Role: "system", Content: "You are helpful"}},
+		[]core.GraycodeRouterMessage{{Role: "system", Content: "You are helpful"}},
 		"claude-3", 256, nil, false, nil, nil, nil, nil, nil, nil,
 	)
 	sys, ok := req["system"].([]map[string]interface{})
@@ -904,7 +904,7 @@ func TestBuildAnthropicCachedRequest_WithTools(t *testing.T) {
 	t.Parallel()
 	tools := []AnthropicTool{{Name: "test", Description: "a test", InputSchema: map[string]interface{}{"type": "object"}}}
 	req := BuildAnthropicCachedRequest(
-		[]core.EyrieMessage{{Role: "user", Content: "Hello"}},
+		[]core.GraycodeRouterMessage{{Role: "user", Content: "Hello"}},
 		"claude-3", 256, nil, false, tools, nil, nil, nil, nil, nil,
 	)
 	toolMaps, ok := req["tools"].([]map[string]interface{})
@@ -928,7 +928,7 @@ func TestBuildAnthropicCachedRequest_WithAllOptions(t *testing.T) {
 	topK := 5
 	stopSeqs := []string{"\n\n"}
 	req := BuildAnthropicCachedRequest(
-		[]core.EyrieMessage{{Role: "user", Content: "Hello"}},
+		[]core.GraycodeRouterMessage{{Role: "user", Content: "Hello"}},
 		"claude-3", 256, &temp, false, nil, thinking, toolChoice, &topP, &topK, stopSeqs,
 	)
 	if req["temperature"] != 0.7 {
@@ -955,7 +955,7 @@ func TestBuildAnthropicCachedRequest_ApplyCacheBreakpoint(t *testing.T) {
 	t.Parallel()
 	// Test with string content
 	req := BuildAnthropicCachedRequest(
-		[]core.EyrieMessage{
+		[]core.GraycodeRouterMessage{
 			{Role: "user", Content: "First"},
 			{Role: "user", Content: "Second"},
 		},
@@ -981,7 +981,7 @@ func TestBuildAnthropicCachedRequest_ApplyCacheBreakpoint_Maps(t *testing.T) {
 	t.Parallel()
 	// Use ContentParts to trigger the []map[string]interface{} content path
 	req := BuildAnthropicCachedRequest(
-		[]core.EyrieMessage{
+		[]core.GraycodeRouterMessage{
 			{Role: "user", Content: "First", ContentParts: []core.ContentPart{{Type: "text", Text: "First text"}}},
 			{Role: "user", Content: "Second"},
 		},

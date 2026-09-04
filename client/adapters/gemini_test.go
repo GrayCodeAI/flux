@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 func testLogger(t *testing.T) *slog.Logger {
@@ -74,7 +74,7 @@ func TestGeminiClient_Chat_Success(t *testing.T) {
 	c := NewGeminiClient("AIza-key", "https://generativelanguage.googleapis.com/v1beta")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestGeminiClient_Chat_Success(t *testing.T) {
 func TestGeminiClient_Chat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "")
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -105,7 +105,7 @@ func TestGeminiClient_Chat_APIError(t *testing.T) {
 	c := NewGeminiClient("bad-key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -124,7 +124,7 @@ func TestGeminiClient_StreamChat_Success(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestGeminiClient_StreamChat_Success(t *testing.T) {
 func TestGeminiClient_StreamChat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "")
-	_, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -168,7 +168,7 @@ func TestGeminiClient_StreamChat_PropagatesRequestID(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash"})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash"})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestProcessGeminiStream_ToolCallWithUsage(t *testing.T) {
 	close(sseEvents)
 
 	var toolCalls int
-	var usage *core.EyrieUsage
+	var usage *core.GraycodeRouterUsage
 	for evt := range events {
 		if evt.Type == "tool_call" && evt.ToolCall != nil {
 			toolCalls++
@@ -412,7 +412,7 @@ func TestGeminiClient_Chat_WithSystem(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{
 		{Role: "system", Content: "Be helpful"},
 		{Role: "user", Content: "Hi"},
 	}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
@@ -445,9 +445,9 @@ func TestGeminiClient_Chat_WithTools(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Weather?"}}, core.ChatOptions{
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Weather?"}}, core.ChatOptions{
 		Model: "gemini-2.0-flash", MaxTokens: 256,
-		Tools:      []core.EyrieTool{{Name: "get_weather", Description: "Get weather", Parameters: map[string]interface{}{"type": "object"}}},
+		Tools:      []core.GraycodeRouterTool{{Name: "get_weather", Description: "Get weather", Parameters: map[string]interface{}{"type": "object"}}},
 		ToolChoice: &core.ToolChoiceOption{Type: "any"},
 	})
 	if err != nil {
@@ -480,7 +480,7 @@ func TestGeminiClient_Chat_WithResponseFormat(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "JSON please"}}, core.ChatOptions{
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "JSON please"}}, core.ChatOptions{
 		Model: "gemini-2.0-flash", MaxTokens: 256,
 		ResponseFormat: &core.ResponseFormat{Type: "json_schema", Schema: `{"type":"object"}`},
 	})
@@ -515,7 +515,7 @@ func TestGeminiClient_Chat_WithTopLogProbs(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:       "gemini-2.0-flash",
 		MaxTokens:   256,
 		TopLogProbs: &logprobs,
@@ -552,7 +552,7 @@ func TestGeminiClient_Chat_WithPenalties(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "gemini-2.0-flash", MaxTokens: 256,
 		PresencePenalty: &penalty,
 		Seed:            &seed,
@@ -579,7 +579,7 @@ func TestGeminiClient_Chat_VertexAuth(t *testing.T) {
 	c := NewGeminiClient("token", "https://us-central1-aiplatform.googleapis.com/v1beta")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -609,7 +609,7 @@ func TestGeminiClient_Chat_ToolResults(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{
 		{Role: "user", ToolResults: []core.ToolResult{{ToolUseID: "get_weather", Content: "72°F"}}},
 	}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
@@ -632,7 +632,7 @@ func TestGeminiClient_StreamChat_LegacyParser(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -663,7 +663,7 @@ func TestGeminiClient_StreamChat_Legacy_InvalidJSON(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -694,7 +694,7 @@ func TestGeminiClient_StreamChat_Legacy_NoCandidates(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -725,7 +725,7 @@ func TestGeminiClient_StreamChat_Legacy_FunctionCall(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -759,7 +759,7 @@ func TestGeminiClient_StreamChat_Legacy_NoUsage(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -804,7 +804,7 @@ func TestGeminiClient_Chat_AssistantRole(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "assistant", Content: "Hello"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "assistant", Content: "Hello"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -833,7 +833,7 @@ func TestGeminiClient_Chat_UnknownRole(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "function", Content: "result"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "function", Content: "result"}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -860,7 +860,7 @@ func TestGeminiClient_Chat_ContentParts(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{
 		Role: "user",
 		ContentParts: []core.ContentPart{
 			{Type: "text", Text: "hello"},
@@ -894,7 +894,7 @@ func TestGeminiClient_Chat_LegacyImages(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{
 		Role:   "user",
 		Images: []string{"base64imagedata"},
 	}}, core.ChatOptions{Model: "gemini-2.0-flash", MaxTokens: 256})
@@ -921,11 +921,11 @@ func TestGeminiClient_Chat_ToolChoiceNone(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:      "gemini-2.0-flash",
 		MaxTokens:  256,
 		ToolChoice: &core.ToolChoiceOption{Type: "none"},
-		Tools:      []core.EyrieTool{{Name: "test", Description: "a test tool"}},
+		Tools:      []core.GraycodeRouterTool{{Name: "test", Description: "a test tool"}},
 	})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
@@ -955,7 +955,7 @@ func TestGeminiClient_Chat_PenaltiesOnly(t *testing.T) {
 	c := NewGeminiClient("key", "")
 	c.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
 	c.httpClient = &http.Client{Transport: transport}
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model:            "gemini-2.0-flash",
 		MaxTokens:        256,
 		FrequencyPenalty: &freq,
@@ -974,7 +974,7 @@ func ptrBool(v bool) *bool { return &v }
 func TestProcessStreamChunk_Content(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "https://gemini.example")
-	events := make(chan core.EyrieStreamEvent, 1)
+	events := make(chan core.GraycodeRouterStreamEvent, 1)
 	data := `{"candidates":[{"content":{"parts":[{"text":"Hello"}]}}]}`
 	cont := c.processStreamChunk(context.Background(), data, events)
 	if cont {
@@ -993,7 +993,7 @@ func TestProcessStreamChunk_Content(t *testing.T) {
 func TestProcessStreamChunk_ToolCall(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "https://gemini.example")
-	events := make(chan core.EyrieStreamEvent, 1)
+	events := make(chan core.GraycodeRouterStreamEvent, 1)
 	data := `{"candidates":[{"content":{"parts":[{"functionCall":{"name":"get_weather","args":{"city":"NYC"},"id":"call_1"}}]}}]}`
 	cont := c.processStreamChunk(context.Background(), data, events)
 	if cont {
@@ -1012,7 +1012,7 @@ func TestProcessStreamChunk_ToolCall(t *testing.T) {
 func TestProcessStreamChunk_UsageDone(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "https://gemini.example")
-	events := make(chan core.EyrieStreamEvent, 2)
+	events := make(chan core.GraycodeRouterStreamEvent, 2)
 	data := `{"candidates":[{"content":{"parts":[{"text":"Hi"}],"finishReason":"STOP"}}],"usageMetadata":{"promptTokenCount":2,"candidatesTokenCount":5,"totalTokenCount":7}}`
 	cont := c.processStreamChunk(context.Background(), data, events)
 	if !cont {
@@ -1037,7 +1037,7 @@ func TestProcessStreamChunk_UsageDone(t *testing.T) {
 func TestProcessStreamChunk_ContextCancelled(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "https://gemini.example")
-	events := make(chan core.EyrieStreamEvent)
+	events := make(chan core.GraycodeRouterStreamEvent)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	data := `{"candidates":[{"content":{"parts":[{"text":"Hello"}]}}]}`
@@ -1050,7 +1050,7 @@ func TestProcessStreamChunk_ContextCancelled(t *testing.T) {
 func TestProcessStreamChunk_EmptyCandidates(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "https://gemini.example")
-	events := make(chan core.EyrieStreamEvent, 1)
+	events := make(chan core.GraycodeRouterStreamEvent, 1)
 	data := `{"candidates":[]}`
 	cont := c.processStreamChunk(context.Background(), data, events)
 	if cont {
@@ -1066,7 +1066,7 @@ func TestProcessStreamChunk_EmptyCandidates(t *testing.T) {
 func TestProcessStreamChunk_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "https://gemini.example")
-	events := make(chan core.EyrieStreamEvent, 1)
+	events := make(chan core.GraycodeRouterStreamEvent, 1)
 	cont := c.processStreamChunk(context.Background(), "not json", events)
 	if cont {
 		t.Fatal("processStreamChunk returned true, expected false")

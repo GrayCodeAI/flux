@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 // ProviderType classifies providers.

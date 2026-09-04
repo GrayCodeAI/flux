@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var clientTracer = otel.Tracer("eyrie/client")
+var clientTracer = otel.Tracer("graycode-router/client")
 
 // TracingProvider wraps a Provider with OpenTelemetry spans for Chat and
 // StreamChat calls. Use NewTracingProvider to create one.
@@ -30,7 +30,7 @@ func (tp *TracingProvider) Ping(ctx context.Context) error {
 	return tp.inner.Ping(ctx)
 }
 
-func (tp *TracingProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (tp *TracingProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	ctx, span := clientTracer.Start(
 		ctx, "provider.Chat",
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -67,7 +67,7 @@ func (tp *TracingProvider) Chat(ctx context.Context, messages []EyrieMessage, op
 	return resp, nil
 }
 
-func (tp *TracingProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (tp *TracingProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	ctx, span := clientTracer.Start(
 		ctx, "provider.StreamChat",
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -90,7 +90,7 @@ func (tp *TracingProvider) StreamChat(ctx context.Context, messages []EyrieMessa
 
 	// Wrap the events channel so the span ends when the stream finishes.
 	origEvents := sr.Events
-	wrappedEvents := make(chan EyrieStreamEvent, cap(origEvents))
+	wrappedEvents := make(chan GraycodeRouterStreamEvent, cap(origEvents))
 	go func() {
 		defer span.End()
 		defer close(wrappedEvents)

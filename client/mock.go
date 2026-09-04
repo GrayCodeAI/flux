@@ -39,7 +39,7 @@ type MockProvider struct {
 
 // MockCall records a single call to the mock provider.
 type MockCall struct {
-	Messages []EyrieMessage
+	Messages []GraycodeRouterMessage
 	Options  ChatOptions
 }
 
@@ -58,7 +58,7 @@ func (m *MockProvider) Name() string { return "mock" }
 func (m *MockProvider) Ping(_ context.Context) error { return nil }
 
 // Chat returns a mock response based on Mode.
-func (m *MockProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (m *MockProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	m.mu.Lock()
 	m.Calls = append(m.Calls, MockCall{Messages: messages, Options: opts})
 	m.mu.Unlock()
@@ -73,9 +73,9 @@ func (m *MockProvider) Chat(ctx context.Context, messages []EyrieMessage, opts C
 
 	switch m.Mode {
 	case MockModeError:
-		return nil, fmt.Errorf("eyrie: mock error")
+		return nil, fmt.Errorf("graycode-router: mock error")
 	case MockModeMaxTokens:
-		return &EyrieResponse{Content: "partial response", FinishReason: "max_tokens", Usage: &EyrieUsage{PromptTokens: 10, CompletionTokens: 100, TotalTokens: 110}}, nil
+		return &GraycodeRouterResponse{Content: "partial response", FinishReason: "max_tokens", Usage: &GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 100, TotalTokens: 110}}, nil
 	case MockModeToolUse:
 		name := m.ToolName
 		if name == "" {
@@ -85,13 +85,13 @@ func (m *MockProvider) Chat(ctx context.Context, messages []EyrieMessage, opts C
 		if args == nil {
 			args = map[string]interface{}{"input": "test"}
 		}
-		return &EyrieResponse{
+		return &GraycodeRouterResponse{
 			ToolCalls:    []ToolCall{{ID: "mock-tc-1", Name: name, Arguments: args}},
 			FinishReason: "tool_use",
-			Usage:        &EyrieUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
+			Usage:        &GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
 		}, nil
 	case MockModeFixed:
-		return &EyrieResponse{Content: m.Response, FinishReason: "end_turn", Usage: &EyrieUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}}, nil
+		return &GraycodeRouterResponse{Content: m.Response, FinishReason: "end_turn", Usage: &GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}}, nil
 	default: // echo
 		last := ""
 		for i := len(messages) - 1; i >= 0; i-- {
@@ -100,24 +100,24 @@ func (m *MockProvider) Chat(ctx context.Context, messages []EyrieMessage, opts C
 				break
 			}
 		}
-		return &EyrieResponse{Content: "echo: " + last, FinishReason: "end_turn", Usage: &EyrieUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}}, nil
+		return &GraycodeRouterResponse{Content: "echo: " + last, FinishReason: "end_turn", Usage: &GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}}, nil
 	}
 }
 
 // StreamChat streams a mock response word by word.
-func (m *MockProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (m *MockProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	resp, err := m.Chat(ctx, messages, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	streamCtx, cancel := context.WithCancel(ctx)
-	ch := make(chan EyrieStreamEvent, 64)
+	ch := make(chan GraycodeRouterStreamEvent, 64)
 
 	go func() {
 		defer close(ch)
 		if resp.FinishReason == "tool_use" && len(resp.ToolCalls) > 0 {
-			emit(streamCtx, ch, EyrieStreamEvent{Type: "tool_call", ToolCall: &resp.ToolCalls[0]})
+			emit(streamCtx, ch, GraycodeRouterStreamEvent{Type: "tool_call", ToolCall: &resp.ToolCalls[0]})
 		} else {
 			words := strings.Fields(resp.Content)
 			for _, w := range words {
@@ -128,10 +128,10 @@ func (m *MockProvider) StreamChat(ctx context.Context, messages []EyrieMessage, 
 						return
 					}
 				}
-				emit(streamCtx, ch, EyrieStreamEvent{Type: "content", Content: w + " "})
+				emit(streamCtx, ch, GraycodeRouterStreamEvent{Type: "content", Content: w + " "})
 			}
 		}
-		emit(streamCtx, ch, EyrieStreamEvent{Type: "done"})
+		emit(streamCtx, ch, GraycodeRouterStreamEvent{Type: "done"})
 	}()
 
 	return NewStreamResult(ch, cancel), nil

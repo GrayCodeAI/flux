@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/config"
 )
 
 // ApplyProviderChatDefaults applies provider policy that host applications
@@ -26,7 +26,7 @@ func IsContextOverflow(err error) bool {
 	if err == nil {
 		return false
 	}
-	var providerErr *core.EyrieError
+	var providerErr *core.GraycodeRouterError
 	if errors.As(err, &providerErr) {
 		message := strings.ToLower(providerErr.Message)
 		if containsContextOverflowSignal(message) {

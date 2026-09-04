@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 func TestNewAzureClient(t *testing.T) {
@@ -58,7 +58,7 @@ func TestAzureClient_Chat_Success(t *testing.T) {
 	c := NewAzureClient("az-key", "https://example.openai.azure.com", "")
 	c.httpClient = &http.Client{Transport: transport}
 
-	resp, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256})
+	resp, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestAzureClient_Chat_Success(t *testing.T) {
 func TestAzureClient_Chat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewAzureClient("az-key", "https://example.openai.azure.com", "")
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}
@@ -94,7 +94,7 @@ func TestAzureClient_Chat_APIError(t *testing.T) {
 	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 	c.httpClient = &http.Client{Transport: transport}
 
-	_, err := c.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256})
+	_, err := c.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256})
 	if err == nil {
 		t.Fatal("expected error for unauthorized")
 	}
@@ -114,7 +114,7 @@ func TestAzureClient_StreamChat_Success(t *testing.T) {
 	c := NewAzureClient("az-key", "https://example.openai.azure.com", "")
 	c.httpClient = &http.Client{Transport: transport}
 
-	result, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256})
+	result, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestAzureClient_StreamChat_Success(t *testing.T) {
 func TestAzureClient_StreamChat_EmptyModel(t *testing.T) {
 	t.Parallel()
 	c := NewAzureClient("az-key", "https://example.openai.azure.com", "")
-	_, err := c.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
+	_, err := c.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: ""})
 	if err == nil {
 		t.Fatal("expected error for empty model")
 	}

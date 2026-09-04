@@ -216,7 +216,7 @@ var _ Provider = (*AdaptiveRateLimitProvider)(nil)
 // zero-valued for sensible defaults.
 func NewAdaptiveRateLimitProvider(inner Provider, config AdaptiveRateLimitConfig) (*AdaptiveRateLimitProvider, error) {
 	if inner == nil {
-		return nil, errors.New("eyrie: NewAdaptiveRateLimitProvider inner provider must not be nil")
+		return nil, errors.New("graycode-router: NewAdaptiveRateLimitProvider inner provider must not be nil")
 	}
 	if config.ThresholdPercent <= 0 {
 		config.ThresholdPercent = 10
@@ -249,7 +249,7 @@ func (a *AdaptiveRateLimitProvider) Ping(ctx context.Context) error {
 }
 
 // Chat sends a non-streaming chat request with adaptive rate limiting.
-func (a *AdaptiveRateLimitProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (a *AdaptiveRateLimitProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	if err := a.checkAndWait(ctx); err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func (a *AdaptiveRateLimitProvider) Chat(ctx context.Context, messages []EyrieMe
 }
 
 // StreamChat sends a streaming chat request with adaptive rate limiting.
-func (a *AdaptiveRateLimitProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (a *AdaptiveRateLimitProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	if err := a.checkAndWait(ctx); err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func (a *AdaptiveRateLimitProvider) StreamChat(ctx context.Context, messages []E
 	//     longer being drained on the consumer side);
 	//   - we release the inner stream's resources (body, goroutine) by
 	//     closing it; otherwise it hangs on a blocking send.
-	wrappedCh := make(chan EyrieStreamEvent, cap(result.Events))
+	wrappedCh := make(chan GraycodeRouterStreamEvent, cap(result.Events))
 	go func() {
 		defer close(wrappedCh)
 		for {
@@ -403,7 +403,7 @@ func (a *AdaptiveRateLimitProvider) checkAndWait(ctx context.Context) error {
 			delay := a.delayUntilReset(now)
 			if remaining <= 0 && delay > a.config.MaxDelay {
 				a.mu.Unlock()
-				return fmt.Errorf("eyrie: adaptive ratelimit: %s RPM limit reached (%d/%d), resets in %v",
+				return fmt.Errorf("graycode-router: adaptive ratelimit: %s RPM limit reached (%d/%d), resets in %v",
 					a.inner.Name(), rpmUsed, a.rpmLimit, delay)
 			}
 			if delay > 0 && delay <= a.config.MaxDelay {
@@ -439,7 +439,7 @@ func (a *AdaptiveRateLimitProvider) checkAndWait(ctx context.Context) error {
 			delay := a.delayUntilReset(now)
 			if remaining <= 0 && delay > a.config.MaxDelay {
 				a.mu.Unlock()
-				return fmt.Errorf("eyrie: adaptive ratelimit: %s TPM limit reached (%d/%d), resets in %v",
+				return fmt.Errorf("graycode-router: adaptive ratelimit: %s TPM limit reached (%d/%d), resets in %v",
 					a.inner.Name(), tpmUsed, a.tpmLimit, delay)
 			}
 			if delay > 0 && delay <= a.config.MaxDelay {
@@ -494,7 +494,7 @@ func (a *AdaptiveRateLimitProvider) recordTokens(tokens int) {
 
 // extractTokens gets the total token count from usage, falling back to
 // prompt + completion if total is not set.
-func (a *AdaptiveRateLimitProvider) extractTokens(usage *EyrieUsage) int {
+func (a *AdaptiveRateLimitProvider) extractTokens(usage *GraycodeRouterUsage) int {
 	if usage == nil {
 		return 0
 	}

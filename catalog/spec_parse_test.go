@@ -528,7 +528,7 @@ func TestResolvedRemoteCatalogURL_Explicit(t *testing.T) {
 
 func TestResolvedRemoteCatalogURL_Default(t *testing.T) {
 	// Clear env var if set
-	t.Setenv("EYRIE_MODEL_CATALOG_URL", "")
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_URL", "")
 	got := ResolvedRemoteCatalogURL("")
 	if got != SeedCatalogURL {
 		t.Fatalf("got %q, want %q", got, SeedCatalogURL)
@@ -536,7 +536,7 @@ func TestResolvedRemoteCatalogURL_Default(t *testing.T) {
 }
 
 func TestResolvedRemoteCatalogURL_EnvOverride(t *testing.T) {
-	t.Setenv("EYRIE_MODEL_CATALOG_URL", "https://env.example.com/catalog.json")
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_URL", "https://env.example.com/catalog.json")
 	got := ResolvedRemoteCatalogURL("")
 	if got != "https://env.example.com/catalog.json" {
 		t.Fatalf("got %q", got)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
 )
 
 func TestValidateKeyFormat(t *testing.T) {

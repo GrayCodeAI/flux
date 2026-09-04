@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 // fakeProvider is a scripted client.Provider for testing the harness without a
@@ -14,14 +14,14 @@ import (
 // first user message's content.
 type fakeProvider struct {
 	name      string
-	responses map[string]*client.EyrieResponse
+	responses map[string]*client.GraycodeRouterResponse
 	errs      map[string]error
 }
 
 func (f *fakeProvider) Name() string                 { return f.name }
 func (f *fakeProvider) Ping(_ context.Context) error { return nil }
 
-func (f *fakeProvider) Chat(_ context.Context, msgs []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (f *fakeProvider) Chat(_ context.Context, msgs []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	key := ""
 	if len(msgs) > 0 {
 		key = msgs[0].Content
@@ -34,14 +34,14 @@ func (f *fakeProvider) Chat(_ context.Context, msgs []client.EyrieMessage, _ cli
 	return f.responses[key], nil
 }
 
-func (f *fakeProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (f *fakeProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
 	return nil, errors.New("not implemented")
 }
 
 func TestRun_AllPass(t *testing.T) {
 	t.Parallel()
 	cases := CanonicalCases()
-	resp := map[string]*client.EyrieResponse{
+	resp := map[string]*client.GraycodeRouterResponse{
 		"Reply with a short greeting.":                            {Content: "Hello!"},
 		"What is 2 + 2? Reply with just the number.":              {Content: "4"},
 		"What is the weather in Paris? Use the get_weather tool.": {ToolCalls: []client.ToolCall{{Name: "get_weather", Arguments: map[string]any{"city": "Paris"}}}},
@@ -60,7 +60,7 @@ func TestRun_AllPass(t *testing.T) {
 func TestRun_DetectsFailures(t *testing.T) {
 	t.Parallel()
 	cases := CanonicalCases()
-	resp := map[string]*client.EyrieResponse{
+	resp := map[string]*client.GraycodeRouterResponse{
 		"Reply with a short greeting.":               {Content: ""},     // empty → fail
 		"What is 2 + 2? Reply with just the number.": {Content: "five"}, // missing "4" → fail
 		// tool case: wrong tool + missing arg → fail
@@ -83,11 +83,11 @@ func TestRun_ToolMissingRequiredArg(t *testing.T) {
 	t.Parallel()
 	cases := []Case{{
 		ID:       "tool",
-		Messages: []client.EyrieMessage{{Role: "user", Content: "go"}},
+		Messages: []client.GraycodeRouterMessage{{Role: "user", Content: "go"}},
 		Expect:   Expectation{ToolName: "get_weather", RequiredArgs: []string{"city"}},
 	}}
 	// Right tool, but missing the "city" arg.
-	p := &fakeProvider{name: "fake", responses: map[string]*client.EyrieResponse{
+	p := &fakeProvider{name: "fake", responses: map[string]*client.GraycodeRouterResponse{
 		"go": {ToolCalls: []client.ToolCall{{Name: "get_weather", Arguments: map[string]any{}}}},
 	}}
 	rep := Run(context.Background(), p, cases)
@@ -103,7 +103,7 @@ func TestRun_ProviderError(t *testing.T) {
 	t.Parallel()
 	cases := []Case{{
 		ID:       "boom",
-		Messages: []client.EyrieMessage{{Role: "user", Content: "x"}},
+		Messages: []client.GraycodeRouterMessage{{Role: "user", Content: "x"}},
 		Expect:   Expectation{NonEmptyContent: true},
 	}}
 	p := &fakeProvider{name: "fake", errs: map[string]error{"x": errors.New("503 unavailable")}}

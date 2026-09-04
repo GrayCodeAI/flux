@@ -5,14 +5,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog"
 )
 
 // ServiceName is the OS secret-store service under which credentials are
-// filed. It defaults to "eyrie" (host-neutral). Embedders must call
+// filed. It defaults to "graycode-router" (host-neutral). Embedders must call
 // SetServiceName before any credential read or write to store secrets under
 // their own service; changing it later orphans previously stored secrets.
-var ServiceName = "eyrie"
+var ServiceName = "graycode-router"
 
 // SetServiceName overrides the secret-store service name. Call it once at
 // startup, before the first credential read or write; changing it later

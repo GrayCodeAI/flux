@@ -47,13 +47,13 @@ func TestResponseHealth_DiagnosticAndErr(t *testing.T) {
 
 func TestHealthFromResponse(t *testing.T) {
 	t.Parallel()
-	if got := healthFromResponse(&EyrieResponse{Content: "hello"}, false); got != ResponseOK {
+	if got := healthFromResponse(&GraycodeRouterResponse{Content: "hello"}, false); got != ResponseOK {
 		t.Errorf("got %q, want ok", got)
 	}
-	if got := healthFromResponse(&EyrieResponse{}, true); got != ResponseErrorOnlyReasoning {
+	if got := healthFromResponse(&GraycodeRouterResponse{}, true); got != ResponseErrorOnlyReasoning {
 		t.Errorf("got %q, want error_only_reasoning", got)
 	}
-	if got := healthFromResponse(&EyrieResponse{}, false); got != ResponseEmpty {
+	if got := healthFromResponse(&GraycodeRouterResponse{}, false); got != ResponseEmpty {
 		t.Errorf("got %q, want empty", got)
 	}
 	if got := healthFromResponse(nil, false); got != ResponseEmpty {

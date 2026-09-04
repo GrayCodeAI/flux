@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog/concentrate"
-	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
+	"github.com/GrayCodeAI/graycode-router/catalog/concentrate"
+	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
+	"github.com/GrayCodeAI/graycode-router/catalog/xiaomi"
 )
 
 // Per-provider fetchers (Grok, ZAI, CanopyWave, OpenCodeGo, Kimi, Xiaomi,
@@ -232,7 +232,7 @@ func FetchOpenRouter(env map[string]string) ([]Entry, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -352,7 +352,7 @@ func FetchAnthropic(env map[string]string) ([]Entry, error) {
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -473,7 +473,7 @@ func FetchGemini(env map[string]string) ([]Entry, error) {
 		return nil, fmt.Errorf("live: create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -541,7 +541,7 @@ func FetchOllama(env map[string]string) ([]Entry, error) {
 		return nil, fmt.Errorf("live: create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -610,7 +610,7 @@ func enrichOllamaEntry(root string, entry *Entry) {
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -824,7 +824,7 @@ func FetchConcentrate(env map[string]string) ([]Entry, error) {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -1011,7 +1011,7 @@ func fetchConcentratePricing(ctx context.Context, baseURL, apiKey string, entrie
 		}
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+		req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 		resp, err := httpClient.Do(req)
 		if err != nil {

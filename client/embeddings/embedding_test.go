@@ -3,7 +3,7 @@ package embeddings
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 func TestDefaultEmbeddingParamsCohere(t *testing.T) {
@@ -98,7 +98,7 @@ func TestEmbeddingResponseStruct(t *testing.T) {
 	resp := &EmbeddingResponse{
 		Embeddings: [][]float32{{0.1, 0.2}},
 		Model:      "test",
-		Usage:      &core.EyrieUsage{PromptTokens: 5, TotalTokens: 5},
+		Usage:      &core.GraycodeRouterUsage{PromptTokens: 5, TotalTokens: 5},
 	}
 	if resp.Model != "test" {
 		t.Errorf("Model = %q, want %q", resp.Model, "test")

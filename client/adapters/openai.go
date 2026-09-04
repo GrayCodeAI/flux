@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 const (
@@ -191,10 +191,10 @@ func openAIToolChoice(tc *core.ToolChoiceOption) interface{} {
 // buildRequestBase builds an OpenAI-compatible request body.
 // When compat is non-nil, MaxTokensField and SupportsUsageInStreaming overrides are applied.
 // For providers with RequiresReasoningPassback set, the reasoning_content captured from
-// a prior assistant turn (core.EyrieMessage.Thinking) is forwarded back into assistant
+// a prior assistant turn (core.GraycodeRouterMessage.Thinking) is forwarded back into assistant
 // messages. DeepSeek requires this whenever that turn performed a tool call, otherwise
 // it returns HTTP 400. For all other providers reasoning_content is not transmitted.
-func buildRequestBase(messages []core.EyrieMessage, opts core.ChatOptions, stream bool, compat *OpenAICompatConfig) openaiRequest {
+func buildRequestBase(messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool, compat *OpenAICompatConfig) openaiRequest {
 	var msgs []map[string]interface{}
 	for _, m := range messages {
 		if len(m.ToolResults) > 0 {
@@ -452,7 +452,7 @@ func buildRequestBase(messages []core.EyrieMessage, opts core.ChatOptions, strea
 	return req
 }
 
-func (c *OpenAIClient) buildRequest(messages []core.EyrieMessage, opts core.ChatOptions, stream bool) openaiRequest {
+func (c *OpenAIClient) buildRequest(messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool) openaiRequest {
 	return buildRequestBase(messages, opts, stream, c.compat)
 }
 
@@ -462,23 +462,23 @@ func (c *OpenAIClient) buildRequest(messages []core.EyrieMessage, opts core.Chat
 // above; this helper is just the request-construction dedup. If
 // stream is true, the request gets the `Accept: text/event-stream`
 // header.
-func (c *OpenAIClient) buildOpenAIRequest(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions, stream bool) (*http.Request, []byte, error) {
+func (c *OpenAIClient) buildOpenAIRequest(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool) (*http.Request, []byte, error) {
 	messages = core.SanitizeMessages(messages)
 	if opts.Model == "" {
-		return nil, nil, fmt.Errorf("eyrie: model is required for %s", c.providerName)
+		return nil, nil, fmt.Errorf("graycode-router: model is required for %s", c.providerName)
 	}
 
 	reqBody := c.buildRequest(messages, opts, stream)
 	body, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, nil, fmt.Errorf("eyrie: marshal openai request: %w", err)
+		return nil, nil, fmt.Errorf("graycode-router: marshal openai request: %w", err)
 	}
 	if len(body) > maxOpenAIRequestSize {
-		return nil, nil, fmt.Errorf("eyrie: request size %d bytes exceeds OpenAI limit of %d bytes", len(body), maxOpenAIRequestSize)
+		return nil, nil, fmt.Errorf("graycode-router: request size %d bytes exceeds OpenAI limit of %d bytes", len(body), maxOpenAIRequestSize)
 	}
 	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return nil, nil, fmt.Errorf("eyrie: failed to create request: %w", err)
+		return nil, nil, fmt.Errorf("graycode-router: failed to create request: %w", err)
 	}
 	c.setHeaders(req)
 	if stream {
@@ -489,7 +489,7 @@ func (c *OpenAIClient) buildOpenAIRequest(ctx context.Context, messages []core.E
 }
 
 // Chat sends a non-streaming request.
-func (c *OpenAIClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *OpenAIClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	req, body, err := c.buildOpenAIRequest(ctx, messages, opts, false)
 	if err != nil {
 		return nil, err
@@ -499,7 +499,7 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 
 	resp, err := c.doRequestWithMimoAuthRetry(ctx, req, body)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: %s request failed: %w", c.providerName, err)
+		return nil, fmt.Errorf("graycode-router: %s request failed: %w", c.providerName, err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -516,10 +516,10 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 
 	var or openaiResponse
 	if err := json.NewDecoder(resp.Body).Decode(&or); err != nil {
-		return nil, fmt.Errorf("eyrie: failed to decode %s response: %w", c.providerName, err)
+		return nil, fmt.Errorf("graycode-router: failed to decode %s response: %w", c.providerName, err)
 	}
 
-	result := &core.EyrieResponse{FinishReason: "unknown", RequestID: requestID}
+	result := &core.GraycodeRouterResponse{FinishReason: "unknown", RequestID: requestID}
 	if len(or.Choices) > 0 {
 		ch := or.Choices[0]
 		result.Content = ch.Message.Content
@@ -534,7 +534,7 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 		}
 	}
 	if or.Usage != nil {
-		result.Usage = &core.EyrieUsage{
+		result.Usage = &core.GraycodeRouterUsage{
 			PromptTokens:     or.Usage.PromptTokens,
 			CompletionTokens: or.Usage.CompletionTokens,
 			TotalTokens:      or.Usage.TotalTokens,
@@ -552,7 +552,7 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []core.EyrieMessage, o
 }
 
 // StreamChat sends a streaming request.
-func (c *OpenAIClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *OpenAIClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	req, body, err := c.buildOpenAIRequest(ctx, messages, opts, true)
 	if err != nil {
 		return nil, err
@@ -560,7 +560,7 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messages []core.EyrieMess
 
 	resp, err := c.doRequestWithMimoAuthRetry(ctx, req, body)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: %s stream request failed: %w", c.providerName, err)
+		return nil, fmt.Errorf("graycode-router: %s stream request failed: %w", c.providerName, err)
 	}
 
 	requestID := resp.Header.Get("X-Request-Id")
@@ -582,34 +582,34 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messages []core.EyrieMess
 func (c *OpenAIClient) Ping(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/models", nil)
 	if err != nil {
-		return fmt.Errorf("eyrie: %s ping failed: %w", c.providerName, err)
+		return fmt.Errorf("graycode-router: %s ping failed: %w", c.providerName, err)
 	}
 	c.setHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("eyrie: %s ping failed: %w", c.providerName, err)
+		return fmt.Errorf("graycode-router: %s ping failed: %w", c.providerName, err)
 	}
 	if c.useMimoAuth && resp.StatusCode == http.StatusUnauthorized {
 		_ = resp.Body.Close()
 		req2, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/models", nil)
 		if err != nil {
-			return fmt.Errorf("eyrie: %s ping failed: %w", c.providerName, err)
+			return fmt.Errorf("graycode-router: %s ping failed: %w", c.providerName, err)
 		}
 		c.setBearerHeaders(req2)
 		resp, err = c.httpClient.Do(req2)
 		if err != nil {
-			return fmt.Errorf("eyrie: %s ping failed: %w", c.providerName, err)
+			return fmt.Errorf("graycode-router: %s ping failed: %w", c.providerName, err)
 		}
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode == 401 {
-		return fmt.Errorf("eyrie: %s: invalid API key", c.providerName)
+		return fmt.Errorf("graycode-router: %s: invalid API key", c.providerName)
 	}
 	return nil
 }
 
 // BuildRequestBase creates the provider-neutral OpenAI-compatible wire body.
-func BuildRequestBase(messages []core.EyrieMessage, opts core.ChatOptions, stream bool, compat *OpenAICompatConfig) OpenAIRequest {
+func BuildRequestBase(messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool, compat *OpenAICompatConfig) OpenAIRequest {
 	return buildRequestBase(messages, opts, stream, compat)
 }
 
@@ -619,6 +619,6 @@ func OpenAIToolChoice(tc *core.ToolChoiceOption) interface{} {
 }
 
 // BuildOpenAIRequest constructs a complete OpenAI-compatible HTTP request.
-func (c *OpenAIClient) BuildOpenAIRequest(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions, stream bool) (*http.Request, []byte, error) {
+func (c *OpenAIClient) BuildOpenAIRequest(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions, stream bool) (*http.Request, []byte, error) {
 	return c.buildOpenAIRequest(ctx, messages, opts, stream)
 }

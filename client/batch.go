@@ -13,16 +13,16 @@ import (
 
 // BatchRequest represents a single request in a batch.
 type BatchRequest struct {
-	CustomID string         `json:"custom_id"`
-	Messages []EyrieMessage `json:"messages"`
-	Options  ChatOptions    `json:"options"`
+	CustomID string                  `json:"custom_id"`
+	Messages []GraycodeRouterMessage `json:"messages"`
+	Options  ChatOptions             `json:"options"`
 }
 
 // BatchResponse represents a single response from a batch.
 type BatchResponse struct {
-	CustomID string         `json:"custom_id"`
-	Response *EyrieResponse `json:"response,omitempty"`
-	Error    string         `json:"error,omitempty"`
+	CustomID string                  `json:"custom_id"`
+	Response *GraycodeRouterResponse `json:"response,omitempty"`
+	Error    string                  `json:"error,omitempty"`
 }
 
 // BatchResult holds the overall batch operation result.
@@ -55,7 +55,7 @@ func NewBatchClient(apiKey, baseURL string) *BatchClient {
 // Submit sends a batch of requests. Returns the batch ID for polling.
 func (bc *BatchClient) Submit(ctx context.Context, requests []BatchRequest) (string, error) {
 	if len(requests) == 0 {
-		return "", fmt.Errorf("eyrie: batch requires at least one request")
+		return "", fmt.Errorf("graycode-router: batch requires at least one request")
 	}
 
 	type batchReqItem struct {
@@ -108,7 +108,7 @@ func (bc *BatchClient) Submit(ctx context.Context, requests []BatchRequest) (str
 	for attempt := 0; attempt < 3; attempt++ {
 		resp, err = bc.httpClient.Do(req)
 		if err != nil {
-			return "", fmt.Errorf("eyrie: batch submit failed: %w", err)
+			return "", fmt.Errorf("graycode-router: batch submit failed: %w", err)
 		}
 		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 			_ = resp.Body.Close()
@@ -125,7 +125,7 @@ func (bc *BatchClient) Submit(ctx context.Context, requests []BatchRequest) (str
 
 	if resp.StatusCode != 200 {
 		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return "", fmt.Errorf("eyrie: batch API error %d: %s", resp.StatusCode, string(errBody))
+		return "", fmt.Errorf("graycode-router: batch API error %d: %s", resp.StatusCode, string(errBody))
 	}
 
 	var result struct {
@@ -149,7 +149,7 @@ func (bc *BatchClient) Poll(ctx context.Context, batchID string) (*BatchResult, 
 
 	resp, err := bc.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: batch poll failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: batch poll failed: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {

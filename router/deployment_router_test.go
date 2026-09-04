@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 type deploymentMockProvider struct {
@@ -14,32 +14,32 @@ type deploymentMockProvider struct {
 	err        error
 	streamErr  error
 	lastModel  string
-	lastTools  []client.EyrieTool
+	lastTools  []client.GraycodeRouterTool
 	streamDone bool
 	callCount  int
 }
 
-func (m *deploymentMockProvider) Chat(_ context.Context, _ []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error) {
+func (m *deploymentMockProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, opts client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	m.lastModel = opts.Model
 	m.lastTools = opts.Tools
 	m.callCount++
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &client.EyrieResponse{Content: "from " + m.name}, nil
+	return &client.GraycodeRouterResponse{Content: "from " + m.name}, nil
 }
 
-func (m *deploymentMockProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, opts client.ChatOptions) (*client.StreamResult, error) {
+func (m *deploymentMockProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, opts client.ChatOptions) (*client.StreamResult, error) {
 	m.lastModel = opts.Model
 	if m.err != nil {
 		return nil, m.err
 	}
-	ch := make(chan client.EyrieStreamEvent, 2)
+	ch := make(chan client.GraycodeRouterStreamEvent, 2)
 	if m.streamErr != nil {
-		ch <- client.EyrieStreamEvent{Type: "error", Error: m.streamErr.Error()}
+		ch <- client.GraycodeRouterStreamEvent{Type: "error", Error: m.streamErr.Error()}
 	} else {
-		ch <- client.EyrieStreamEvent{Type: "content", Content: "from " + m.name}
-		ch <- client.EyrieStreamEvent{Type: "done"}
+		ch <- client.GraycodeRouterStreamEvent{Type: "content", Content: "from " + m.name}
+		ch <- client.GraycodeRouterStreamEvent{Type: "done"}
 		m.streamDone = true
 	}
 	close(ch)
@@ -73,7 +73,7 @@ func TestDeploymentRouterRewritesCanonicalModelToNativeModel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	resp, err := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestDeploymentRouterFallsBackAcrossStages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	resp, err := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestDeploymentRouterFallsBackOnInsufficientCredits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "moonshotai/kimi-k2.6"})
+	resp, err := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "moonshotai/kimi-k2.6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestDeploymentRouterNonTransientDoesNotFallback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	_, err = r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err == nil {
 		t.Fatal("expected auth error")
 	}
@@ -235,7 +235,7 @@ func TestDeploymentRouterMaterializesAzureModelMapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "openai/gpt-4o"})
+	_, err = r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "openai/gpt-4o"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestDeploymentRouterModelMappingOverridesCatalogOffering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	_, err = r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +291,7 @@ func TestDeploymentRouterStreamFallbackBeforeOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stream, err := r.StreamChat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	stream, err := r.StreamChat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestDeploymentRouterNativeMimoUsesConfiguredXiaomiDeployment(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "mimo-v2.5-pro"})
+	_, err = r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "mimo-v2.5-pro"})
 	if err != nil {
 		t.Fatalf("chat: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestDeploymentRouterRetriesPreferDifferentEndpoint(t *testing.T) {
 	}
 
 	resp, err := r.Chat(context.Background(),
-		[]client.EyrieMessage{{Role: "user", Content: "hi"}},
+		[]client.GraycodeRouterMessage{{Role: "user", Content: "hi"}},
 		client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)

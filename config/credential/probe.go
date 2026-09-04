@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	"github.com/GrayCodeAI/eyrie/internal/probehttp"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/xiaomi"
+	"github.com/GrayCodeAI/graycode-router/internal/probehttp"
 )
 
 const credentialProbeTimeout = 8 * time.Second

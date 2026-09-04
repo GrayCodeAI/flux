@@ -1,3 +1,3 @@
-module github.com/GrayCodeAI/eyrie/sdk/go
+module github.com/GrayCodeAI/graycode-router/sdk/go
 
 go 1.26.3

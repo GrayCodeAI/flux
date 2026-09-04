@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/tools"
+	"github.com/GrayCodeAI/graycode-router/tools"
 )
 
 // TestToolsParity pins the wire schema of tools.ToolCall and tools.ToolResult

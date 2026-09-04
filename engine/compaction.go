@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
+	"github.com/GrayCodeAI/graycode-router/runtime"
 )
 
 // SupportsNativeCompaction reports whether the selection and configured

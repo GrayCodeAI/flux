@@ -63,7 +63,7 @@ func TestAnthropic_ChatVsStream_SameBody(t *testing.T) {
 	defer srv.Close()
 
 	c := NewAnthropicClient("test-key", srv.URL)
-	messages := []EyrieMessage{{Role: "user", Content: "hi"}}
+	messages := []GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	temp := 0.7
 	topP := 0.9
 	topK := 40
@@ -118,7 +118,7 @@ func TestAnthropic_BuildRequest_ModelRequired(t *testing.T) {
 	c := NewAnthropicClient("test-key", "http://localhost:0")
 	_, _, err := c.BuildAnthropicRequest(
 		context.Background(),
-		[]EyrieMessage{{Role: "user", Content: "hi"}},
+		[]GraycodeRouterMessage{{Role: "user", Content: "hi"}},
 		ChatOptions{}, // no Model
 		false,
 	)
@@ -135,7 +135,7 @@ func TestAnthropic_BuildRequest_ModelRequired(t *testing.T) {
 func TestAnthropic_BuildRequest_StreamSetsAccept(t *testing.T) {
 	t.Parallel()
 	c := NewAnthropicClient("test-key", "http://localhost:0")
-	messages := []EyrieMessage{{Role: "user", Content: "hi"}}
+	messages := []GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	opts := ChatOptions{Model: "claude-test"}
 
 	chatReq, _, err := c.BuildAnthropicRequest(context.Background(), messages, opts, false)
@@ -162,7 +162,7 @@ func TestAnthropic_BuildRequest_GetBody(t *testing.T) {
 	c := NewAnthropicClient("test-key", "http://localhost:0")
 	req, body, err := c.BuildAnthropicRequest(
 		context.Background(),
-		[]EyrieMessage{{Role: "user", Content: "hi"}},
+		[]GraycodeRouterMessage{{Role: "user", Content: "hi"}},
 		ChatOptions{Model: "claude-test"},
 		false,
 	)
@@ -195,7 +195,7 @@ func TestAnthropic_BuildRequest_SystemPromptMerging(t *testing.T) {
 	defer srv.Close()
 
 	c := NewAnthropicClient("test-key", srv.URL)
-	messages := []EyrieMessage{
+	messages := []GraycodeRouterMessage{
 		{Role: "system", Content: "from-message"},
 		{Role: "user", Content: "hi"},
 	}
@@ -244,7 +244,7 @@ func TestAnthropic_BuildRequest_SizeLimit(t *testing.T) {
 	c := NewAnthropicClient("test-key", "http://localhost:0")
 	// Build a single huge message that pushes the body over 32 MB.
 	big := strings.Repeat("x", 33*1024*1024) // 33 MB
-	messages := []EyrieMessage{{Role: "user", Content: big}}
+	messages := []GraycodeRouterMessage{{Role: "user", Content: big}}
 	_, _, err := c.BuildAnthropicRequest(context.Background(), messages,
 		ChatOptions{Model: "claude-test"}, false)
 	if err == nil {
@@ -284,7 +284,7 @@ func TestOpenAI_ChatVsStream_SameBody(t *testing.T) {
 	defer srv.Close()
 
 	c := NewOpenAIClient("test-key", srv.URL, &OpenAICompatConfig{})
-	messages := []EyrieMessage{{Role: "user", Content: "hi"}}
+	messages := []GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	temp := 0.7
 	topP := 0.9
 	opts := ChatOptions{
@@ -318,7 +318,7 @@ func TestOpenAI_ChatVsStream_SameBody(t *testing.T) {
 func TestOpenAI_BuildRequest_StreamSetsAccept(t *testing.T) {
 	t.Parallel()
 	c := NewOpenAIClient("test-key", "http://localhost:0", &OpenAICompatConfig{})
-	messages := []EyrieMessage{{Role: "user", Content: "hi"}}
+	messages := []GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	opts := ChatOptions{Model: "gpt-test"}
 
 	chatReq, _, err := c.BuildOpenAIRequest(context.Background(), messages, opts, false)

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/opengateway"
+	"github.com/GrayCodeAI/graycode-router/catalog/opengateway"
 )
 
 // opengatewayModel is the subset of the public GET /v1/models OpenGateway object
@@ -48,7 +48,7 @@ func FetchOpenGateway(env map[string]string) ([]Entry, error) {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -68,7 +68,7 @@ func FetchOpenGateway(env map[string]string) ([]Entry, error) {
 	return opengatewayEntries(payload.Data), nil
 }
 
-// opengatewayEntries maps the OpenGateway model objects to eyrie Entries.
+// opengatewayEntries maps the OpenGateway model objects to graycode-router Entries.
 func opengatewayEntries(models []opengatewayModel) []Entry {
 	var entries []Entry
 	for _, m := range models {

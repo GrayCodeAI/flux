@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
 )
 
 func appendSourceSuffix(source, suffix string) string {
@@ -102,7 +102,7 @@ func run(ctx context.Context, opts Options) (*catalog.RefreshResult, error) {
 
 	env := opts.Credentials.Env()
 	if len(env) == 0 && !opts.DisableCredentialFallback {
-		env = eyriecfg.DiscoveryCredentials(ctx).Env()
+		env = graycoderoutercfg.DiscoveryCredentials(ctx).Env()
 	}
 	if len(env) > 0 {
 		v1Catalog, enrichment := catalog.FetchLiveProviderCatalog(env)

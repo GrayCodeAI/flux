@@ -107,14 +107,14 @@ type anthropicStreamEvent struct {
 	} `json:"content_block,omitempty"`
 }
 
-// ProcessAnthropicStream converts Anthropic SSE events to EyrieStreamEvents.
+// ProcessAnthropicStream converts Anthropic SSE events to GraycodeRouterStreamEvents.
 // Handles text, tool_use (with input_json_delta), and thinking blocks.
-func ProcessAnthropicStream(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger) <-chan EyrieStreamEvent {
+func ProcessAnthropicStream(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger) <-chan GraycodeRouterStreamEvent {
 	return ProcessAnthropicStreamWithOpts(ctx, sseEvents, logger, time.Now())
 }
 
-func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger, start time.Time) <-chan EyrieStreamEvent {
-	ch := make(chan EyrieStreamEvent, StreamChannelBuffer)
+func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger, start time.Time) <-chan GraycodeRouterStreamEvent {
+	ch := make(chan GraycodeRouterStreamEvent, StreamChannelBuffer)
 	go func() {
 		defer close(ch)
 
@@ -139,7 +139,7 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 				if !ok {
 					// Stream closed — Emit partial tool call as error if incomplete
 					if currentTool != nil {
-						Emit(ctx, ch, EyrieStreamEvent{
+						Emit(ctx, ch, GraycodeRouterStreamEvent{
 							Type:  "error",
 							Error: fmt.Sprintf("stream closed with incomplete tool call: %s", currentTool.name),
 						})
@@ -149,7 +149,7 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 				}
 				// Propagate SSE-level errors
 				if evt.Event == "error" {
-					Emit(ctx, ch, EyrieStreamEvent{Type: "error", Error: evt.Data})
+					Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "error", Error: evt.Data})
 					return
 				}
 				data := strings.TrimSpace(evt.Data)
@@ -182,15 +182,15 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 					case "text_delta":
 						if ae.Delta.Text != "" {
 							if strings.Contains(blockTypes[ae.Index], "thinking") {
-								Emit(ctx, ch, EyrieStreamEvent{Type: "thinking", Thinking: ae.Delta.Text})
+								Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "thinking", Thinking: ae.Delta.Text})
 							} else {
 								// TTFT: record and Emit on the first content token.
 								if !ttftEmitted {
 									ttftEmitted = true
 									ttftMs = int(time.Since(start) / time.Millisecond)
-									Emit(ctx, ch, EyrieStreamEvent{Type: "ttft", TTFT: ttftMs})
+									Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "ttft", TTFT: ttftMs})
 								}
-								Emit(ctx, ch, EyrieStreamEvent{Type: "content", Content: ae.Delta.Text})
+								Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "content", Content: ae.Delta.Text})
 							}
 						}
 					case "input_json_delta":
@@ -199,13 +199,13 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 							if !ttftEmitted {
 								ttftEmitted = true
 								ttftMs = int(time.Since(start) / time.Millisecond)
-								Emit(ctx, ch, EyrieStreamEvent{Type: "ttft", TTFT: ttftMs})
+								Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "ttft", TTFT: ttftMs})
 							}
 							currentTool.jsonBuf.WriteString(ae.Delta.PartialJSON)
 						}
 					case "thinking_delta":
 						if ae.Delta.Text != "" {
-							Emit(ctx, ch, EyrieStreamEvent{Type: "thinking", Thinking: ae.Delta.Text})
+							Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "thinking", Thinking: ae.Delta.Text})
 						}
 					}
 
@@ -216,12 +216,12 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 						var args map[string]interface{}
 						if err := json.Unmarshal([]byte(rawJSON), &args); err != nil {
 							logger.Warn("invalid tool call JSON accumulated", "tool", currentTool.name, "error", err)
-							Emit(ctx, ch, EyrieStreamEvent{
+							Emit(ctx, ch, GraycodeRouterStreamEvent{
 								Type:  "error",
 								Error: fmt.Sprintf("invalid tool call JSON for %s: %v", currentTool.name, err),
 							})
 						} else {
-							Emit(ctx, ch, EyrieStreamEvent{
+							Emit(ctx, ch, GraycodeRouterStreamEvent{
 								Type:     "tool_call",
 								ToolCall: &ToolCall{ID: currentTool.id, Name: currentTool.name, Arguments: args},
 							})
@@ -230,7 +230,7 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 					}
 
 				case "message_stop":
-					Emit(ctx, ch, EyrieStreamEvent{Type: "done", StopReason: stopReason, TTFTms: ttftMs})
+					Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "done", StopReason: stopReason, TTFTms: ttftMs})
 					return
 
 				case "message_delta":
@@ -250,9 +250,9 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 						stopReason = md.Delta.StopReason
 					}
 					if md.Usage != nil && md.Usage.OutputTokens > 0 {
-						Emit(ctx, ch, EyrieStreamEvent{
+						Emit(ctx, ch, GraycodeRouterStreamEvent{
 							Type: "usage",
-							Usage: &EyrieUsage{
+							Usage: &GraycodeRouterUsage{
 								CompletionTokens: md.Usage.OutputTokens,
 							},
 						})
@@ -272,16 +272,16 @@ func ProcessAnthropicStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEve
 						logger.Warn("stream: failed to parse anthropic message_start", "error", err)
 					}
 					if ms.Message.Usage.InputTokens > 0 {
-						Emit(ctx, ch, EyrieStreamEvent{
+						Emit(ctx, ch, GraycodeRouterStreamEvent{
 							Type: "usage",
-							Usage: &EyrieUsage{
+							Usage: &GraycodeRouterUsage{
 								PromptTokens: ms.Message.Usage.InputTokens,
 							},
 						})
 					}
 
 				case "error":
-					Emit(ctx, ch, EyrieStreamEvent{Type: "error", Error: data})
+					Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "error", Error: data})
 					return
 				}
 			}
@@ -297,7 +297,7 @@ type openaiStreamChoice struct {
 		Content string `json:"content,omitempty"`
 		// ReasoningContent carries the model's chain-of-thought on OpenAI-compatible
 		// providers that expose it as a separate channel (DeepSeek, Qwen, MiniMax-M2,
-		// some OpenRouter/z.ai routes). Without this field eyrie would drop it.
+		// some OpenRouter/z.ai routes). Without this field graycode-router would drop it.
 		ReasoningContent string `json:"reasoning_content,omitempty"`
 		Role             string `json:"role,omitempty"`
 		ToolCalls        []struct {
@@ -393,16 +393,16 @@ func partialSuffixLen(s, tag string) int {
 	return 0
 }
 
-// ProcessOpenAIStream converts OpenAI SSE events to EyrieStreamEvents.
+// ProcessOpenAIStream converts OpenAI SSE events to GraycodeRouterStreamEvents.
 // Handles text deltas and tool call streaming by index.
 // Also instruments TTFT (time-to-first-token) and runs a RepeatDetector to
 // synthesise a finish_reason:"repeat" event when the stream loops.
-func ProcessOpenAIStream(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger) <-chan EyrieStreamEvent {
+func ProcessOpenAIStream(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger) <-chan GraycodeRouterStreamEvent {
 	return ProcessOpenAIStreamWithOpts(ctx, sseEvents, logger, DefaultRepeatDetector(), time.Now())
 }
 
-func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger, repeat *RepeatDetector, start time.Time) <-chan EyrieStreamEvent {
-	ch := make(chan EyrieStreamEvent, StreamChannelBuffer)
+func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent, logger *slog.Logger, repeat *RepeatDetector, start time.Time) <-chan GraycodeRouterStreamEvent {
+	ch := make(chan GraycodeRouterStreamEvent, StreamChannelBuffer)
 	go func() {
 		defer close(ch)
 
@@ -445,7 +445,7 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 					// the caller sees something rather than a nil map.
 					args = map[string]interface{}{"_raw": t.argsBuf.String()}
 				}
-				Emit(ctx, ch, EyrieStreamEvent{
+				Emit(ctx, ch, GraycodeRouterStreamEvent{
 					Type:     "tool_call",
 					ToolCall: &ToolCall{ID: t.id, Name: t.name, Arguments: args},
 				})
@@ -468,9 +468,9 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 				StreamEnded:  true,
 			})
 			if d := health.Diagnostic(); d != "" {
-				Emit(ctx, ch, EyrieStreamEvent{Type: "error", Error: d, Warning: d})
+				Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "error", Error: d, Warning: d})
 			}
-			Emit(ctx, ch, EyrieStreamEvent{Type: "done", StopReason: stopReason, TTFTms: ttftMs})
+			Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "done", StopReason: stopReason, TTFTms: ttftMs})
 		}
 
 		for {
@@ -484,7 +484,7 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 				}
 				// Propagate SSE-level errors
 				if evt.Event == "error" {
-					Emit(ctx, ch, EyrieStreamEvent{Type: "error", Error: evt.Data})
+					Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "error", Error: evt.Data})
 					return
 				}
 				data := strings.TrimSpace(evt.Data)
@@ -501,9 +501,9 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 
 				// Emit usage if present (final chunk with stream_options.include_usage)
 				if oe.Usage != nil {
-					Emit(ctx, ch, EyrieStreamEvent{
+					Emit(ctx, ch, GraycodeRouterStreamEvent{
 						Type: "usage",
-						Usage: &EyrieUsage{
+						Usage: &GraycodeRouterUsage{
 							PromptTokens:     oe.Usage.PromptTokens,
 							CompletionTokens: oe.Usage.CompletionTokens,
 							TotalTokens:      oe.Usage.TotalTokens,
@@ -520,7 +520,7 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 				// route it to a thinking event so it never lands in the answer.
 				if choice.Delta.ReasoningContent != "" {
 					sawReasoning = true
-					Emit(ctx, ch, EyrieStreamEvent{Type: "thinking", Thinking: choice.Delta.ReasoningContent})
+					Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "thinking", Thinking: choice.Delta.ReasoningContent})
 				}
 
 				// Text content. Split out any inline <think>...</think> reasoning
@@ -529,17 +529,17 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 					content, thinking := splitter.feed(choice.Delta.Content)
 					if thinking != "" {
 						sawReasoning = true
-						Emit(ctx, ch, EyrieStreamEvent{Type: "thinking", Thinking: thinking})
+						Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "thinking", Thinking: thinking})
 					}
 					if content != "" {
 						// TTFT: record and Emit a dedicated event on the first token.
 						if !ttftEmitted {
 							ttftEmitted = true
 							ttftMs = int(time.Since(start) / time.Millisecond)
-							Emit(ctx, ch, EyrieStreamEvent{Type: "ttft", TTFT: ttftMs})
+							Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "ttft", TTFT: ttftMs})
 						}
 						contentLen += len(content)
-						Emit(ctx, ch, EyrieStreamEvent{Type: "content", Content: content})
+						Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "content", Content: content})
 						// Repeat detection: abort if stream is looping.
 						if repeat != nil {
 							repeat.Feed(content)
@@ -558,7 +558,7 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 					if !ttftEmitted && tc.Function.Arguments != "" {
 						ttftEmitted = true
 						ttftMs = int(time.Since(start) / time.Millisecond)
-						Emit(ctx, ch, EyrieStreamEvent{Type: "ttft", TTFT: ttftMs})
+						Emit(ctx, ch, GraycodeRouterStreamEvent{Type: "ttft", TTFT: ttftMs})
 					}
 					t, ok := tools[tc.Index]
 					if !ok {
@@ -587,7 +587,7 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 	return ch
 }
 
-func Emit(ctx context.Context, ch chan<- EyrieStreamEvent, evt EyrieStreamEvent) {
+func Emit(ctx context.Context, ch chan<- GraycodeRouterStreamEvent, evt GraycodeRouterStreamEvent) {
 	select {
 	case ch <- evt:
 	case <-ctx.Done():

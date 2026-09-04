@@ -17,7 +17,7 @@ var (
 	tokenizerErr  error
 )
 
-// estimateTextTokens uses a lightweight character-based heuristic. Eyrie needs
+// estimateTextTokens uses a lightweight character-based heuristic. GraycodeRouter needs
 // cheap local budgeting, not shared cross-repo token infrastructure.
 func estimateTextTokens(text string) int {
 	if count, ok := preciseTokenCount(text); ok {

@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 const (
@@ -64,9 +64,9 @@ func NewBedrockClient(accessKeyID, secretAccessKey, sessionToken, region string)
 
 func (c *BedrockClient) Name() string { return "anthropic-bedrock" }
 
-func (c *BedrockClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *BedrockClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for bedrock")
+		return nil, fmt.Errorf("graycode-router: model is required for bedrock")
 	}
 	body, err := c.buildBody(messages, opts)
 	if err != nil {
@@ -74,7 +74,7 @@ func (c *BedrockClient) Chat(ctx context.Context, messages []core.EyrieMessage, 
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.modelURL(opts.Model), bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: bedrock request creation failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: bedrock request creation failed: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
@@ -85,7 +85,7 @@ func (c *BedrockClient) Chat(ctx context.Context, messages []core.EyrieMessage, 
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: bedrock request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: bedrock request failed: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -99,20 +99,20 @@ func (c *BedrockClient) Chat(ctx context.Context, messages []core.EyrieMessage, 
 
 	var ar anthropicResponse
 	if err := json.NewDecoder(resp.Body).Decode(&ar); err != nil {
-		return nil, fmt.Errorf("eyrie: bedrock decode failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: bedrock decode failed: %w", err)
 	}
-	eyrieResp := ParseAnthropicResponse(ar, resp.Header.Get("X-Amzn-Requestid"), "")
+	graycodeRouterResp := ParseAnthropicResponse(ar, resp.Header.Get("X-Amzn-Requestid"), "")
 
-	if err := core.ApplyGuardrails(ctx, eyrieResp, c.guardrails); err != nil {
+	if err := core.ApplyGuardrails(ctx, graycodeRouterResp, c.guardrails); err != nil {
 		return nil, err
 	}
 
-	return eyrieResp, nil
+	return graycodeRouterResp, nil
 }
 
-func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	if opts.Model == "" {
-		return nil, fmt.Errorf("eyrie: model is required for bedrock")
+		return nil, fmt.Errorf("graycode-router: model is required for bedrock")
 	}
 	body, err := c.buildBody(messages, opts)
 	if err != nil {
@@ -132,7 +132,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 	streamURL := strings.Replace(c.modelURL(opts.Model), "/invoke", "/invoke-with-response-stream", 1)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, streamURL, bytes.NewReader(streamBody))
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: bedrock stream request creation failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: bedrock stream request creation failed: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.amazon.eventstream")
 	req.Header.Set("Content-Type", "application/json")
@@ -143,7 +143,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 
 	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger) //nolint:bodyclose // closed in goroutine for streaming
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: bedrock stream request failed: %w", err)
+		return nil, fmt.Errorf("graycode-router: bedrock stream request failed: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		defer func() {
@@ -156,7 +156,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 	}
 
 	streamCtx, cancel := context.WithCancel(ctx)
-	ch := make(chan core.EyrieStreamEvent, 64)
+	ch := make(chan core.GraycodeRouterStreamEvent, 64)
 
 	go func() {
 		defer close(ch)
@@ -168,7 +168,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 		}()
 
 		var contentBuf strings.Builder
-		var usage *core.EyrieUsage
+		var usage *core.GraycodeRouterUsage
 		var finishReason string
 
 		// Bedrock uses Amazon EventStream format. Parse it.
@@ -192,7 +192,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 			if err != nil {
 				if err != io.EOF {
 					select {
-					case ch <- core.EyrieStreamEvent{Type: "error", Content: err.Error()}:
+					case ch <- core.GraycodeRouterStreamEvent{Type: "error", Content: err.Error()}:
 					case <-streamCtx.Done():
 					}
 				}
@@ -210,7 +210,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 				if chunk.Delta != nil && chunk.Delta.Text != "" {
 					contentBuf.WriteString(chunk.Delta.Text)
 					select {
-					case ch <- core.EyrieStreamEvent{Type: "content", Content: chunk.Delta.Text}:
+					case ch <- core.GraycodeRouterStreamEvent{Type: "content", Content: chunk.Delta.Text}:
 					case <-streamCtx.Done():
 						return
 					}
@@ -218,7 +218,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 				if chunk.Delta != nil && chunk.Delta.Type == "input_json_delta" && chunk.Delta.PartialJSON != "" {
 					// Accumulate tool input JSON
 					select {
-					case ch <- core.EyrieStreamEvent{Type: "tool_input_delta", Content: chunk.Delta.PartialJSON}:
+					case ch <- core.GraycodeRouterStreamEvent{Type: "tool_input_delta", Content: chunk.Delta.PartialJSON}:
 					case <-streamCtx.Done():
 						return
 					}
@@ -229,7 +229,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 					_ = json.Unmarshal(chunk.ContentBlock.Input, &args)
 					tc := core.ToolCall{ID: chunk.ContentBlock.ID, Name: chunk.ContentBlock.Name, Arguments: args}
 					select {
-					case ch <- core.EyrieStreamEvent{Type: "tool_call", ToolCall: &tc}:
+					case ch <- core.GraycodeRouterStreamEvent{Type: "tool_call", ToolCall: &tc}:
 					case <-streamCtx.Done():
 						return
 					}
@@ -246,7 +246,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 		}
 
 		// Send final done event with usage (matching Anthropic/OpenAI pattern)
-		doneEvt := core.EyrieStreamEvent{Type: "done", StopReason: finishReason}
+		doneEvt := core.GraycodeRouterStreamEvent{Type: "done", StopReason: finishReason}
 		if usage != nil {
 			doneEvt.Usage = usage
 		}
@@ -261,7 +261,7 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.EyrieMes
 
 func (c *BedrockClient) Ping(ctx context.Context) error {
 	if c.region == "" || c.accessKeyID == "" || len(c.secretAccessKey) == 0 {
-		return fmt.Errorf("eyrie: bedrock credentials are incomplete")
+		return fmt.Errorf("graycode-router: bedrock credentials are incomplete")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://bedrock.%s.amazonaws.com/foundation-models", c.region), nil)
 	if err != nil {
@@ -272,16 +272,16 @@ func (c *BedrockClient) Ping(ctx context.Context) error {
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("eyrie: bedrock ping failed: %w", err)
+		return fmt.Errorf("graycode-router: bedrock ping failed: %w", err)
 	}
 	_ = resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return fmt.Errorf("eyrie: bedrock: invalid credentials")
+		return fmt.Errorf("graycode-router: bedrock: invalid credentials")
 	}
 	return nil
 }
 
-func (c *BedrockClient) buildBody(messages []core.EyrieMessage, opts core.ChatOptions) ([]byte, error) {
+func (c *BedrockClient) buildBody(messages []core.GraycodeRouterMessage, opts core.ChatOptions) ([]byte, error) {
 	messages = core.SanitizeMessages(messages)
 	msgs, system := buildAnthropicMessages(messages)
 	if opts.System != "" {
@@ -325,7 +325,7 @@ func (c *BedrockClient) buildBody(messages []core.EyrieMessage, opts core.ChatOp
 		return nil, err
 	}
 	if len(data) > maxBedrockRequestSize {
-		return nil, fmt.Errorf("eyrie: request size %d bytes exceeds Bedrock limit of %d bytes", len(data), maxBedrockRequestSize)
+		return nil, fmt.Errorf("graycode-router: request size %d bytes exceeds Bedrock limit of %d bytes", len(data), maxBedrockRequestSize)
 	}
 	return data, nil
 }
@@ -351,7 +351,7 @@ type anthropicStreamChunk struct {
 		StopReason  string `json:"stop_reason,omitempty"`
 	} `json:"delta,omitempty"`
 	Message *struct {
-		Usage *core.EyrieUsage `json:"usage,omitempty"`
+		Usage *core.GraycodeRouterUsage `json:"usage,omitempty"`
 	} `json:"message,omitempty"`
 }
 
@@ -458,7 +458,7 @@ func (es *eventStreamReader) ReadEvent() (*eventStreamFrame, error) {
 
 func (c *BedrockClient) sign(req *http.Request, body []byte, now time.Time) error {
 	if c.region == "" || c.accessKeyID == "" || len(c.secretAccessKey) == 0 {
-		return fmt.Errorf("eyrie: bedrock credentials are incomplete")
+		return fmt.Errorf("graycode-router: bedrock credentials are incomplete")
 	}
 	service := "bedrock"
 	if strings.HasPrefix(req.URL.Host, "bedrock-runtime.") {
@@ -549,7 +549,7 @@ func (c *BedrockClient) ModelURL(model string) string {
 }
 
 // BuildBody creates the Anthropic-compatible Bedrock request payload.
-func (c *BedrockClient) BuildBody(messages []core.EyrieMessage, opts core.ChatOptions) ([]byte, error) {
+func (c *BedrockClient) BuildBody(messages []core.GraycodeRouterMessage, opts core.ChatOptions) ([]byte, error) {
 	return c.buildBody(messages, opts)
 }
 

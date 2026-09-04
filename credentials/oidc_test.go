@@ -87,7 +87,7 @@ func TestExchangeForAWS(t *testing.T) {
 		if got := r.Form.Get("Action"); got != "AssumeRoleWithWebIdentity" {
 			t.Errorf("Action = %q", got)
 		}
-		if got := r.Form.Get("RoleArn"); got != "arn:aws:iam::123:role/eyrie" {
+		if got := r.Form.Get("RoleArn"); got != "arn:aws:iam::123:role/graycode-router" {
 			t.Errorf("RoleArn = %q", got)
 		}
 		if got := r.Form.Get("WebIdentityToken"); got != "oidc-jwt" {
@@ -108,7 +108,7 @@ func TestExchangeForAWS(t *testing.T) {
 	defer srv.Close()
 
 	ak, sk, st, err := ExchangeForAWSWith(context.Background(),
-		"arn:aws:iam::123:role/eyrie", "us-east-1", "oidc-jwt",
+		"arn:aws:iam::123:role/graycode-router", "us-east-1", "oidc-jwt",
 		AWSEndpoints{STSURL: srv.URL})
 	if err != nil {
 		t.Fatalf("ExchangeForAWSWith() error = %v", err)

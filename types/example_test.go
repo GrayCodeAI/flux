@@ -3,7 +3,7 @@ package types_test
 import (
 	"fmt"
 
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 func ExampleCreateUserMessage() {

@@ -103,7 +103,7 @@ func TestBudgetProvider_NoKeyPassesThrough(t *testing.T) {
 
 func TestActualCostUSD(t *testing.T) {
 	t.Parallel()
-	usage := &EyrieUsage{PromptTokens: 1000, CompletionTokens: 1000}
+	usage := &GraycodeRouterUsage{PromptTokens: 1000, CompletionTokens: 1000}
 	cost := ActualCostUSD("gpt-4o", usage)
 	// 1000*2.5/1e6 + 1000*10/1e6 = 0.0025 + 0.01 = 0.0125
 	if cost < 0.0124 || cost > 0.0126 {

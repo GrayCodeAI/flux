@@ -16,21 +16,21 @@ import (
 // CoalesceKey uniquely identifies an LLM request for deduplication.
 // It hashes provider, model, messages, temperature, and max_tokens.
 type CoalesceKey struct {
-	Provider    string         `json:"provider"`
-	Model       string         `json:"model"`
-	Messages    []EyrieMessage `json:"messages"`
-	Temperature *float64       `json:"temperature,omitempty"`
-	MaxTokens   int            `json:"max_tokens,omitempty"`
+	Provider    string                  `json:"provider"`
+	Model       string                  `json:"model"`
+	Messages    []GraycodeRouterMessage `json:"messages"`
+	Temperature *float64                `json:"temperature,omitempty"`
+	MaxTokens   int                     `json:"max_tokens,omitempty"`
 }
 
 // String returns a stable hash of the coalesce key for map lookup.
 func (k CoalesceKey) String() string {
 	structured := struct {
-		Provider    string         `json:"provider"`
-		Model       string         `json:"model"`
-		Messages    []EyrieMessage `json:"messages"`
-		Temperature *float64       `json:"temperature,omitempty"`
-		MaxTokens   int            `json:"max_tokens,omitempty"`
+		Provider    string                  `json:"provider"`
+		Model       string                  `json:"model"`
+		Messages    []GraycodeRouterMessage `json:"messages"`
+		Temperature *float64                `json:"temperature,omitempty"`
+		MaxTokens   int                     `json:"max_tokens,omitempty"`
 	}{
 		Provider:    k.Provider,
 		Model:       k.Model,
@@ -55,7 +55,7 @@ type InflightRequest struct {
 	// done is closed once the result is ready
 	done chan struct{}
 	// result holds the response (set before done is closed)
-	result *EyrieResponse
+	result *GraycodeRouterResponse
 	// err holds the error (set before done is closed)
 	err error
 	// ctx is the context for this request
@@ -105,7 +105,7 @@ func NewCoalescer(ttl time.Duration) *Coalescer {
 //  3. Closing the done channel to wake all waiters
 //
 // All waiting goroutines receive the same response.
-func (c *Coalescer) Coalesce(ctx context.Context, key CoalesceKey, fn func() (*EyrieResponse, error)) (*EyrieResponse, error) {
+func (c *Coalescer) Coalesce(ctx context.Context, key CoalesceKey, fn func() (*GraycodeRouterResponse, error)) (*GraycodeRouterResponse, error) {
 	keyStr := key.String()
 
 	c.mu.Lock()
@@ -116,7 +116,7 @@ func (c *Coalescer) Coalesce(ctx context.Context, key CoalesceKey, fn func() (*E
 		if existing.waiters >= maxCoalesceWaiters {
 			existing.mu.Unlock()
 			c.mu.Unlock()
-			return nil, fmt.Errorf("eyrie: coalesce limit reached (%d waiters); retry independently", maxCoalesceWaiters)
+			return nil, fmt.Errorf("graycode-router: coalesce limit reached (%d waiters); retry independently", maxCoalesceWaiters)
 		}
 		existing.waiters++
 		existing.mu.Unlock()
@@ -139,7 +139,7 @@ func (c *Coalescer) Coalesce(ctx context.Context, key CoalesceKey, fn func() (*E
 
 	// Execute the request (this goroutine is responsible for it).
 	// Use a closure so the defer can broadcast to waiters even on panic.
-	var result *EyrieResponse
+	var result *GraycodeRouterResponse
 	var fnErr error
 	func() {
 		defer func() {
@@ -174,7 +174,7 @@ func (c *Coalescer) Coalesce(ctx context.Context, key CoalesceKey, fn func() (*E
 }
 
 // wait blocks until the inflight request completes or the provided context is cancelled.
-func (r *InflightRequest) wait(ctx context.Context) (*EyrieResponse, error) {
+func (r *InflightRequest) wait(ctx context.Context) (*GraycodeRouterResponse, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

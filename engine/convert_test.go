@@ -3,8 +3,8 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	llm "github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/client"
+	llm "github.com/GrayCodeAI/graycode-router/llm"
 )
 
 func TestToClientMessages_ReturnsMessagesUnchanged(t *testing.T) {
@@ -29,7 +29,7 @@ func TestToClientOptions_MapsBasicFields(t *testing.T) {
 		OutputSchema: "{}",
 		Limits:       llm.Limits{MaxOutputTokens: 1000},
 		Metadata:     llm.Metadata{SessionID: "sess-1", TurnID: "turn-2", UserID: "user-3", ProjectID: "proj-4"},
-		Tools:        []llm.EyrieTool{{Name: "read", Description: "read a file"}},
+		Tools:        []llm.GraycodeRouterTool{{Name: "read", Description: "read a file"}},
 	}
 	route := Route{Provider: "anthropic", Model: "claude-sonnet-4-20250514"}
 
@@ -222,7 +222,7 @@ func TestToClientOptions_NoOutputSchemaLeavesResponseFormatNil(t *testing.T) {
 func TestToClientOptions_ClonesSlicesAndMaps(t *testing.T) {
 	// Verify that mutating the request after conversion does not affect the options.
 	req := llm.GenerateRequest{
-		Tools:        []llm.EyrieTool{{Name: "a"}, {Name: "b"}},
+		Tools:        []llm.GraycodeRouterTool{{Name: "a"}, {Name: "b"}},
 		Options:      llm.GenerationOptions{StopSequences: []string{"x", "y"}},
 		OutputSchema: "orig",
 	}
@@ -246,7 +246,7 @@ func TestToClientOptions_ClonesSlicesAndMaps(t *testing.T) {
 }
 
 func TestFromClientResponse_AttachesRoute(t *testing.T) {
-	resp := &client.EyrieResponse{Content: "hello"}
+	resp := &client.GraycodeRouterResponse{Content: "hello"}
 	route := Route{Provider: "anthropic", Model: "claude-sonnet-4-20250514"}
 	out := fromClientResponse(resp, route)
 
@@ -277,7 +277,7 @@ func TestFromClientResponse_NilResponse(t *testing.T) {
 }
 
 func TestFromClientUsage_ReturnsUnchanged(t *testing.T) {
-	usage := &client.EyrieUsage{PromptTokens: 10, CompletionTokens: 20, TotalTokens: 30}
+	usage := &client.GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 20, TotalTokens: 30}
 	out := fromClientUsage(usage)
 	if out != usage {
 		t.Error("fromClientUsage should return the same pointer")

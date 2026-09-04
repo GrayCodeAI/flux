@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/config"
 )
 
-// ApplyCredentialsResult is the full eyrie response after API keys are applied:
+// ApplyCredentialsResult is the full graycode-router response after API keys are applied:
 // refreshed catalog, provider.json (deployments + routing), and paths.
 type ApplyCredentialsResult struct {
 	Catalog            *catalog.RefreshResult

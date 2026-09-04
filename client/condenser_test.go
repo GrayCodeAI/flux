@@ -12,7 +12,7 @@ func TestLLMSummarizingCondenser_NoTriggerUnderMaxSize(t *testing.T) {
 	mock.Response = "SUMMARY"
 	c := NewLLMSummarizingCondenser(mock)
 
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "system", Content: "sys"},
 		{Role: "user", Content: "one"},
 		{Role: "assistant", Content: "two"},
@@ -35,7 +35,7 @@ func TestLLMSummarizingCondenser_TriggersAndKeepsFirst(t *testing.T) {
 	mock.Response = "SUMMARY"
 	c := NewLLMSummarizingCondenser(mock)
 
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "system", Content: "keep-me-0"},
 		{Role: "user", Content: "keep-me-1"},
 		{Role: "assistant", Content: "mid-2"},
@@ -84,7 +84,7 @@ func TestLLMSummarizingCondenser_UsesWeakRole(t *testing.T) {
 	c := NewLLMSummarizingCondenser(mock,
 		WithCondenserRoles(ModelRoles{Primary: "big", Weak: "small"}))
 
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "a"},
 		{Role: "assistant", Content: "b"},
 		{Role: "user", Content: "c"},
@@ -111,7 +111,7 @@ func TestCondensingProvider_CondensesBeforeChat(t *testing.T) {
 
 	cp := NewCondensingProvider(inner, cond, CondenseOptions{MaxSize: 3, KeepFirst: 1})
 
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "system", Content: "s"},
 		{Role: "user", Content: "u1"},
 		{Role: "assistant", Content: "a1"},
@@ -143,7 +143,7 @@ func TestCondensingProvider_PassThroughWhenDisabled(t *testing.T) {
 
 	// MaxSize 0 disables condensation.
 	cp := NewCondensingProvider(inner, cond, CondenseOptions{MaxSize: 0})
-	msgs := []EyrieMessage{
+	msgs := []GraycodeRouterMessage{
 		{Role: "user", Content: "a"},
 		{Role: "assistant", Content: "b"},
 		{Role: "user", Content: "c"},

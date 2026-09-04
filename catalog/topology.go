@@ -1,6 +1,6 @@
 package catalog
 
-import "github.com/GrayCodeAI/eyrie/catalog/registry"
+import "github.com/GrayCodeAI/graycode-router/catalog/registry"
 
 // PruneUnreferencedDeployments makes the embedded catalog and provider registry
 // authoritative for first-class providers, then removes unrelated orphan

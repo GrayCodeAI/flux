@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 // ClientOption and the adapter-level With* constructors live in client/core
 // (see core.Configurable); they are aliased/wrapped here so the public
 // client.* API is unchanged. Only WithCoalescing is defined locally — it
-// configures the EyrieClient itself, which lives in this package.
+// configures the GraycodeRouterClient itself, which lives in this package.
 
 // ClientOption configures clients.
 type ClientOption = core.ClientOption
@@ -69,5 +69,5 @@ func WithMimoAuth() ClientOption { return core.WithMimoAuth() }
 // The ttl parameter controls how long completed requests remain in the coalescer
 // for potential reuse. A typical value is 100-500ms.
 func WithCoalescing(ttl time.Duration) ClientOption {
-	return core.NewEyrieOption(func(e core.EyrieConfigurable) { e.SetCoalescingTTL(ttl) })
+	return core.NewGraycodeRouterOption(func(e core.GraycodeRouterConfigurable) { e.SetCoalescingTTL(ttl) })
 }

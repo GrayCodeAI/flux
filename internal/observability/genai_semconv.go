@@ -12,7 +12,7 @@
 // This file is stdlib-only and purely additive (constant declarations only).
 //
 // Spec: https://opentelemetry.io/docs/specs/semconv/gen-ai/
-package eyrie
+package graycoderouter
 
 // GenAI semantic convention attribute keys. These mirror the OpenTelemetry
 // gen_ai.* namespace plus the small set of ecosystem extensions

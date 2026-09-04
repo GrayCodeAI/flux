@@ -38,7 +38,7 @@ func DefaultCacheConfig() CacheConfig {
 
 // cachedResponse holds a cached API response along with LRU metadata.
 type cachedResponse struct {
-	response   *EyrieResponse
+	response   *GraycodeRouterResponse
 	createdAt  time.Time
 	lastAccess time.Time
 
@@ -102,7 +102,7 @@ func (cp *CachedProvider) Ping(ctx context.Context) error {
 
 // Chat checks the cache first. On a miss, it calls the inner provider and caches
 // the response (if the temperature is not too high).
-func (cp *CachedProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
+func (cp *CachedProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
 	if !cp.enabled {
 		return cp.inner.Chat(ctx, messages, opts)
 	}
@@ -131,7 +131,7 @@ func (cp *CachedProvider) Chat(ctx context.Context, messages []EyrieMessage, opt
 
 // StreamChat delegates to the inner provider without caching. Streaming responses
 // are inherently incremental and not suitable for simple response caching.
-func (cp *CachedProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
+func (cp *CachedProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
 	return cp.inner.StreamChat(ctx, messages, opts)
 }
 
@@ -174,7 +174,7 @@ func (cp *CachedProvider) SetEnabled(enabled bool) {
 // get looks up a cache entry by key. It returns a copy of the response if the
 // entry exists and has not expired, and promotes it to the head of the LRU list.
 // Expired entries are evicted inline.
-func (cp *CachedProvider) get(key string) (*EyrieResponse, bool) {
+func (cp *CachedProvider) get(key string) (*GraycodeRouterResponse, bool) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
@@ -197,7 +197,7 @@ func (cp *CachedProvider) get(key string) (*EyrieResponse, bool) {
 }
 
 // put stores a response in the cache, evicting the LRU entry if necessary.
-func (cp *CachedProvider) put(key string, resp *EyrieResponse) {
+func (cp *CachedProvider) put(key string, resp *GraycodeRouterResponse) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
@@ -293,7 +293,7 @@ func (cp *CachedProvider) evictExpiredLocked() {
 
 // buildCacheKey produces a deterministic hash of the request parameters that
 // affect the response: system prompt, messages, model, and temperature.
-func buildCacheKey(messages []EyrieMessage, opts ChatOptions) string {
+func buildCacheKey(messages []GraycodeRouterMessage, opts ChatOptions) string {
 	h := sha256.New()
 
 	// Model.

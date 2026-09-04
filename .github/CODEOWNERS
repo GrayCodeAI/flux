@@ -1,4 +1,4 @@
-# CODEOWNERS for eyrie (code-generation engine)
+# CODEOWNERS for graycode-router (code-generation engine)
 * @GrayCodeAI/maintainers
 
 # Engine core

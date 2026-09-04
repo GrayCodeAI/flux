@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/live"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/live"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
 )
 
 // RefreshProvider fetches live models for one provider, merges into the catalog cache,
@@ -63,7 +63,7 @@ func refreshProvider(ctx context.Context, providerID string, opts ProviderRefres
 
 	env := opts.Credentials.Env()
 	if len(env) == 0 && !opts.DisableCredentialFallback {
-		env = eyriecfg.DiscoveryCredentials(ctx).Env()
+		env = graycoderoutercfg.DiscoveryCredentials(ctx).Env()
 	}
 	env = registry.ScopedProviderEnv(spec, env)
 	if !registry.CredentialPresent(spec, env) {

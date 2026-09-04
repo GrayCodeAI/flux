@@ -6,19 +6,19 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/config"
 )
 
-// TestMigrateConfigDirHonorsEYRIE_CONFIG_DIR verifies H1 fix: when
-// EYRIE_CONFIG_DIR is set, the migration copies from
-// <UserConfigDir>/hawk/ → <EYRIE_CONFIG_DIR>/, not the default path.
-func TestMigrateConfigDirHonorsEYRIE_CONFIG_DIR(t *testing.T) {
+// TestMigrateConfigDirHonorsGRAYCODE_ROUTER_CONFIG_DIR verifies H1 fix: when
+// GRAYCODE_ROUTER_CONFIG_DIR is set, the migration copies from
+// <UserConfigDir>/hawk/ → <GRAYCODE_ROUTER_CONFIG_DIR>/, not the default path.
+func TestMigrateConfigDirHonorsGRAYCODE_ROUTER_CONFIG_DIR(t *testing.T) {
 	// Fresh state for this test.
 	migrateProviderConfigDirOnce = sync.Once{}
 
 	userDir := t.TempDir()
 	customDir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", customDir)
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", customDir)
 	t.Setenv("HAWK_CONFIG_DIR", "")
 	t.Setenv("XDG_CONFIG_HOME", "")
 
@@ -52,7 +52,7 @@ func TestMigrateConfigDirHonorsEYRIE_CONFIG_DIR(t *testing.T) {
 
 	migrateProviderConfigDir()
 
-	// Should have copied to <EYRIE_CONFIG_DIR>/provider.json.
+	// Should have copied to <GRAYCODE_ROUTER_CONFIG_DIR>/provider.json.
 	dst := filepath.Join(customDir, "provider.json")
 	data, err := os.ReadFile(dst)
 	if err != nil {
@@ -62,9 +62,9 @@ func TestMigrateConfigDirHonorsEYRIE_CONFIG_DIR(t *testing.T) {
 		t.Fatalf("migration content mismatch")
 	}
 	// Should NOT have created a file at the default path.
-	defaultPath := filepath.Join(userConfigDir, "eyrie", "provider.json")
+	defaultPath := filepath.Join(userConfigDir, "graycode-router", "provider.json")
 	if _, err := os.Stat(defaultPath); err == nil {
-		t.Fatalf("migration wrote to default %s — should only write to EYRIE_CONFIG_DIR", defaultPath)
+		t.Fatalf("migration wrote to default %s — should only write to GRAYCODE_ROUTER_CONFIG_DIR", defaultPath)
 	}
 }
 
@@ -74,7 +74,7 @@ func TestMigrateConfigDirAtomicAndIdempotent(t *testing.T) {
 	migrateProviderConfigDirOnce = sync.Once{}
 	userDir := t.TempDir()
 	customDir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", customDir)
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", customDir)
 	t.Setenv("HAWK_CONFIG_DIR", "")
 	t.Setenv("HOME", userDir)
 	userConfigDir, err := os.UserConfigDir()

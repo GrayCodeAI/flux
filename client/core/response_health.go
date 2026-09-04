@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// ResponseHealth classifies the outcome of a model response so eyrie can turn a
+// ResponseHealth classifies the outcome of a model response so graycode-router can turn a
 // confusing "the agent did nothing" symptom into a precise, named diagnostic.
 // It is most valuable for reasoning-capable models behind OpenAI-compatible
 // providers, where a misconfiguration commonly yields thinking tokens but no
@@ -79,21 +79,21 @@ func (h ResponseHealth) Diagnostic() string {
 // to callers/operators. OK returns nil.
 func (h ResponseHealth) Err() error {
 	if d := h.Diagnostic(); d != "" {
-		return fmt.Errorf("eyrie: %s: %s", h, d)
+		return fmt.Errorf("graycode-router: %s: %s", h, d)
 	}
 	return nil
 }
 
-// healthFromResponse classifies a non-streaming EyrieResponse. Because the
+// healthFromResponse classifies a non-streaming GraycodeRouterResponse. Because the
 // non-streaming response shape does not carry a reasoning field today, the
 // caller passes whether reasoning was observed (e.g. from a thinking field on
 // the raw provider payload); when unknown, pass false.
 // ResponseHasContent reports whether a non-streaming response carries usable text.
-func ResponseHasContent(resp *EyrieResponse) bool {
+func ResponseHasContent(resp *GraycodeRouterResponse) bool {
 	return resp != nil && strings.TrimSpace(resp.Content) != ""
 }
 
-func healthFromResponse(resp *EyrieResponse, sawReasoning bool) ResponseHealth {
+func healthFromResponse(resp *GraycodeRouterResponse, sawReasoning bool) ResponseHealth {
 	if resp == nil {
 		return ResponseEmpty
 	}

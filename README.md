@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="eyrie" width="480"/>
+  <img src="assets/logo.svg" alt="graycode-router" width="480"/>
 </p>
 
 <h1 align="center">Universal LLM Provider Runtime</h1>
@@ -11,9 +11,9 @@
 <p align="center">
   <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
-  <a href="https://github.com/GrayCodeAI/eyrie/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/GrayCodeAI/eyrie/ci.yml?style=flat-square&label=tests" alt="CI"></a>
-  <a href="https://github.com/GrayCodeAI/eyrie/releases"><img src="https://img.shields.io/github/v/release/GrayCodeAI/eyrie?style=flat-square&label=release&color=green" alt="Release"></a>
-  <a href="https://pkg.go.dev/github.com/GrayCodeAI/eyrie"><img src="https://img.shields.io/badge/godoc-reference-00ADD8?style=flat-square&logo=go" alt="GoDoc"></a>
+  <a href="https://github.com/GrayCodeAI/graycode-router/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/GrayCodeAI/graycode-router/ci.yml?style=flat-square&label=tests" alt="CI"></a>
+  <a href="https://github.com/GrayCodeAI/graycode-router/releases"><img src="https://img.shields.io/github/v/release/GrayCodeAI/graycode-router?style=flat-square&label=release&color=green" alt="Release"></a>
+  <a href="https://pkg.go.dev/github.com/GrayCodeAI/graycode-router"><img src="https://img.shields.io/badge/godoc-reference-00ADD8?style=flat-square&logo=go" alt="GoDoc"></a>
 </p>
 
 <p align="center">
@@ -28,27 +28,27 @@
 
 ---
 
-## What is eyrie
+## What is graycode-router
 
-eyrie is the LLM provider runtime that powers the [hawk](https://github.com/GrayCodeAI/hawk) coding agent. It handles everything between your application and LLM APIs — authentication, model resolution, streaming, retries, rate limiting, and caching.
+graycode-router is the LLM provider runtime that powers the [hawk](https://github.com/GrayCodeAI/hawk) coding agent. It handles everything between your application and LLM APIs — authentication, model resolution, streaming, retries, rate limiting, and caching.
 
-When your app calls a model, eyrie figures out which provider to use, how to talk to it, and how to stream the response back. Switch from Anthropic to Ollama? eyrie handles the translation. API returns 529? eyrie retries with backoff. Response hits `max_tokens`? eyrie continues automatically.
+When your app calls a model, graycode-router figures out which provider to use, how to talk to it, and how to stream the response back. Switch from Anthropic to Ollama? graycode-router handles the translation. API returns 529? graycode-router retries with backoff. Response hits `max_tokens`? graycode-router continues automatically.
 
-**Your app never talks to an LLM API directly. eyrie does.**
+**Your app never talks to an LLM API directly. graycode-router does.**
 
 Hawk is the product face: it owns UX, agent orchestration, tools, permissions,
-sessions, and product semantics. Eyrie is the provider engine: it owns
+sessions, and product semantics. GraycodeRouter is the provider engine: it owns
 credentials, catalog and route resolution, provider transports, normalized
 streams, retry/fallback, usage, and provider telemetry. Hawk integrates through
-the stable [`engine`](engine/) facade rather than assembling Eyrie's internal
+the stable [`engine`](engine/) facade rather than assembling GraycodeRouter's internal
 provider packages.
 
 ## Ecosystem Boundaries
 
-eyrie is a Hawk support engine. Keep the dependency edge one-way:
+graycode-router is a Hawk support engine. Keep the dependency edge one-way:
 
 - host-facing DTOs and the `Provider` port live in `eagle/llm`; `engine/` re-exports them as aliases (`*Engine` implements `llm.Provider`)
-- internal provider/transport types stay eyrie-scoped (not shared contracts)
+- internal provider/transport types stay graycode-router-scoped (not shared contracts)
 - do not import `hawk/internal/*`
 - do not import removed legacy path `hawk/shared/types`
 - do not import other engines (`harrier`, `shrike`, `swift`, `kestrel`, `merlin`) — engines are peers, not dependencies
@@ -56,16 +56,16 @@ eyrie is a Hawk support engine. Keep the dependency edge one-way:
 ## Quick Start
 
 ```bash
-go get github.com/GrayCodeAI/eyrie
+go get github.com/GrayCodeAI/graycode-router
 ```
 
 Requires Go 1.26+. Minimal dependencies (UUID, OpenTelemetry, SQLite, keyring).
 
 ```go
-import "github.com/GrayCodeAI/eyrie/client"
+import "github.com/GrayCodeAI/graycode-router/client"
 
 // Create a client — provider auto-detected from environment
-c := client.NewEyrieClient(&client.EyrieConfig{
+c := client.NewGraycodeRouterClient(&client.GraycodeRouterConfig{
     Provider: client.DetectProvider(),
 })
 
@@ -128,7 +128,7 @@ GitHub OIDC keyless authentication for cloud deployments — mints a short-lived
 
 ### OpenAI-Compatible Proxy
 
-Serves `POST /v1/chat/completions` so existing OpenAI SDK clients can talk to eyrie unchanged.
+Serves `POST /v1/chat/completions` so existing OpenAI SDK clients can talk to graycode-router unchanged.
 
 ### Load-Balancing Strategies
 
@@ -257,7 +257,7 @@ config.SaveProviderConfig(cfg, "")               // save changes
 ## Architecture
 
 ```
-eyrie/
+graycode-router/
 ├── engine/                 # Stable host-facing facade and provider-neutral DTOs
 ├── client/                 # Backwards-compatible public client facade
 │   ├── core/               # Provider-neutral wire, stream, retry, and transport primitives
@@ -296,18 +296,18 @@ eyrie/
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed system design and data flows.
 
 `operationsgraph.Build` projects resolved routes and normalized usage into
-`eyrie.graph/v1` operations nodes. Provider, model, request ID, and generated
+`graycode-router.graph/v1` operations nodes. Provider, model, request ID, and generated
 content are represented only by SHA-256 digests; token counts, finish reason,
 tool-call count, and deployment-routing state remain queryable.
 
 ## Ecosystem
 
-eyrie is part of the hawk-eco:
+graycode-router is part of the hawk-eco:
 
 | Component | Repository | Purpose |
 |---|---|---|
 | **hawk** | [GrayCodeAI/hawk](https://github.com/GrayCodeAI/hawk) | AI coding agent |
-| **eyrie** | This repo | LLM provider runtime |
+| **graycode-router** | This repo | LLM provider runtime |
 | **shrike** | [GrayCodeAI/shrike](https://github.com/GrayCodeAI/shrike) | Tokenizer & compression |
 | **harrier** | [GrayCodeAI/harrier](https://github.com/GrayCodeAI/harrier) | Graph-based memory |
 | **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture |

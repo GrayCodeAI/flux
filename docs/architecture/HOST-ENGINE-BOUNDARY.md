@@ -1,4 +1,4 @@
-# Host–Eyrie Engine Boundary
+# Host–GraycodeRouter Engine Boundary
 
 Status: accepted. The host-facing compatibility contract is
 `engine.ContractVersion == "2"`.
@@ -6,7 +6,7 @@ Status: accepted. The host-facing compatibility contract is
 ## Decision
 
 Hawk is the product face. It owns the terminal UI, agent loop, tool execution,
-permissions, conversation history, checkpoints, and product semantics. Eyrie is
+permissions, conversation history, checkpoints, and product semantics. GraycodeRouter is
 the engine. It owns credentials, provider/deployment metadata, model discovery,
 catalog compilation, selection, transport construction, provider request and
 stream normalization, resilience, normalized usage, and provider telemetry.
@@ -19,7 +19,7 @@ Hawk (face: UX, session, tools, permissions)
   |
   | stable DTOs and methods
   v
-github.com/GrayCodeAI/eyrie/engine  [contract v2]
+github.com/GrayCodeAI/graycode-router/engine  [contract v2]
   |
   +--> injected secret store
   +--> injected state paths
@@ -30,9 +30,9 @@ github.com/GrayCodeAI/eyrie/engine  [contract v2]
 Provider model APIs
 ```
 
-The dependency is one-way: Eyrie must not import Hawk. Hawk's integration layer
-may import `eyrie/engine`; Hawk command, conversation, and UI packages must not
-assemble Eyrie's `catalog`, `client`, `config`, `credentials`, `router`,
+The dependency is one-way: GraycodeRouter must not import Hawk. Hawk's integration layer
+may import `graycode-router/engine`; Hawk command, conversation, and UI packages must not
+assemble GraycodeRouter's `catalog`, `client`, `config`, `credentials`, `router`,
 `runtime`, or `setup` packages.
 
 ## Composition root
@@ -132,14 +132,14 @@ normal provider-state writes.
 
 Hosts express capabilities (`streaming`, `tools`, `vision`, structured JSON,
 reasoning, and context size) plus an intent or explicit provider/model. An
-explicit model is a hard constraint unless the host enables fallback. Eyrie
+explicit model is a hard constraint unless the host enables fallback. GraycodeRouter
 owns canonicalization, gateway ownership, deployment routing, and capability
 matching.
 
-Eyrie generation is stateless from Hawk's point of view:
+GraycodeRouter generation is stateless from Hawk's point of view:
 
 ```text
-Hawk owns                         Eyrie owns
+Hawk owns                         GraycodeRouter owns
 ----------                        -----------
 conversation history              route decision
 tool permission and execution     provider transport
@@ -151,7 +151,7 @@ session lifecycle                 normalized usage/telemetry
 `Stream` is pull-based, cancellable, and must be closed. It emits the selected
 route before provider events and normalizes content, thinking, tool calls,
 usage, retry/continuation, TTFT, and completion. Unknown future event types are
-additive and must be ignored safely. Eyrie emits tool requests; Hawk authorizes
+additive and must be ignored safely. GraycodeRouter emits tool requests; Hawk authorizes
 and executes tools, appends results to its history, and begins the next model
 turn.
 
@@ -171,25 +171,25 @@ diagnostics; live readiness is an explicit network operation.
 
 ## Release and sibling-repository order
 
-The boundary is delivered Eyrie-first:
+The boundary is delivered GraycodeRouter-first:
 
 ```text
-1. Change and verify standalone Eyrie
-2. Commit Eyrie and publish a resolvable release/commit
-3. Update Hawk's Eyrie module version when required
-4. Update Hawk's Eyrie module pin to that exact published commit
+1. Change and verify standalone GraycodeRouter
+2. Commit GraycodeRouter and publish a resolvable release/commit
+3. Update Hawk's GraycodeRouter module version when required
+4. Update Hawk's GraycodeRouter module pin to that exact published commit
 5. Verify Hawk integration, boundary checks, and clean-clone/module builds
 6. Commit the Hawk module-pin update in Hawk's repository
 ```
 
-Hawk must never depend on an uncommitted Eyrie worktree. The parent workspace
+Hawk must never depend on an uncommitted GraycodeRouter worktree. The parent workspace
 uses a sibling checkout for source identity during local development; a
 resolvable published module version is also required for workflows that build
 Hawk with `GOWORK=off`.
 
 ## Compatibility policy
 
-Lower-level Eyrie packages remain public for non-Hawk consumers and staged
+Lower-level GraycodeRouter packages remain public for non-Hawk consumers and staged
 migration, but they are not part of Hawk's product boundary. Additive fields
 and stream events are allowed within contract v2. Removing or changing stable
 DTO semantics requires a contract-version and semantic-version boundary.

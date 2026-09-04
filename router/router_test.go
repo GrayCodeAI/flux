@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/types"
 )
 
 type mockProvider struct {
@@ -16,19 +16,19 @@ type mockProvider struct {
 	err  error
 }
 
-func (m *mockProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (m *mockProvider) Chat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.GraycodeRouterResponse, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &client.EyrieResponse{Content: "from " + m.name}, nil
+	return &client.GraycodeRouterResponse{Content: "from " + m.name}, nil
 }
 
-func (m *mockProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (m *mockProvider) StreamChat(_ context.Context, _ []client.GraycodeRouterMessage, _ client.ChatOptions) (*client.StreamResult, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	ch := make(chan client.EyrieStreamEvent, 1)
-	ch <- client.EyrieStreamEvent{Type: "done"}
+	ch := make(chan client.GraycodeRouterStreamEvent, 1)
+	ch <- client.GraycodeRouterStreamEvent{Type: "done"}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }
@@ -48,7 +48,7 @@ func TestWeightedSelection(t *testing.T) {
 
 	counts := map[string]int{}
 	for i := 0; i < 1000; i++ {
-		resp, _ := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+		resp, _ := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 		counts[resp.Content]++
 	}
 	if counts["from p1"] < 600 {
@@ -65,7 +65,7 @@ func TestFallbackOnError(t *testing.T) {
 	p2 := &mockProvider{name: "p2"}
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	resp, err := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	resp, err := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestAllProvidersFail(t *testing.T) {
 	p2 := &mockProvider{name: "p2", err: fmt.Errorf("HTTP 502")}
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -92,7 +92,7 @@ func TestNonTransientNoFallback(t *testing.T) {
 	p2 := &mockProvider{name: "p2"}
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if err == nil {
 		t.Error("expected error — 401 should not fallback")
 	}
@@ -148,7 +148,7 @@ func TestOnRetryCallback(t *testing.T) {
 	cfg.OnRetry = func(e RetryEvent) { calls++ }
 	r := New([]RouteEntry{{Provider: p, Weight: 100}}, nil, &cfg)
 
-	r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if calls != 2 {
 		t.Errorf("expected 2 OnRetry calls, got %d", calls)
 	}
@@ -159,7 +159,7 @@ func TestToolFilter(t *testing.T) {
 	f := NewToolFilter(map[string][]string{
 		"claude-3": {"web_search"},
 	})
-	tools := []client.EyrieTool{
+	tools := []client.GraycodeRouterTool{
 		{Name: "web_search", Description: "search"},
 		{Name: "code_exec", Description: "exec"},
 		{Name: "my_func", Description: "custom", Parameters: map[string]interface{}{"type": "object"}},
@@ -183,7 +183,7 @@ func TestStreamFallback(t *testing.T) {
 	p2 := &mockProvider{name: "p2"}
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	sr, err := r.StreamChat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	sr, err := r.StreamChat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestStats(t *testing.T) {
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
 	for i := 0; i < 5; i++ {
-		r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+		r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	}
 
 	stats := r.Stats()
@@ -335,7 +335,7 @@ func TestStatsAfterFallback(t *testing.T) {
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
 	for i := 0; i < 3; i++ {
-		r.Chat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+		r.Chat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	}
 
 	stats := r.Stats()
@@ -368,7 +368,7 @@ func TestContextCancellationDuringRetry(t *testing.T) {
 		cancel()
 	}()
 
-	_, err := r.Chat(ctx, []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.Chat(ctx, []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if err == nil {
 		t.Fatal("expected error from cancelled context")
 	}
@@ -419,7 +419,7 @@ func TestStreamNonTransientNoFallback(t *testing.T) {
 	p2 := &mockProvider{name: "p2"}
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.StreamChat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.StreamChat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if err == nil {
 		t.Error("expected error — 401 should not fallback on stream")
 	}
@@ -431,7 +431,7 @@ func TestStreamAllProvidersFail(t *testing.T) {
 	p2 := &mockProvider{name: "p2", err: fmt.Errorf("HTTP 502")}
 	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.StreamChat(context.Background(), []client.EyrieMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.StreamChat(context.Background(), []client.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
 	if err == nil {
 		t.Error("expected error when all providers fail")
 	}

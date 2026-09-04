@@ -1,4 +1,4 @@
-package eyrie
+package graycoderouter
 
 import "testing"
 

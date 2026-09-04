@@ -1,4 +1,4 @@
-package eyrie
+package graycoderouter
 
 import (
 	"encoding/json"
@@ -336,13 +336,13 @@ func TestExportPrometheus(t *testing.T) {
 
 	// Check that it contains expected metric names.
 	expectedMetrics := []string{
-		"eyrie_requests_total",
-		"eyrie_input_tokens_total",
-		"eyrie_output_tokens_total",
-		"eyrie_request_duration_ms",
-		"eyrie_error_rate",
-		"eyrie_cost_usd_total",
-		"eyrie_cache_hit_rate",
+		"graycode_router_requests_total",
+		"graycode_router_input_tokens_total",
+		"graycode_router_output_tokens_total",
+		"graycode_router_request_duration_ms",
+		"graycode_router_error_rate",
+		"graycode_router_cost_usd_total",
+		"graycode_router_cache_hit_rate",
 	}
 	for _, m := range expectedMetrics {
 		if !strings.Contains(prom, m) {

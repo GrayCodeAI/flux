@@ -156,7 +156,7 @@
     <text x="196" y="96"
           font-family="'SF Mono','Fira Code','Cascadia Code','Courier New',monospace"
           font-size="72" font-weight="800"
-          fill="#4ECDC4" filter="url(#textGlow)" letter-spacing="-3">Eyrie</text>
+          fill="#4ECDC4" filter="url(#textGlow)" letter-spacing="-3">GraycodeRouter</text>
 
     <text x="198" y="126"
           font-family="'SF Mono','Fira Code',monospace"

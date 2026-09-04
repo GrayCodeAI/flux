@@ -9,27 +9,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	"github.com/GrayCodeAI/eyrie/catalog/zai"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/runtime"
-	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/graycode-router/catalog/xiaomi"
+	"github.com/GrayCodeAI/graycode-router/catalog/zai"
+	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/graycode-router/runtime"
+	"github.com/GrayCodeAI/graycode-router/setup"
 )
 
 // SecretStoreName is safe presentation metadata for host UIs.
 func SecretStoreName() string { return credentials.PlatformSecretStoreName() }
 
 // SetSecretStoreServiceName overrides the OS secret-store service name (default
-// "eyrie"). Hosts call this once at startup so existing credentials filed under
+// "graycode-router"). Hosts call this once at startup so existing credentials filed under
 // their product name (e.g. "hawk") stay readable.
 func SetSecretStoreServiceName(name string) { credentials.SetServiceName(name) }
 
 // -- Test-fixture re‑exports -------------------------------------------------
 // These let host test code inject credential fixtures through the engine
-// boundary instead of importing eyrie/credentials directly.
+// boundary instead of importing graycode-router/credentials directly.
 
 // SetDefaultStore replaces the process-wide credential store (for tests).
 var SetDefaultStore = credentials.SetDefaultStore
@@ -92,7 +92,7 @@ func (e *Engine) HasCredentialEnv(ctx context.Context, envVar string) bool {
 func (e *Engine) SaveCredentialEnv(ctx context.Context, envVar, secret string) error {
 	envVar, secret = strings.TrimSpace(envVar), strings.TrimSpace(secret)
 	if envVar == "" || secret == "" {
-		return invalid("save_credential_env", "eyrie engine: credential env and value are required")
+		return invalid("save_credential_env", "graycode-router engine: credential env and value are required")
 	}
 	if err := config.ValidateCredentialSecret(envVar, secret); err != nil {
 		return &Error{Code: ErrorInvalidRequest, Operation: "save_credential_env", Message: err.Error(), Cause: err}
@@ -203,7 +203,7 @@ func (e *Engine) SetGatewayRegion(ctx context.Context, providerID, value string)
 			}
 		}
 	default:
-		return invalid("set_gateway_region", "eyrie engine: gateway does not support regions")
+		return invalid("set_gateway_region", "graycode-router engine: gateway does not support regions")
 	}
 	if err := e.saveProviderConfig(ctx, cfg); err != nil {
 		return err
@@ -307,7 +307,7 @@ func (e *Engine) DeploymentRoutingEnabled(override *bool) bool {
 }
 
 func (e *Engine) DeploymentStatus(ctx context.Context, activeModel string) (string, error) {
-	// Compatibility formatter remains Eyrie-owned while setup internals migrate
+	// Compatibility formatter remains GraycodeRouter-owned while setup internals migrate
 	// to injected paths. Host code receives presentation text only.
 	report, err := setup.DeploymentStatusFromPaths(nonNilContext(ctx), activeModel, e.providerConfigPath, e.catalogPath)
 	if err != nil {
@@ -460,7 +460,7 @@ func (e *Engine) PreflightWithOptions(ctx context.Context, opts PreflightOptions
 			if err == nil && !modelListContains(liveModels, activeModel) {
 				err = &Error{
 					Code: ErrorModelUnavailable, Operation: "preflight", Provider: providerID, Model: activeModel,
-					Message: fmt.Sprintf("eyrie engine: selected model %q is not present in %s live model list", activeModel, providerID),
+					Message: fmt.Sprintf("graycode-router engine: selected model %q is not present in %s live model list", activeModel, providerID),
 				}
 			}
 		}
@@ -576,7 +576,7 @@ func (e *Engine) MigrateProviderSecretsContext(ctx context.Context) error {
 	cfg := *cfgState
 	writes, err := e.importProviderConfigSecrets(ctx, cfg)
 	if err != nil {
-		return &Error{Code: ErrorInternal, Operation: "migrate_provider_secrets", Message: "eyrie engine: could not import provider credentials", Cause: err}
+		return &Error{Code: ErrorInternal, Operation: "migrate_provider_secrets", Message: "graycode-router engine: could not import provider credentials", Cause: err}
 	}
 	sanitized := config.SanitizeProviderConfigForDisk(cfg)
 	if err := writeProviderConfigAtomic(path, &sanitized); err != nil {

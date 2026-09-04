@@ -98,7 +98,7 @@ func (bc *BatchClient) WaitUntilDone(ctx context.Context, batchID string, opts P
 		req.Header.Set("Anthropic-Beta", "message-batches-2024-09-24")
 		resp, err := bc.httpClient.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("eyrie: batch wait: %w", err)
+			return nil, fmt.Errorf("graycode-router: batch wait: %w", err)
 		}
 		switch {
 		case resp.StatusCode == http.StatusOK:
@@ -116,11 +116,11 @@ func (bc *BatchClient) WaitUntilDone(ctx context.Context, batchID string, opts P
 		default:
 			errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 			_ = resp.Body.Close()
-			return nil, fmt.Errorf("eyrie: batch wait error %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
+			return nil, fmt.Errorf("graycode-router: batch wait error %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
 		}
 
 		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("eyrie: batch %s not terminal within %s", batchID, opts.Timeout)
+			return nil, fmt.Errorf("graycode-router: batch %s not terminal within %s", batchID, opts.Timeout)
 		}
 		delay := backoffDelay(attempt, resp.Header.Get("Retry-After"), opts)
 		select {
@@ -142,7 +142,7 @@ type BatchRequestResult struct {
 
 // ErrResultNotVisible reports that a request's result row was absent even
 // though polling continued past batch completion — callers may retry.
-var ErrResultNotVisible = errors.New("eyrie: batch result row not yet visible")
+var ErrResultNotVisible = errors.New("graycode-router: batch result row not yet visible")
 
 // RequestResults fetches and parses the newline-delimited results document.
 func (bc *BatchClient) RequestResults(ctx context.Context, batchID string) ([]BatchRequestResult, error) {
@@ -155,7 +155,7 @@ func (bc *BatchClient) RequestResults(ctx context.Context, batchID string) ([]Ba
 	req.Header.Set("Anthropic-Beta", "message-batches-2024-09-24")
 	resp, err := bc.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("eyrie: batch results: %w", err)
+		return nil, fmt.Errorf("graycode-router: batch results: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -164,7 +164,7 @@ func (bc *BatchClient) RequestResults(ctx context.Context, batchID string) ([]Ba
 	}()
 	if resp.StatusCode != http.StatusOK {
 		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("eyrie: batch results error %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
+		return nil, fmt.Errorf("graycode-router: batch results error %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
 	}
 	var out []BatchRequestResult
 	scanner := bufio.NewScanner(resp.Body)
@@ -176,7 +176,7 @@ func (bc *BatchClient) RequestResults(ctx context.Context, batchID string) ([]Ba
 		}
 		var r BatchRequestResult
 		if err := json.Unmarshal(line, &r); err != nil {
-			return nil, fmt.Errorf("eyrie: parse results line: %w", err)
+			return nil, fmt.Errorf("graycode-router: parse results line: %w", err)
 		}
 		out = append(out, r)
 	}

@@ -3,7 +3,7 @@ package runtime
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 // ChatTransportOpts supplies host-side overrides while transport ownership
@@ -63,5 +63,5 @@ func directChatProvider(_ context.Context, primary string) client.Provider {
 	if primary == "" {
 		return nil
 	}
-	return client.NewLazyProvider(&client.EyrieConfig{Provider: primary})
+	return client.NewLazyProvider(&client.GraycodeRouterConfig{Provider: primary})
 }

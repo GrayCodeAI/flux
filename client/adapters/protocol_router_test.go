@@ -6,25 +6,25 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 func TestNewStreamWithReasoningFallbackChatFirst(t *testing.T) {
 	t.Parallel()
-	primaryEvents := make(chan core.EyrieStreamEvent, 4)
-	primaryEvents <- core.EyrieStreamEvent{Type: "thinking", Thinking: "internal reasoning"}
-	primaryEvents <- core.EyrieStreamEvent{Type: "done", StopReason: "end_turn"}
+	primaryEvents := make(chan core.GraycodeRouterStreamEvent, 4)
+	primaryEvents <- core.GraycodeRouterStreamEvent{Type: "thinking", Thinking: "internal reasoning"}
+	primaryEvents <- core.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn"}
 	close(primaryEvents)
 	primary := llm.NewStreamResult(primaryEvents, "", func() {})
 
 	var chatCalled, streamCalled bool
 	fallback := protocolStreamFallback{
-		chat: func(context.Context, []core.EyrieMessage, core.ChatOptions) (*core.EyrieResponse, error) {
+		chat: func(context.Context, []core.GraycodeRouterMessage, core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 			chatCalled = true
-			return &core.EyrieResponse{Content: "Hello from chat fallback!", FinishReason: "stop"}, nil
+			return &core.GraycodeRouterResponse{Content: "Hello from chat fallback!", FinishReason: "stop"}, nil
 		},
-		stream: func(context.Context, []core.EyrieMessage, core.ChatOptions) (*core.StreamResult, error) {
+		stream: func(context.Context, []core.GraycodeRouterMessage, core.ChatOptions) (*core.StreamResult, error) {
 			streamCalled = true
 			return nil, fmt.Errorf("stream fallback should not run")
 		},
@@ -53,24 +53,24 @@ func TestNewStreamWithReasoningFallbackChatFirst(t *testing.T) {
 
 func TestNewStreamWithReasoningFallbackStreamWhenChatEmpty(t *testing.T) {
 	t.Parallel()
-	primaryEvents := make(chan core.EyrieStreamEvent, 4)
-	primaryEvents <- core.EyrieStreamEvent{Type: "thinking", Thinking: "internal reasoning"}
-	primaryEvents <- core.EyrieStreamEvent{Type: "done", StopReason: "end_turn"}
+	primaryEvents := make(chan core.GraycodeRouterStreamEvent, 4)
+	primaryEvents <- core.GraycodeRouterStreamEvent{Type: "thinking", Thinking: "internal reasoning"}
+	primaryEvents <- core.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn"}
 	close(primaryEvents)
 	primary := llm.NewStreamResult(primaryEvents, "", func() {})
 
-	fallbackEvents := make(chan core.EyrieStreamEvent, 4)
-	fallbackEvents <- core.EyrieStreamEvent{Type: "content", Content: "stream answer"}
-	fallbackEvents <- core.EyrieStreamEvent{Type: "done", StopReason: "stop"}
+	fallbackEvents := make(chan core.GraycodeRouterStreamEvent, 4)
+	fallbackEvents <- core.GraycodeRouterStreamEvent{Type: "content", Content: "stream answer"}
+	fallbackEvents <- core.GraycodeRouterStreamEvent{Type: "done", StopReason: "stop"}
 	close(fallbackEvents)
 
 	var chatCalled, streamCalled bool
 	fallback := protocolStreamFallback{
-		chat: func(context.Context, []core.EyrieMessage, core.ChatOptions) (*core.EyrieResponse, error) {
+		chat: func(context.Context, []core.GraycodeRouterMessage, core.ChatOptions) (*core.GraycodeRouterResponse, error) {
 			chatCalled = true
-			return &core.EyrieResponse{Thinking: "still thinking"}, nil
+			return &core.GraycodeRouterResponse{Thinking: "still thinking"}, nil
 		},
-		stream: func(context.Context, []core.EyrieMessage, core.ChatOptions) (*core.StreamResult, error) {
+		stream: func(context.Context, []core.GraycodeRouterMessage, core.ChatOptions) (*core.StreamResult, error) {
 			streamCalled = true
 			return llm.NewStreamResult(fallbackEvents, "", func() {}), nil
 		},
@@ -107,9 +107,9 @@ func TestProtocolRouterChatFallbackOnError(t *testing.T) {
 	})}
 
 	router := ProtocolRouter{OpenAI: openAI, Anthropic: anthropic}
-	response, err := router.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+	response, err := router.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
 		Model: "test", MaxTokens: 16,
-	}, ChatProtocolCompletions, func(err error, _ *core.EyrieResponse) bool {
+	}, ChatProtocolCompletions, func(err error, _ *core.GraycodeRouterResponse) bool {
 		return err != nil
 	})
 	if err != nil {
@@ -127,7 +127,7 @@ func TestProtocolRouterNoFallbackWhenNil(t *testing.T) {
 		return jsonResponse(http.StatusBadGateway, map[string]string{"error": "down"}), nil
 	})}
 	router := ProtocolRouter{OpenAI: openAI}
-	_, err := router.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
+	_, err := router.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{
 		Model: "test", MaxTokens: 16,
 	}, ChatProtocolCompletions, nil)
 	if err == nil {

@@ -10,7 +10,7 @@ import (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AgentRouting — per-agent model selection. Maps agent types to specific
-// models/providers for cost optimization. Stored at ~/.eyrie/agent-routing.json.
+// models/providers for cost optimization. Stored at ~/.graycode-router/agent-routing.json.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // AgentRoutingConfig holds per-agent model routing rules.
@@ -23,7 +23,7 @@ type AgentRoutingConfig struct {
 // AgentRoutingPath returns the path to the agent routing config.
 func AgentRoutingPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".eyrie", "agent-routing.json")
+	return filepath.Join(home, ".graycode-router", "agent-routing.json")
 }
 
 // LoadAgentRouting reads the agent routing config.

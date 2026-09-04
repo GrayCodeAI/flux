@@ -1,4 +1,4 @@
-// Example: basic chat with eyrie.
+// Example: basic chat with graycode-router.
 //
 // Run:
 //
@@ -10,15 +10,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/graycode-router/client"
 )
 
 func main() {
-	c := client.Client(&client.EyrieConfig{
+	c := client.Client(&client.GraycodeRouterConfig{
 		Provider: client.DetectProvider(),
 	})
 
-	messages := []client.EyrieMessage{
+	messages := []client.GraycodeRouterMessage{
 		{Role: "user", Content: "What is 2 + 2?"},
 	}
 

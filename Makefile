@@ -1,10 +1,10 @@
 # Canonical hawk-eco Makefile for Go LIBRARY repos.
-# eyrie is a versioned Go library consumed by Hawk (no standalone binary).
+# graycode-router is a versioned Go library consumed by Hawk (no standalone binary).
 
 # ---------------------------------------------------------------------------
 # Project metadata
 # ---------------------------------------------------------------------------
-NAME      := eyrie
+NAME      := graycode-router
 
 # ---------------------------------------------------------------------------
 # Versioning — sourced from VERSION file; falls back to git describe.
@@ -51,7 +51,7 @@ all: lint test build ## Default — lint, test, build.
 # ---------------------------------------------------------------------------
 # Build / install / release.
 # ---------------------------------------------------------------------------
-build: ## Build all library packages (eyrie is a library consumed by hawk; no standalone binary).
+build: ## Build all library packages (graycode-router is a library consumed by hawk; no standalone binary).
 	go build ./...
 
 # ---------------------------------------------------------------------------
@@ -130,6 +130,6 @@ hooks: ## Install git hooks via lefthook (format, lint, conventional commits, co
 	git config --unset core.hooksPath 2>/dev/null || true
 	lefthook install
 
-sync-clone: ## Hard-reset eyrie to origin/main (post history rewrite).
+sync-clone: ## Hard-reset graycode-router to origin/main (post history rewrite).
 	@chmod +x scripts/sync-clone.sh scripts/commit-clean.sh
 	@./scripts/sync-clone.sh

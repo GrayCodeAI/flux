@@ -8,16 +8,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/conversation"
+	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/graycode-router/conversation"
 	"github.com/google/uuid"
 )
 
 // This file implements an OpenAI-compatible proxy endpoint
-// (POST /v1/chat/completions, LiteLLM-style) on top of eyrie's conversation
+// (POST /v1/chat/completions, LiteLLM-style) on top of graycode-router's conversation
 // engine. It translates the OpenAI request/response shapes to and from the
 // engine's prompt path so existing tooling that speaks the OpenAI API can talk
-// to eyrie unchanged.
+// to graycode-router unchanged.
 
 // openAIChatMessage is a single message in an OpenAI chat request/response.
 type openAIChatMessage struct {
@@ -26,7 +26,7 @@ type openAIChatMessage struct {
 }
 
 // openAIChatRequest is the subset of the OpenAI /v1/chat/completions request
-// body that eyrie understands.
+// body that graycode-router understands.
 type openAIChatRequest struct {
 	Model       string              `json:"model"`
 	Messages    []openAIChatMessage `json:"messages"`
@@ -108,7 +108,7 @@ const maxOpenAIBodyBytes = 10 << 20 // 10 MiB
 
 // handleOpenAIChatCompletions implements POST /v1/chat/completions.
 func (s *Server) handleOpenAIChatCompletions(w http.ResponseWriter, r *http.Request) {
-	// OpenAI clients send many fields eyrie does not consume (seed, logprobs,
+	// OpenAI clients send many fields graycode-router does not consume (seed, logprobs,
 	// stream_options, ...). Decode leniently rather than with the strict
 	// unknown-field rejection used by decodeJSONBody.
 	// Use a larger body limit than the native /prompt endpoint (1 MiB) because
@@ -136,7 +136,7 @@ func (s *Server) handleOpenAIChatCompletions(w http.ResponseWriter, r *http.Requ
 		SystemPrompt: system,
 		MaxTokens:    req.MaxTokens,
 		Temperature:  req.Temperature,
-		Tools:        openAIToolsToEyrie(req.Tools),
+		Tools:        openAIToolsToGraycodeRouter(req.Tools),
 	}
 
 	id := "chatcmpl-" + uuid.New().String()
@@ -283,7 +283,7 @@ func (s *Server) openAIUsageForNode(ctx context.Context, nodeID string) (openAIU
 	return usage, openAIFinishReason(node.StopReason)
 }
 
-// openAIFinishReason maps eyrie stop reasons to OpenAI finish_reason values.
+// openAIFinishReason maps graycode-router stop reasons to OpenAI finish_reason values.
 func openAIFinishReason(stop string) string {
 	switch stop {
 	case "max_tokens":
@@ -331,14 +331,14 @@ func splitOpenAIMessages(messages []openAIChatMessage) (system, prompt string) {
 	return system, strings.Join(transcript, "\n\n")
 }
 
-// openAIToolsToEyrie converts OpenAI function/tool declarations to eyrie tools.
-func openAIToolsToEyrie(tools []openAITool) []client.EyrieTool {
+// openAIToolsToGraycodeRouter converts OpenAI function/tool declarations to graycode-router tools.
+func openAIToolsToGraycodeRouter(tools []openAITool) []client.GraycodeRouterTool {
 	if len(tools) == 0 {
 		return nil
 	}
-	out := make([]client.EyrieTool, 0, len(tools))
+	out := make([]client.GraycodeRouterTool, 0, len(tools))
 	for _, t := range tools {
-		out = append(out, client.EyrieTool{
+		out = append(out, client.GraycodeRouterTool{
 			Name:        t.Function.Name,
 			Description: t.Function.Description,
 			Parameters:  t.Function.Parameters,

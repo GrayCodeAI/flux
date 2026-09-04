@@ -8,13 +8,13 @@ import (
 func TestFilterRelationships_DropsEmpty(t *testing.T) {
 	t.Parallel()
 	in := []Relationship{
-		{Subject: "eyrie", Predicate: "part_of", Object: "hawk-eco"},
+		{Subject: "graycode-router", Predicate: "part_of", Object: "hawk-eco"},
 		{Subject: "", Predicate: "x", Object: "y"},   // empty subject
 		{Subject: "a", Predicate: "  ", Object: "b"}, // blank predicate
 		{Subject: "c", Predicate: "rel", Object: ""}, // empty object
 	}
 	out := filterRelationships(in, nil)
-	if len(out) != 1 || out[0].Subject != "eyrie" {
+	if len(out) != 1 || out[0].Subject != "graycode-router" {
 		t.Fatalf("expected only the complete triple, got %#v", out)
 	}
 }
@@ -34,7 +34,7 @@ func TestFilterRelationships_PredicateAllowlist(t *testing.T) {
 
 func TestExtractRelationships_EmptyText(t *testing.T) {
 	t.Parallel()
-	c := &EyrieClient{}
+	c := &GraycodeRouterClient{}
 	_, err := c.ExtractRelationships(context.Background(), "   ", ExtractOptions{})
 	if err == nil {
 		t.Fatal("expected error for empty text")

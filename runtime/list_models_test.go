@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/runtime"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/runtime"
 )
 
 func TestListModels_RequiresProvider(t *testing.T) {
@@ -71,7 +71,7 @@ func TestListModels_CacheReadDoesNotRequireDiscover(t *testing.T) {
 	if err := catalog.WriteCatalogCache(cachePath, &c); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", cachePath)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", cachePath)
 
 	entries, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
 		ProviderID: "openai",
@@ -120,7 +120,7 @@ func TestListModels_CacheEntriesHaveCorrectFields(t *testing.T) {
 	if err := catalog.WriteCatalogCache(cachePath, &c); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", cachePath)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", cachePath)
 
 	entries, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
 		ProviderID: "anthropic",
@@ -206,7 +206,7 @@ func TestListModels_CacheMultipleModels(t *testing.T) {
 	if err := catalog.WriteCatalogCache(cachePath, &c); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", cachePath)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", cachePath)
 
 	entries, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
 		ProviderID: "openai",
@@ -260,7 +260,7 @@ func TestListModels_CacheProviderNotInCatalog(t *testing.T) {
 	if err := catalog.WriteCatalogCache(cachePath, &c); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", cachePath)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", cachePath)
 
 	entries, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
 		ProviderID: "nonexistent",
@@ -296,7 +296,7 @@ func TestWriteCatalogCache_CanBeReadBack(t *testing.T) {
 	if err := catalog.WriteCatalogCache(path, &c); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", path)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", path)
 
 	entries, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
 		ProviderID: "anthropic",

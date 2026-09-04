@@ -1,7 +1,7 @@
-# Design Doc: Eyrie Enterprise Gateway
+# Design Doc: GraycodeRouter Enterprise Gateway
 
 **Status:** Draft / Proposed
-**Owner:** Eyrie team
+**Owner:** GraycodeRouter team
 **Last updated:** 2026-06-06
 **Scope:** Multi-month product effort. This is an executable design, not a code-session deliverable.
 
@@ -9,7 +9,7 @@
 
 ## 1. Overview & Competitive Context
 
-Eyrie today is a privacy-first, zero-cloud, Go-static-binary LLM provider runtime. It already
+GraycodeRouter today is a privacy-first, zero-cloud, Go-static-binary LLM provider runtime. It already
 ships several of the *primitives* an enterprise gateway needs — virtual-key budgets, named
 routing strategies, an OpenAI-compatible proxy, OIDC keyless auth, OTel-style observability,
 and a privacy-preserving audit log — but it lacks the *organizational layer* that turns those
@@ -17,13 +17,13 @@ primitives into a managed gateway a team or company can operate: an org/team/use
 SSO/RBAC, an admin/analytics dashboard UI, a versioned prompt library, canary model testing as
 a first-class flow, A2A interop, fine-tuning workflows, and SLA-tiered request scheduling.
 
-This doc designs the **Eyrie Enterprise Gateway** as a cohesive surface built *on top of*
-existing eyrie packages, preserving the privacy-first posture (local-first, hash-only audit,
+This doc designs the **GraycodeRouter Enterprise Gateway** as a cohesive surface built *on top of*
+existing graycode-router packages, preserving the privacy-first posture (local-first, hash-only audit,
 no telemetry exfiltration by default).
 
 ### Which Top-20 repos ship these features
 
-From `TOP20_COMPARISON.md` (the eyrie section, lines 89–124):
+From `TOP20_COMPARISON.md` (the graycode-router section, lines 89–124):
 
 | Capability | Top-20 repos that ship it | Comparison-doc reference |
 |---|---|---|
@@ -36,7 +36,7 @@ From `TOP20_COMPARISON.md` (the eyrie section, lines 89–124):
 | Fine-tuning workflow integration | OpenAI, Vertex AI, Together AI | `TOP20_COMPARISON.md:123` (P2) |
 | Priority queue with SLA tiers | LiteLLM, enterprise LLM gateways | `TOP20_COMPARISON.md:124` (P2) |
 
-Eyrie's gap summary in the comparison doc: **2 P0 / 13 P1 / 5 P2** (`TOP20_COMPARISON.md:271`).
+GraycodeRouter's gap summary in the comparison doc: **2 P0 / 13 P1 / 5 P2** (`TOP20_COMPARISON.md:271`).
 The enterprise gateway is the single largest cluster of those gaps and the one with no
 incremental code-session path — it requires a persistent org data model and a UI, which is why
 it is treated here as a multi-month effort.
@@ -53,21 +53,21 @@ it is treated here as a multi-month effort.
    spend, rotate provider secrets — surfacing what `storage/budgets.go` already persists.
 3. **Analytics dashboard UI** (Helicone-style): per-request segmentation, session tracking,
    a query interface (HQL — "Helicone Query Language") over the request ledger, and the
-   21+ metrics eyrie's `MetricsCollector` already computes.
+   21+ metrics graycode-router's `MetricsCollector` already computes.
 4. **Versioned prompt library** with dynamic variables and side-by-side model comparison
    ("run prompt vX against models A/B/C").
 5. **Canary / blue-green model testing** promoted from the existing weighted/preview routing
    primitives into a named, observable production-traffic flow.
 6. **A2A protocol** so hawk agents can call external agents (LangGraph, Vertex Agent Engine,
-   Azure AI Foundry, Bedrock AgentCore) as tool calls through the eyrie proxy.
+   Azure AI Foundry, Bedrock AgentCore) as tool calls through the graycode-router proxy.
 7. **Fine-tuning workflow client** that submits training data, polls jobs, and registers the
-   resulting model in eyrie's catalog.
+   resulting model in graycode-router's catalog.
 8. **Priority queue with SLA tiers** at the rate-limit layer: interactive traffic preempts
    batch/background traffic.
 
 ### Non-Goals
 
-- **Eyrie does not become a hosted SaaS.** The enterprise gateway is a self-hostable binary +
+- **GraycodeRouter does not become a hosted SaaS.** The enterprise gateway is a self-hostable binary +
   embedded UI. Multi-tenancy means *org isolation within one operator's deployment*, not
   Anthropic-style managed multi-tenant cloud.
 - **No billing/payments engine.** Budgets are USD spend *caps and accounting*, not invoicing.
@@ -85,7 +85,7 @@ it is treated here as a multi-month effort.
 
 ```
                          ┌─────────────────────────────────────────────┐
-                         │             Eyrie Enterprise Server          │
+                         │             GraycodeRouter Enterprise Server          │
                          │            (internal/api/server.go)          │
    Browser ──HTTPS──▶    │  ┌──────────┐  ┌───────────┐  ┌───────────┐  │
    (Admin/Analytics UI)  │  │ Auth /   │  │ Org/RBAC  │  │ Prompt    │  │
@@ -179,7 +179,7 @@ New routes:
 ```
 # SSO / session
 GET    /auth/login              -> redirect to OIDC IdP (Auth Code + PKCE)
-GET    /auth/callback           -> exchange code, mint eyrie session cookie
+GET    /auth/callback           -> exchange code, mint graycode-router session cookie
 POST   /auth/logout
 
 # Org / RBAC admin (Admin/Owner only)
@@ -271,7 +271,7 @@ Admin → POST /api/canary {primary:M1, canary:M2, split_pct:5}
 
 ---
 
-## 4. Integration With Existing Eyrie Code (what is reusable today)
+## 4. Integration With Existing GraycodeRouter Code (what is reusable today)
 
 This is the crux: most enterprise primitives already exist as *internals* and need an org
 layer + UI, not a rewrite.
@@ -304,7 +304,7 @@ login, and (b) the embedded dashboard UI — not by re-implementing gateway inte
 
 ### P0 — Foundation (org model, RBAC, admin dashboard, analytics UI)
 
-Maps to the two eyrie **P0** comparison gaps (`TOP20_COMPARISON.md:96`) plus the analytics-UI
+Maps to the two graycode-router **P0** comparison gaps (`TOP20_COMPARISON.md:96`) plus the analytics-UI
 P1 (`:111`), because they share the org/auth/UI foundation.
 
 Milestones:
@@ -362,7 +362,7 @@ Exit: full enterprise parity with LiteLLM/Portkey gateway feature set per the co
 | Org/RBAC store | **Build** on existing SQLite `storage/` | No external dep; matches privacy-first, zero-cloud posture. |
 | SSO / OIDC login | **Build** (stdlib `net/http` + `crypto`), patterns from `credentials/oidc.go` | Avoids a heavy OIDC lib; the outbound exchange code proves stdlib-only OIDC is viable. Optionally add `github.com/coreos/go-oidc` (Apache-2.0) only if JWKS verification proves burdensome. |
 | Session cookies / JWT | **Build** (HMAC-signed cookie, stdlib) | No dep; rotate signing key per deployment. |
-| Dashboard UI | **Build** a small bundle, `go:embed` into the binary | Keeps eyrie a single static binary (its core differentiator). Consider Preact/Svelte (MIT) compiled to a static bundle — no runtime server-side framework. |
+| Dashboard UI | **Build** a small bundle, `go:embed` into the binary | Keeps graycode-router a single static binary (its core differentiator). Consider Preact/Svelte (MIT) compiled to a static bundle — no runtime server-side framework. |
 | HQL parser | **Build** an allow-listed DSL → parameterized SQL | Buying a SQL engine would invite injection; a constrained DSL is safer and smaller. |
 | Canary | **Build** on existing router | Pure reuse of `router/strategy.go`. |
 | A2A protocol | **Build** a client implementing the open A2A spec | A2A is an open spec; implement as a `Provider`. No mandatory SDK. |
@@ -372,7 +372,7 @@ Exit: full enterprise parity with LiteLLM/Portkey gateway feature set per the co
 | Redis (distributed state, priority across instances) | **Adopt opt-in** `redis/go-redis` (BSD-2) | Behind interface; not default. |
 | gRPC | **Defer** — keep skeleton, do not add `google.golang.org/grpc` until demanded | Per `internal/grpc/README.md` policy. |
 
-**Licensing:** eyrie is MIT (`LICENSE`, "Copyright (c) 2026 Hawk Contributors"). All proposed
+**Licensing:** graycode-router is MIT (`LICENSE`, "Copyright (c) 2026 Hawk Contributors"). All proposed
 default deps (SQLite, go-keyring, OTel, uuid) are already MIT/BSD/Apache-2.0 (`go.mod`). Any
 opt-in adds (go-oidc Apache-2.0, pgx MIT, go-redis BSD) are MIT-compatible. **No GPL/AGPL.**
 A UI build toolchain (Vite/esbuild, MIT) is a dev-time dependency only — it does not ship in the

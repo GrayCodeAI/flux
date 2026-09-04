@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/graycode-router/client/core"
 )
 
 func TestOpenCodeGoClientRoutesMiniMaxToAnthropic(t *testing.T) {
@@ -26,7 +26,7 @@ func TestOpenCodeGoClientRoutesMiniMaxToAnthropic(t *testing.T) {
 
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
 	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
-	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	response, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "minimax-m2.5", MaxTokens: 256,
 	})
 	if err != nil {
@@ -59,7 +59,7 @@ func TestOpenCodeGoClientRoutesKimiToOpenAI(t *testing.T) {
 
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
 	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	response, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "kimi-k2.5", MaxTokens: 256,
 	})
 	if err != nil {
@@ -94,7 +94,7 @@ func TestOpenCodeGoClientQwen401FallsBackToOpenAI(t *testing.T) {
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
 	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
 	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	response, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "qwen3.7-max", MaxTokens: 256,
 	})
 	if err != nil {
@@ -128,7 +128,7 @@ func TestOpenCodeGoClientMessagesEmptyFallsBackToOpenAI(t *testing.T) {
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
 	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
 	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	response, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	response, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "minimax-m3", MaxTokens: 256,
 	})
 	if err != nil {
@@ -163,7 +163,7 @@ func TestOpenCodeGoClientNormalizesModelID(t *testing.T) {
 	})
 	client := NewOpenCodeGoClient("key", "https://opencode.example/zen/go/v1")
 	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	_, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	_, err := client.Chat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "opencode-go/kimi-k2.6", MaxTokens: 16,
 	})
 	if err != nil {
@@ -206,7 +206,7 @@ func TestOpenCodeGoClientStreamMiniMaxReasoningOnlyFallsBackToChat(t *testing.T)
 	client := NewOpenCodeGoClient("ocg-test-key", "https://opencode.example/zen/go/v1")
 	client.router.Anthropic.httpClient = &http.Client{Transport: transport}
 	client.router.OpenAI.httpClient = &http.Client{Transport: transport}
-	result, err := client.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hello how are you?"}}, core.ChatOptions{
+	result, err := client.StreamChat(context.Background(), []core.GraycodeRouterMessage{{Role: "user", Content: "Hello how are you?"}}, core.ChatOptions{
 		Model: "minimax-m3", MaxTokens: 256,
 	})
 	if err != nil {

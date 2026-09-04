@@ -40,7 +40,7 @@ func enrichOpenAIWithOpenRouter(entries []Entry) {
 		return
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return
@@ -124,7 +124,7 @@ func enrichFromOpenRouter(entries []Entry, prefix string) {
 		return
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return
@@ -227,7 +227,7 @@ func FetchAzure(env map[string]string) ([]Entry, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -291,7 +291,7 @@ func FetchBedrock(env map[string]string) ([]Entry, error) {
 		return nil, fmt.Errorf("live: create bedrock request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 	signAWSV4(req, accessKeyID, secretAccessKey, strings.TrimSpace(env["AWS_SESSION_TOKEN"]), region, "bedrock", nil)
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -364,7 +364,7 @@ func FetchVertex(env map[string]string) ([]Entry, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "eyrie-model-catalog/1.0")
+	req.Header.Set("User-Agent", "graycode-router-model-catalog/1.0")
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
