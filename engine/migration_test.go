@@ -11,7 +11,7 @@ import (
 
 // TestMigrateConfigDirHonorsGRAYCODE_ROUTER_CONFIG_DIR verifies H1 fix: when
 // GRAYCODE_ROUTER_CONFIG_DIR is set, the migration copies from
-// <UserConfigDir>/hawk/ → <GRAYCODE_ROUTER_CONFIG_DIR>/, not the default path.
+// <UserConfigDir>/graycode/ → <GRAYCODE_ROUTER_CONFIG_DIR>/, not the default path.
 func TestMigrateConfigDirHonorsGRAYCODE_ROUTER_CONFIG_DIR(t *testing.T) {
 	// Fresh state for this test.
 	migrateProviderConfigDirOnce = sync.Once{}

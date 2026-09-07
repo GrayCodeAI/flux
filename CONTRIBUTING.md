@@ -1,8 +1,8 @@
 # Contributing to graycode-router
 
 Thanks for your interest! This guide covers the conventions used across the
-hawk-eco. The eco-wide standards (versioning, release tooling, repo layout)
-are defined in <https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md>.
+graycode-eco. The eco-wide standards (versioning, release tooling, repo layout)
+are defined in <https://github.com/GrayCodeAI/graycode-cli/blob/main/VERSIONING.md>.
 
 ## Quick start
 
@@ -20,7 +20,7 @@ are defined in <https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md>.
 
 ## Build & test
 
-This repo uses the standardised hawk-eco Makefile targets. Run `make help`
+This repo uses the standardised graycode-eco Makefile targets. Run `make help`
 for the full list. The most common targets:
 
 | Target              | What it does                                     |

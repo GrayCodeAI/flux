@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Run with EXPORT_HAWK_FIXTURE=1 to refresh hawk/internal/catalogtest/testdata/minimal_v1.json
+// Run with EXPORT_HAWK_FIXTURE=1 to refresh graycode/internal/catalogtest/testdata/minimal_v1.json
 func TestExportHawkCatalogFixture(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("EXPORT_HAWK_FIXTURE") != "1" {

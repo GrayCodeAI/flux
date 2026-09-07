@@ -1,4 +1,4 @@
-// Package graph defines the portable graph vocabulary shared across hawk-eco.
+// Package graph defines the portable graph vocabulary shared across graycode-eco.
 //
 // The package contains data contracts only. Individual repositories retain
 // ownership of their graph storage, projections, and runtime behavior.

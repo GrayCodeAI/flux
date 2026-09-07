@@ -1,11 +1,11 @@
-// Package llm is the canonical provider port contract for the hawk ecosystem.
+// Package llm is the canonical provider port contract for the graycode ecosystem.
 //
 // It is the single source of truth for the conversation DTOs and the Provider
-// interface that hawk (product face) and graycode-router (provider engine) speak across
+// interface that graycode (product face) and graycode-router (provider engine) speak across
 // their boundary. Both sides alias to these types, so there is exactly one
 // definition of each DTO and no per-call conversion.
 //
-// hawk owns the product vocabulary (hence names like GraycodeRouterMessage); graycode-router
+// graycode owns the product vocabulary (hence names like GraycodeRouterMessage); graycode-router
 // implements the port. graycode-router's internal transport types stay graycode-router-scoped and
 // never appear here.
 package llm

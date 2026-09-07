@@ -26,7 +26,7 @@ func TestProviderSpecs_AgnesOpenAIOnlyLongCatOpenAIPrimary(t *testing.T) {
 	}
 
 	// LongCat: official docs expose BOTH OpenAI (/openai) and Anthropic (/anthropic).
-	// Hawk uses the OpenAI primary only — Anthropic is not required when OpenAI works.
+	// Graycode uses the OpenAI primary only — Anthropic is not required when OpenAI works.
 	longcat, ok := registry.SpecByProviderID("longcat")
 	if !ok {
 		t.Fatal("missing longcat")

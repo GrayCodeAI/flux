@@ -41,7 +41,7 @@ fi
 
 # 4. Verify all providers have live fetchers
 echo "--- live fetchers ---"
-cd /Users/lakshmanpatel/Desktop/OSS2026/RealWork/hawk-eco/graycode-router
+cd "$(dirname "$0")/.."
 fetchers=$(grep -c '".*":\s*Fetch' catalog/live/fetchers.go 2>/dev/null || echo 0)
 if [ "$fetchers" -ge 11 ]; then
   pass "all 11 providers have live fetchers"

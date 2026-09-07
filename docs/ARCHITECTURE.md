@@ -14,9 +14,9 @@
 
 ## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/target.svg" width="16" height="16" alt="target" /> Overview
 
-graycode-router is the LLM provider runtime for the hawk ecosystem. It sits between the application and LLM APIs, handling **authentication**, **model resolution**, **streaming**, **retries**, **rate limiting**, and **caching**.
+graycode-router is the LLM provider runtime for the graycode ecosystem. It sits between the application and LLM APIs, handling **authentication**, **model resolution**, **streaming**, **retries**, **rate limiting**, and **caching**.
 
-> <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> No hawk ecosystem component talks to an LLM API directly — all communication goes through graycode-router.
+> <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> No graycode ecosystem component talks to an LLM API directly — all communication goes through graycode-router.
 
 ---
 

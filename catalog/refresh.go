@@ -96,7 +96,7 @@ func (r *RefreshResult) Summary() string {
 	)
 }
 
-// DiscoverReport returns a multi-line report for `hawk models refresh` / `graycode-router catalog discover`.
+// DiscoverReport returns a multi-line report for `graycode models refresh` / `graycode-router catalog discover`.
 func (r *RefreshResult) DiscoverReport() string {
 	if r == nil || r.Compiled == nil {
 		return "Catalog discovery: no data"

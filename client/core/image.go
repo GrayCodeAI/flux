@@ -37,7 +37,7 @@ var extToMediaType = map[string]string{
 //     encoded → (mediaType, data, true)
 //
 // It is the single entry point for image handling so the provider clients and
-// hawk no longer each carry their own divergent encoder. Local files and
+// graycode no longer each carry their own divergent encoder. Local files and
 // data-URLs are validated against supportedImageMediaTypes; HTTP URLs are left
 // for the provider to fetch (avoiding an SSRF surface inside graycode-router).
 func NormalizeImageSource(src string) (mediaType, data string, isBase64 bool, err error) {

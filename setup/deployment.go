@@ -1,4 +1,4 @@
-// Package setup wires catalog-backed deployment routing for hawk and graycode-router CLIs.
+// Package setup wires catalog-backed deployment routing for graycode and graycode-router CLIs.
 package setup
 
 import (

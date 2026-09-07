@@ -1,5 +1,5 @@
 // Package operationsgraph projects GraycodeRouter routing and normalized generation
-// telemetry into the portable hawk-eco graph contract.
+// telemetry into the portable graycode-eco graph contract.
 package operationsgraph
 
 import (

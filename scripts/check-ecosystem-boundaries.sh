@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# GraycodeRouter is host-neutral: it must not depend on any Hawk package. Shared
-# ecosystem vocabulary belongs in eagle, whose module path does
-# not match this expression.
-FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk(/|")'
+# GraycodeRouter is host-neutral: it must not depend on any Graycode package.
+# Shared ecosystem vocabulary lives in graycode-cli/internal/contracts, which
+# hosts vendor rather than import from here.
+FORBIDDEN_HAWK='github\.com/GrayCodeAI/(hawk|graycode-cli)(/|")'
 FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(harrier|shrike|swift|kestrel|merlin)(/|")'
 
 exit_code=0
@@ -21,10 +21,10 @@ else
 fi
 
 if [[ -n "${violations}" ]]; then
-  echo "forbidden Hawk imports found:"
+  echo "forbidden Graycode host imports found:"
   echo "${violations}"
   echo
-  echo "graycode-router must use eagle or local contracts, never the Hawk product module"
+  echo "graycode-router must use local contracts, never the Graycode product module"
   exit_code=1
 fi
 

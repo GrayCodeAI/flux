@@ -5,7 +5,7 @@ Status: accepted. The host-facing compatibility contract is
 
 ## Decision
 
-Hawk is the product face. It owns the terminal UI, agent loop, tool execution,
+Graycode is the product face. It owns the terminal UI, agent loop, tool execution,
 permissions, conversation history, checkpoints, and product semantics. GraycodeRouter is
 the engine. It owns credentials, provider/deployment metadata, model discovery,
 catalog compilation, selection, transport construction, provider request and
@@ -15,7 +15,7 @@ stream normalization, resilience, normalized usage, and provider telemetry.
 User
   |
   v
-Hawk (face: UX, session, tools, permissions)
+Graycode (face: UX, session, tools, permissions)
   |
   | stable DTOs and methods
   v
@@ -30,14 +30,14 @@ github.com/GrayCodeAI/graycode-router/engine  [contract v2]
 Provider model APIs
 ```
 
-The dependency is one-way: GraycodeRouter must not import Hawk. Hawk's integration layer
-may import `graycode-router/engine`; Hawk command, conversation, and UI packages must not
+The dependency is one-way: GraycodeRouter must not import Graycode. Graycode's integration layer
+may import `graycode-router/engine`; Graycode command, conversation, and UI packages must not
 assemble GraycodeRouter's `catalog`, `client`, `config`, `credentials`, `router`,
 `runtime`, or `setup` packages.
 
 ## Composition root
 
-Hawk constructs one `engine.Engine` from host-owned dependencies:
+Graycode constructs one `engine.Engine` from host-owned dependencies:
 
 ```go
 e, err := engine.New(engine.Options{
@@ -53,7 +53,7 @@ e, err := engine.New(engine.Options{
 `StateDir` derives `model_catalog.json` and `provider.json` when explicit paths
 are absent. Explicit paths win. The store, paths, remote catalog URL, and custom
 gateways belong to the Engine instance; production behavior does not depend on
-ambient Hawk paths or a process-global custom-gateway registry. The global
+ambient Graycode paths or a process-global custom-gateway registry. The global
 registry remains an opt-in compatibility path through
 `UseRegisteredCustomGateways`.
 
@@ -77,7 +77,7 @@ MigrateProviderSecretsContext
 Provider-specific wire types, authentication headers, retry behavior, and raw
 stream events do not cross this boundary. `Model` keeps distinct `Owner`,
 `ProviderID`, `GatewayID`, `CanonicalID`, `Source`, and `LiveMetadata` fields so
-Hawk does not reconstruct catalog meaning.
+Graycode does not reconstruct catalog meaning.
 
 ## Credential-to-conversation flow
 
@@ -98,10 +98,10 @@ Engine.ApplyCredentials / ListLiveModels
   +--> pass a provider-scoped environment to its live fetcher
   +--> merge/compile catalog and atomically update model_catalog.json
   v
-Engine.ListModels --> Hawk picker --> Engine.SetSelection
+Engine.ListModels --> Graycode picker --> Engine.SetSelection
   |
   v
-Hawk builds provider-neutral GenerateRequest from its conversation
+Graycode builds provider-neutral GenerateRequest from its conversation
   |
   +--> Engine.Generate
   `--> Engine.Stream --> normalized route/content/thinking/tool/usage events
@@ -125,7 +125,7 @@ Legacy provider files may contain credential-shaped fields. The explicit
 `MigrateProviderSecretsContext` flow maps every recognized secret to the
 injected store before writing a sanitized provider file. An unmapped secret or
 store failure aborts the migration and restores the original state; no
-plaintext backup is created. Hawk should run security status/migration before
+plaintext backup is created. Graycode should run security status/migration before
 normal provider-state writes.
 
 ## Selection and generation
@@ -136,10 +136,10 @@ explicit model is a hard constraint unless the host enables fallback. GraycodeRo
 owns canonicalization, gateway ownership, deployment routing, and capability
 matching.
 
-GraycodeRouter generation is stateless from Hawk's point of view:
+GraycodeRouter generation is stateless from Graycode's point of view:
 
 ```text
-Hawk owns                         GraycodeRouter owns
+Graycode owns                         GraycodeRouter owns
 ----------                        -----------
 conversation history              route decision
 tool permission and execution     provider transport
@@ -151,7 +151,7 @@ session lifecycle                 normalized usage/telemetry
 `Stream` is pull-based, cancellable, and must be closed. It emits the selected
 route before provider events and normalizes content, thinking, tool calls,
 usage, retry/continuation, TTFT, and completion. Unknown future event types are
-additive and must be ignored safely. GraycodeRouter emits tool requests; Hawk authorizes
+additive and must be ignored safely. GraycodeRouter emits tool requests; Graycode authorizes
 and executes tools, appends results to its history, and begins the next model
 turn.
 
@@ -176,20 +176,20 @@ The boundary is delivered GraycodeRouter-first:
 ```text
 1. Change and verify standalone GraycodeRouter
 2. Commit GraycodeRouter and publish a resolvable release/commit
-3. Update Hawk's GraycodeRouter module version when required
-4. Update Hawk's GraycodeRouter module pin to that exact published commit
-5. Verify Hawk integration, boundary checks, and clean-clone/module builds
-6. Commit the Hawk module-pin update in Hawk's repository
+3. Update Graycode's GraycodeRouter module version when required
+4. Update Graycode's GraycodeRouter module pin to that exact published commit
+5. Verify Graycode integration, boundary checks, and clean-clone/module builds
+6. Commit the Graycode module-pin update in Graycode's repository
 ```
 
-Hawk must never depend on an uncommitted GraycodeRouter worktree. The parent workspace
+Graycode must never depend on an uncommitted GraycodeRouter worktree. The parent workspace
 uses a sibling checkout for source identity during local development; a
 resolvable published module version is also required for workflows that build
-Hawk with `GOWORK=off`.
+Graycode with `GOWORK=off`.
 
 ## Compatibility policy
 
-Lower-level GraycodeRouter packages remain public for non-Hawk consumers and staged
-migration, but they are not part of Hawk's product boundary. Additive fields
+Lower-level GraycodeRouter packages remain public for non-Graycode consumers and staged
+migration, but they are not part of Graycode's product boundary. Additive fields
 and stream events are allowed within contract v2. Removing or changing stable
 DTO semantics requires a contract-version and semantic-version boundary.

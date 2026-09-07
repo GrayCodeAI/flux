@@ -1,6 +1,6 @@
-# Credential setup: hawk (face) + graycode-router (brain)
+# Credential setup: graycode (face) + graycode-router (brain)
 
-**Principle:** Hawk renders UI only. GraycodeRouter owns providers, keys, validation, catalog, models.
+**Principle:** Graycode renders UI only. GraycodeRouter owns providers, keys, validation, catalog, models.
 
 See also: [DYNAMIC-MODEL-DISCOVERY.md](./DYNAMIC-MODEL-DISCOVERY.md)
 
@@ -35,7 +35,7 @@ MiMo exposes **OpenAI-compatible** and **Anthropic-compatible** APIs on the same
 | Pay-as-you-go | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` | `sk-*` | `https://api.xiaomimimo.com/v1` | `https://api.xiaomimimo.com/anthropic` |
 | Token Plan | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` | `tp-*` | `https://token-plan-{cn,sgp,ams}.xiaomimimo.com/v1` | `https://token-plan-{cn,sgp,ams}.xiaomimimo.com/anthropic` |
 
-Token Plan region (`cn`, `sgp`, `ams`) is stored in `~/.hawk/provider.json` as `xiaomi_mimo_token_plan_region`. Hawk `/config` prompts for region before key paste on the Token Plan row.
+Token Plan region (`cn`, `sgp`, `ams`) is stored in `~/.graycode/provider.json` as `xiaomi_mimo_token_plan_region`. Graycode `/config` prompts for region before key paste on the Token Plan row.
 
 **Auth:** `api-key` header on probe, live fetch, and chat; OpenAI paths also retry once with `Authorization: Bearer` on HTTP 401 (per [OpenAI API](https://platform.xiaomimimo.com/docs/en-US/api/chat/openai-api)).
 
@@ -50,7 +50,7 @@ GraycodeRouter stores Anthropic **base** as `…/anthropic` (no `/v1`); `Anthrop
 
 **Legacy:** `xiaomi_mimo` / `XIAOMI_MIMO_API_KEY` / keychain account `xiaomi_mimo_api_key` migrate to pay-as-you-go (`XIAOMI_MIMO_PAYG_API_KEY` / `xiaomi_mimo_payg_api_key`) on load and startup.
 
-**Code:** `graycode-router/catalog/xiaomi/` (URLs), `graycode-router/client/mimo.go` (dual-protocol client), `hawk/cmd/chat_config_xiaomi.go` (region UI).
+**Code:** `graycode-router/catalog/xiaomi/` (URLs), `graycode-router/client/mimo.go` (dual-protocol client), `graycode-cli/cmd/chat_config_region.go` (region UI).
 
 **Not implemented (out of scope):** ASR/TTS ([Speech Recognition](https://platform.xiaomimimo.com/docs/en-US/api/audio/Speech-Recognition), speech synthesis guides), web-search billing plugins, user toggle for Anthropic-primary routing.
 
@@ -69,7 +69,7 @@ Setup is **gateway-first**: pick the gateway on the Gateways tab, paste any non-
   → Pick model    → ListModels (auto) when credentials exist
 ```
 
-## Host API (hawk uses `internal/graycode-routerclient` only)
+## Host API (graycode uses `internal/graycode-routerclient` only)
 
 - `ResolveCredentialForHost` / `SaveCredentialForHost`
 - `ApplyGraycodeRouterCredentials`
@@ -82,4 +82,4 @@ Setup is **gateway-first**: pick the gateway on the Gateways tab, paste any non-
 1. Add one `ProviderSpec` row in `catalog/registry/providers.go`
 2. Implement fetcher in `catalog/live/fetchers.go` and register in `Registry`
 3. Add deployment row to remote catalog JSON (metadata only; picker uses live list)
-4. No hawk changes (registry-driven `/config`)
+4. No graycode changes (registry-driven `/config`)

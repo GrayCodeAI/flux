@@ -123,10 +123,10 @@ func New(opts Options) (*Engine, error) {
 }
 
 // migrateProviderConfigDir copies a provider.json left in the old
-// product-specific "hawk" config dir into the new host-neutral "graycode-router" dir the
+// product-specific "graycode" config dir into the new host-neutral "graycode-router" dir the
 // first time an engine starts after the rename. Without this, upgrading users
 // silently lose their active provider/model selection, deployments, and routing
-// (hawk starts as if unconfigured and they must re-run /config).
+// (graycode starts as if unconfigured and they must re-run /config).
 //
 // The copy only happens when the graycode-router-dir provider.json does not yet exist, so
 // it is a one-time, idempotent migration that never overwrites newer state.
@@ -144,8 +144,8 @@ func migrateProviderConfigDir() {
 	if err != nil || userDir == "" {
 		return
 	}
-	// The old "hawk" subdir lived in the user-config root. If a custom
-	// GRAYCODE_ROUTER_CONFIG_DIR is in use, there is no old "hawk" subdir to migrate
+	// The old "graycode" subdir lived in the user-config root. If a custom
+	// GRAYCODE_ROUTER_CONFIG_DIR is in use, there is no old "graycode" subdir to migrate
 	// from; skip.
 	oldDir := filepath.Join(userDir, "hawk")
 	// Copy old <oldDir>/<name> → <resolvedDir>/<name> the first time an

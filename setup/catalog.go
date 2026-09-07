@@ -20,7 +20,7 @@ func DiscoverModelCatalog(ctx context.Context, creds catalog.Credentials) (*cata
 	return DiscoverModelCatalogWithOptions(ctx, creds, DiscoverModelCatalogOptions{})
 }
 
-// DiscoverModelCatalogWithOptions runs discover with optional force refresh (manual hawk models refresh).
+// DiscoverModelCatalogWithOptions runs discover with optional force refresh (manual graycode models refresh).
 func DiscoverModelCatalogWithOptions(ctx context.Context, creds catalog.Credentials, opts DiscoverModelCatalogOptions) (*catalog.RefreshResult, error) {
 	cachePath := catalog.DefaultCachePath()
 	refreshRemote := opts.ForceRefresh

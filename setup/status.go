@@ -132,7 +132,7 @@ func FormatStatus(report StatusReport) string {
 		fmt.Fprintf(&b, "  cached: no (using embedded catalog: %d models)\n", report.CatalogModels)
 	}
 	if report.CatalogStale {
-		b.WriteString("  stale: yes — hawk refreshes automatically; use `hawk models refresh` or `/refresh-model-catalog` for a manual run\n")
+		b.WriteString("  stale: yes — graycode refreshes automatically; use `graycode models refresh` or `/refresh-model-catalog` for a manual run\n")
 	}
 	if report.ActiveModel != "" {
 		fmt.Fprintf(&b, "Active canonical model: %s\n", report.ActiveModel)

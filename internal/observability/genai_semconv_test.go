@@ -4,7 +4,7 @@ import "testing"
 
 // TestGenAISemConvKeys pins the canonical gen_ai.* attribute keys so that the
 // ecosystem-wide convention documented in docs/OTEL-CONVENTIONS.md cannot drift
-// silently. Other hawk-eco repos mirror these exact strings.
+// silently. Other graycode-eco repos mirror these exact strings.
 func TestGenAISemConvKeys(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

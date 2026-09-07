@@ -89,7 +89,7 @@ func ChatWithContinuation(ctx context.Context, p Provider, messages []GraycodeRo
 // It returns a StreamResult whose Events channel transparently continues across
 // multiple LLM calls, emitting a "continuation" event at each boundary.
 //
-// DEPRECATION NOTE: hawk's Session loop has its own max_tokens recovery
+// DEPRECATION NOTE: graycode's Session loop has its own max_tokens recovery
 // (internal/engine/stream.go around the `recoveryCount` loop) that doesn't
 // add a synthetic "Continue." user message, and the graycode-router conversation
 // engine (graycode-router/conversation.Engine) has its own OutputGroupID-based
@@ -97,7 +97,7 @@ func ChatWithContinuation(ctx context.Context, p Provider, messages []GraycodeRo
 // conversation shapes (no synthetic user turns) and are the recommended
 // pattern for new code. This client-level helper remains for
 // backwards-compatibility with the embedded graycode-router HTTP server and
-// non-hawk consumers; new code should implement continuation at the
+// non-graycode consumers; new code should implement continuation at the
 // engine or call-site level instead.
 //
 // Will be removed in graycode-router v0.3.0. See graycode-router/CHANGELOG.md for the

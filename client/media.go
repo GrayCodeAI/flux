@@ -17,7 +17,7 @@ import (
 //
 // These are provider-agnostic backends for the two well-defined, broadly
 // supported public APIs (OpenAI Images: POST /v1/images/generations; OpenAI
-// Audio: POST /v1/audio/transcriptions). They give hawk's pluggable
+// Audio: POST /v1/audio/transcriptions). They give graycode's pluggable
 // MediaEngine / Transcriber seams a concrete default backend while staying
 // testable against an httptest server. A future provider (xAI image-gen,
 // etc.) can replace the endpoint/credentials without touching callers.

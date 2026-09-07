@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// Provider is hawk's hawk-owned view of the provider engine: a composition of
-// the role interfaces below. It is the single integration surface — hawk never
-// holds an *graycoderouterengine.Engine, and graycode-router never imports hawk/internal.
+// Provider is graycode's graycode-owned view of the provider engine: a composition of
+// the role interfaces below. It is the single integration surface — graycode never
+// holds an *graycoderouterengine.Engine, and graycode-router never imports graycode/internal.
 //
 // Callers that need only a subset depend on the relevant role interface
 // directly (e.g. session_factory depends only on Generator), keeping the

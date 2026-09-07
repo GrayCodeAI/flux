@@ -56,7 +56,7 @@ func ApplyCredentialsForProvider(ctx context.Context, providerID string, creds c
 }
 
 // ApplyCredentials discovers the model catalog from env API keys, then writes
-// ~/.hawk/provider.json deployments and routing derived from the catalog.
+// ~/.graycode/provider.json deployments and routing derived from the catalog.
 func ApplyCredentials(ctx context.Context, creds catalog.Credentials) (*ApplyCredentialsResult, error) {
 	catResult, err := DiscoverModelCatalog(ctx, creds)
 	if err != nil {

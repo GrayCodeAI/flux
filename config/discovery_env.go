@@ -11,7 +11,7 @@ import (
 )
 
 // DiscoveryCredentials loads API keys from the OS secret store (not process env or .env files),
-// merged with non-secret routing from ~/.hawk/provider.json (e.g. MiMo Token Plan region/base URL).
+// merged with non-secret routing from ~/.graycode/provider.json (e.g. MiMo Token Plan region/base URL).
 func DiscoveryCredentials(ctx context.Context) catalog.Credentials {
 	if ctx == nil {
 		ctx = context.Background()

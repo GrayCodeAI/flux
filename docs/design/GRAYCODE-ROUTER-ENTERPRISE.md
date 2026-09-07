@@ -58,7 +58,7 @@ it is treated here as a multi-month effort.
    ("run prompt vX against models A/B/C").
 5. **Canary / blue-green model testing** promoted from the existing weighted/preview routing
    primitives into a named, observable production-traffic flow.
-6. **A2A protocol** so hawk agents can call external agents (LangGraph, Vertex Agent Engine,
+6. **A2A protocol** so graycode agents can call external agents (LangGraph, Vertex Agent Engine,
    Azure AI Foundry, Bedrock AgentCore) as tool calls through the graycode-router proxy.
 7. **Fine-tuning workflow client** that submits training data, polls jobs, and registers the
    resulting model in graycode-router's catalog.
@@ -75,7 +75,7 @@ it is treated here as a multi-month effort.
   (the existing `internal/grpc/README.md` policy of not adding `google.golang.org/grpc`
   speculatively is preserved).
 - **No model training** — only orchestration of provider-side fine-tuning APIs.
-- The browser/IDE/cloud-execution gaps belong to hawk, not this doc.
+- The browser/IDE/cloud-execution gaps belong to graycode, not this doc.
 
 ---
 
@@ -372,7 +372,7 @@ Exit: full enterprise parity with LiteLLM/Portkey gateway feature set per the co
 | Redis (distributed state, priority across instances) | **Adopt opt-in** `redis/go-redis` (BSD-2) | Behind interface; not default. |
 | gRPC | **Defer** — keep skeleton, do not add `google.golang.org/grpc` until demanded | Per `internal/grpc/README.md` policy. |
 
-**Licensing:** graycode-router is MIT (`LICENSE`, "Copyright (c) 2026 Hawk Contributors"). All proposed
+**Licensing:** graycode-router is MIT (`LICENSE`, "Copyright (c) 2026 Graycode Contributors"). All proposed
 default deps (SQLite, go-keyring, OTel, uuid) are already MIT/BSD/Apache-2.0 (`go.mod`). Any
 opt-in adds (go-oidc Apache-2.0, pgx MIT, go-redis BSD) are MIT-compatible. **No GPL/AGPL.**
 A UI build toolchain (Vite/esbuild, MIT) is a dev-time dependency only — it does not ship in the
