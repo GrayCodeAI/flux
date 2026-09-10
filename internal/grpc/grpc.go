@@ -8,7 +8,13 @@
 // note and codegen steps.
 package grpc
 
-import "context"
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/GrayCodeAI/graycode-router/conversation"
+)
 
 // ChatRequest is the unary Chat request payload. It mirrors the HTTP
 // /prompt request fields so a gRPC implementation can reuse the conversation
@@ -58,4 +64,51 @@ func (noopChatService) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, e
 // engine-backed implementation instead.
 func NewChatService() ChatService {
 	return noopChatService{}
+}
+
+// EngineChatService adapts conversation.Engine to the ChatService contract: a
+// unary Chat RPC becomes a single Prompt over the conversation engine, with
+// the streamed assistant content aggregated into the response.
+type EngineChatService struct {
+	engine *conversation.Engine
+}
+
+// NewEngineChatService returns a ChatService backed by a conversation.Engine.
+// It is the real backend referenced by the gRPC server (build tag "grpc").
+func NewEngineChatService(engine *conversation.Engine) ChatService {
+	return &EngineChatService{engine: engine}
+}
+
+// Chat runs a single prompt through the conversation engine and aggregates the
+// streamed assistant content into a ChatResponse.
+func (s *EngineChatService) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+	if s.engine == nil {
+		return nil, ErrUnimplemented
+	}
+	if req == nil {
+		return nil, fmt.Errorf("graycode-router/grpc: chat request is required")
+	}
+	ch, err := s.engine.Prompt(ctx, req.Message, conversation.PromptOpts{
+		Model:        req.Model,
+		SystemPrompt: req.SystemPrompt,
+		MaxTokens:    req.MaxTokens,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var content string
+	var nodeID string
+	for ev := range ch {
+		switch ev.Type {
+		case conversation.EventDelta:
+			content += ev.Content
+		case conversation.EventError:
+			if ev.Error != "" {
+				return nil, errors.New(ev.Error)
+			}
+		case conversation.EventDone:
+			nodeID = ev.NodeID
+		}
+	}
+	return &ChatResponse{Content: content, NodeID: nodeID, FinishReason: "stop"}, nil
 }

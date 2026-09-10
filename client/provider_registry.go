@@ -153,6 +153,14 @@ func (c *GraycodeRouterClient) getOrCreateProvider(providerName string) (Provide
 			p = adapters.NewPoolsideClient(apiKey, baseURL)
 			break
 		}
+		if providerName == "longcat" {
+			// LongCat speaks both the OpenAI and Anthropic wire protocols; the
+			// dedicated client preserves both paths, matching the setup path.
+			// Without this, the generic OpenAI client below would silently drop
+			// the Anthropic route for Anthropic-configured longcat deployments.
+			p = adapters.NewLongCatClient(apiKey, baseURL, config.DefaultLongCatAnthropicBaseURL, info.Compat)
+			break
+		}
 		p = adapters.NewOpenAIClient(apiKey, baseURL, info.Compat)
 	}
 
