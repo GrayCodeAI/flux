@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
-	"github.com/GrayCodeAI/graycode-router/catalog/live"
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog/live"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestListLiveModelsUsesInjectedStateWithoutMutatingCache(t *testing.T) {

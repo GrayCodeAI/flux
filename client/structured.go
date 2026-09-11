@@ -155,7 +155,7 @@ func validateArray(value interface{}, schema map[string]interface{}) error {
 
 // BuildStructuredPrompt adds JSON schema instructions to the message system prompt.
 // It prepends schema requirements to ensure the LLM outputs valid JSON matching the schema.
-func BuildStructuredPrompt(messages []GraycodeRouterMessage, schema map[string]interface{}) []GraycodeRouterMessage {
+func BuildStructuredPrompt(messages []EyrieMessage, schema map[string]interface{}) []EyrieMessage {
 	schemaJSON, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		// Fallback: return messages unchanged if schema can't be marshaled
@@ -172,7 +172,7 @@ Important:
 - All required fields must be present`, string(schemaJSON))
 
 	// Find system message and prepend to it, or create new one
-	result := make([]GraycodeRouterMessage, 0, len(messages)+1)
+	result := make([]EyrieMessage, 0, len(messages)+1)
 	systemFound := false
 
 	for _, msg := range messages {
@@ -193,8 +193,8 @@ Important:
 
 	if !systemFound {
 		// Insert system message at the beginning
-		systemMsg := GraycodeRouterMessage{Role: "system", Content: schemaInstruction}
-		result = append([]GraycodeRouterMessage{systemMsg}, result...)
+		systemMsg := EyrieMessage{Role: "system", Content: schemaInstruction}
+		result = append([]EyrieMessage{systemMsg}, result...)
 	}
 
 	return result
@@ -213,9 +213,9 @@ func WithStructuredOutput(schema map[string]interface{}, maxRetries int) ClientO
 
 // ChatWithStructuredOutput sends a chat request with structured output validation.
 // If the response doesn't match the schema, it retries with error feedback.
-func (c *GraycodeRouterClient) ChatWithStructuredOutput(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions, validation SchemaValidation) (*GraycodeRouterResponse, error) {
+func (c *EyrieClient) ChatWithStructuredOutput(ctx context.Context, messages []EyrieMessage, opts ChatOptions, validation SchemaValidation) (*EyrieResponse, error) {
 	if len(messages) == 0 {
-		return nil, fmt.Errorf("graycode-router: messages must not be empty")
+		return nil, fmt.Errorf("eyrie: messages must not be empty")
 	}
 
 	provider := opts.Provider
@@ -253,7 +253,7 @@ func (c *GraycodeRouterClient) ChatWithStructuredOutput(ctx context.Context, mes
 		structuredMessages = addAnthropicPrefill(structuredMessages)
 	}
 
-	var lastResp *GraycodeRouterResponse
+	var lastResp *EyrieResponse
 	var lastErr error
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -302,9 +302,9 @@ func (c *GraycodeRouterClient) ChatWithStructuredOutput(ctx context.Context, mes
 }
 
 // addAnthropicPrefill adds an assistant message prefill for Anthropic to encourage JSON output.
-func addAnthropicPrefill(messages []GraycodeRouterMessage) []GraycodeRouterMessage {
+func addAnthropicPrefill(messages []EyrieMessage) []EyrieMessage {
 	// Add assistant message with opening brace to force JSON output
-	prefillMsg := GraycodeRouterMessage{
+	prefillMsg := EyrieMessage{
 		Role:    "assistant",
 		Content: "```json\n{",
 	}
@@ -312,7 +312,7 @@ func addAnthropicPrefill(messages []GraycodeRouterMessage) []GraycodeRouterMessa
 }
 
 // addRetryFeedback adds error feedback to messages for retry attempts.
-func addRetryFeedback(messages []GraycodeRouterMessage, lastResponse string, validationErr error, schema map[string]interface{}) []GraycodeRouterMessage {
+func addRetryFeedback(messages []EyrieMessage, lastResponse string, validationErr error, schema map[string]interface{}) []EyrieMessage {
 	schemaJSON, _ := json.MarshalIndent(schema, "", "  ")
 
 	feedback := fmt.Sprintf(`Your previous response was invalid. Error: %v
@@ -332,7 +332,7 @@ Remember:
 		string(schemaJSON))
 
 	// Add as user message
-	feedbackMsg := GraycodeRouterMessage{
+	feedbackMsg := EyrieMessage{
 		Role:    "user",
 		Content: feedback,
 	}

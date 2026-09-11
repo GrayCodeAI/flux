@@ -1,14 +1,14 @@
 # Dynamic Model Discovery
 
-Status: implemented through the `graycode-router/engine` contract v2.
+Status: implemented through the `eyrie/engine` contract v2.
 
-This guide describes the host-facing path used by Graycode. Graycode is the face; GraycodeRouter
+This guide describes the host-facing path used by Hawk. Hawk is the face; Eyrie
 is the engine and source of truth for provider metadata, credentials, live
 model discovery, catalog compilation, selection, and provider transport.
 
 ## Ownership
 
-| Graycode owns | GraycodeRouter owns |
+| Hawk owns | Eyrie owns |
 |---|---|
 | credential and model-picker UX | safe credential resolution and persistence |
 | conversation/session state | provider registry and deployment metadata |
@@ -17,17 +17,17 @@ model discovery, catalog compilation, selection, and provider transport.
 | product settings and lifecycle | model ownership, aliases, selection, and routing |
 | normalized request construction | provider adapters, streams, usage, and errors |
 
-Graycode calls its integration wrapper, which delegates to `graycode-router/engine`. Graycode UI,
-command, and conversation packages do not call GraycodeRouter's lower-level runtime or
+Hawk calls its integration wrapper, which delegates to `eyrie/engine`. Hawk UI,
+command, and conversation packages do not call Eyrie's lower-level runtime or
 client packages.
 
 ## End-to-end path
 
 ```text
-User enters API key or custom-gateway settings in Graycode
+User enters API key or custom-gateway settings in Hawk
   |
   v
-Graycode integration --> Engine.ResolveCredential
+Hawk integration --> Engine.ResolveCredential
   |
   v
 Engine.SaveCredential
@@ -47,10 +47,10 @@ Engine.ApplyCredentials / Engine.ListLiveModels
   `--> atomically compile the injected catalog path
   |
   v
-Engine.ListModels --> Graycode picker --> Engine.SetSelection
+Engine.ListModels --> Hawk picker --> Engine.SetSelection
   |
   v
-Graycode conversation --> Engine.Generate or Engine.Stream --> provider API
+Hawk conversation --> Engine.Generate or Engine.Stream --> provider API
   |
   `--> normalized route, content, thinking, tool-call, usage, and done events
 ```
@@ -61,7 +61,7 @@ exist in the same store.
 
 ## Engine construction and isolation
 
-Create the Engine once at Graycode's composition root and inject all host-owned
+Create the Engine once at Hawk's composition root and inject all host-owned
 state:
 
 ```go
@@ -76,7 +76,7 @@ e, err := engine.New(engine.Options{
 ```
 
 - `StateDir` derives default catalog and provider paths; explicit paths win.
-- An empty `RemoteCatalogURL` selects GraycodeRouter's compiled-in HTTPS seed and does
+- An empty `RemoteCatalogURL` selects Eyrie's compiled-in HTTPS seed and does
   not consult a process-environment override.
 - Custom gateways are normalized, validated, and snapshotted per Engine.
 - `UseRegisteredCustomGateways` exists only for callers that deliberately opt
@@ -89,7 +89,7 @@ custom gateways to coexist safely in one process.
 
 ## Catalog sources
 
-GraycodeRouter keeps three complementary sources:
+Eyrie keeps three complementary sources:
 
 ```text
 published remote catalog
@@ -110,13 +110,13 @@ that do not require the host to reproduce provider logic.
 The stable model DTO intentionally distinguishes:
 
 - `ID`: provider-native/listed model identifier.
-- `CanonicalID`: GraycodeRouter's canonical alias target where known.
+- `CanonicalID`: Eyrie's canonical alias target where known.
 - `Owner`: catalog model owner.
 - `ProviderID`: provider associated with the offering.
 - `GatewayID`: selected/listed gateway or deployment identity.
 - `Source` and `LiveMetadata`: origin and provider-native metadata.
 
-Graycode should render these fields; it should not infer ownership from model-name
+Hawk should render these fields; it should not infer ownership from model-name
 prefixes or parse raw provider responses.
 
 ## Provider registry
@@ -134,7 +134,7 @@ ProviderSpec
 
 Provider-specific HTTP parsing remains inside registered fetchers/adapters.
 Adding a built-in provider should normally require registry data, its adapter
-or live fetcher, and tests—not new branches in Graycode UI code.
+or live fetcher, and tests—not new branches in Hawk UI code.
 
 Custom OpenAI-compatible gateways are invocation-scoped Engine options rather
 than registry mutations. Their URLs must be HTTP(S) with a host and must not
@@ -181,14 +181,14 @@ failed live response is not silently represented as successful live readiness.
 
 ## Selection and conversation handoff
 
-Graycode persists a choice through `Engine.SetSelection(provider, model)`. GraycodeRouter
+Hawk persists a choice through `Engine.SetSelection(provider, model)`. Eyrie
 validates provider/model ownership, preserves custom model IDs, canonicalizes
 built-in aliases, and stores routing metadata at the injected provider path.
 
-At generation time Graycode passes provider-neutral messages, tools,
+At generation time Hawk passes provider-neutral messages, tools,
 requirements, preferences, limits, and metadata. `Resolve`, `Generate`, and
 `Stream` use the same Engine-owned catalog, provider state, credentials, and
-custom-gateway snapshot. Graycode neither constructs a provider client nor exports
+custom-gateway snapshot. Hawk neither constructs a provider client nor exports
 credentials into the process environment.
 
 ## Local and live preflight
@@ -211,7 +211,7 @@ Live (VerifyLive=true)
 
 Local preflight is safe for normal startup and offline diagnostics. Live
 preflight is an explicit network check and should be labeled accordingly in
-Graycode.
+Hawk.
 
 ## State and secret safety
 
@@ -230,7 +230,7 @@ Engine provider-state mutations:
 
 `MigrateProviderSecretsContext` is the explicit legacy migration. If mapping or
 store persistence fails, it aborts and restores the original provider state.
-Graycode diagnostics can use `ProviderStateSecurityStatus`, `CatalogHealth`, and
+Hawk diagnostics can use `ProviderStateSecurityStatus`, `CatalogHealth`, and
 the safe credential/gateway reports without reading either file directly.
 
 ## Failure handling
@@ -246,26 +246,26 @@ the safe credential/gateway reports without reading either file directly.
 | custom gateway URL contains embedded data | reject configuration |
 | stream caller exits | close/cancel the Engine stream |
 
-Provider-specific friendly error formatting remains GraycodeRouter-owned; Graycode decides
+Provider-specific friendly error formatting remains Eyrie-owned; Hawk decides
 where and how to display it.
 
-## Release order for Graycode
+## Release order for Hawk
 
-GraycodeRouter is changed and released before Graycode advances its dependency:
+Eyrie is changed and released before Hawk advances its dependency:
 
 ```text
-standalone GraycodeRouter change
-  --> GraycodeRouter tests (two passes)
-  --> signed GraycodeRouter commit
-  --> publish a resolvable GraycodeRouter module release/commit
-  --> update Graycode module dependency when needed
-  --> update Graycode's GraycodeRouter module pin to the same published commit
-  --> Graycode integration + boundary + clean-clone verification (two passes)
-  --> commit Graycode code and gitlink together
+standalone Eyrie change
+  --> Eyrie tests (two passes)
+  --> signed Eyrie commit
+  --> publish a resolvable Eyrie module release/commit
+  --> update Hawk module dependency when needed
+  --> update Hawk's Eyrie module pin to the same published commit
+  --> Hawk integration + boundary + clean-clone verification (two passes)
+  --> commit Hawk code and gitlink together
 ```
 
-The parent workspace must use a committed GraycodeRouter checkout, never working-tree-
-only code, and Graycode's module pin must resolve to that same published commit.
+The parent workspace must use a committed Eyrie checkout, never working-tree-
+only code, and Hawk's module pin must resolve to that same published commit.
 Both workspace builds and `GOWORK=off` builds must expose the same Engine
 contract.
 
@@ -274,4 +274,4 @@ contract.
 - `docs/architecture/HOST-ENGINE-BOUNDARY.md` — ownership and compatibility
   policy.
 - `CREDENTIAL-SETUP-FLOW.md` — product setup flow.
-- Graycode's dynamic-model and architecture docs — host integration and UI behavior.
+- Hawk's dynamic-model and architecture docs — host integration and UI behavior.

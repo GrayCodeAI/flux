@@ -3,16 +3,16 @@
 **Status:** In Progress — Phases 1–3 implemented 2026-07-13; layering guard live
 **Author:** Claude (architecture review session)
 **Date:** 2026-07-12
-**Repos affected:** graycode-router (all changes), hawk (no code changes required; update
-the published GraycodeRouter module pin)
+**Repos affected:** eyrie (all changes), hawk (no code changes required; update
+the published Eyrie module pin)
 
 ## Problem Statement
 
-`graycode-router/client` is a 63-file, ~14k-line (source, excluding tests) single package that
+`eyrie/client` is a 63-file, ~14k-line (source, excluding tests) single package that
 mixes at least six distinct concerns:
 
-1. **Core contract & types** — `Provider` interface, `GraycodeRouterMessage`, `GraycodeRouterResponse`,
-   `GraycodeRouterStreamEvent`, `StreamResult`, `ChatOptions`, `GraycodeRouterClient` (`client.go`,
+1. **Core contract & types** — `Provider` interface, `EyrieMessage`, `EyrieResponse`,
+   `EyrieStreamEvent`, `StreamResult`, `ChatOptions`, `EyrieClient` (`client.go`,
    `options.go`, `chat.go`, `errors.go`, `retry.go`, `transport.go`, `stream.go`,
    `continuation.go`, `roles.go`, `merge.go`, `extract.go`)
 2. **Protocol adapters** — `anthropic.go`, `openai.go`, `gemini.go`, `azure.go`,
@@ -42,17 +42,17 @@ and a public API surface far larger than what consumers use.
   `buildAnthropicCachedRequest`, `defaultTimeout`, `emit`, `openAIImageURL`,
   `parseImageString`, `parseSSEStream`, `processAnthropicStream`,
   `processOpenAIStream`, `userAgent`.
-- hawk (the primary consumer) accesses `graycode-router/client` from **4 files only** —
+- hawk (the primary consumer) accesses `eyrie/client` from **4 files only** —
   it maintains its own DTO layer (`hawk/internal/types/client.go`) and converts
-  at the boundary. Entry points consumed: `Client`, `GraycodeRouterClient` methods
+  at the boundary. Entry points consumed: `Client`, `EyrieClient` methods
   (`Chat`, `StreamChat`, `StreamChatContinue`, `SetAPIKey`, `Ping`,
   `GetProviders`), `StreamChatWithContinuation`, `ParseInlineToolCalls`,
   `DetectProvider`, `RegisterDynamicProvider`, `DefaultContinuationConfig`,
   `NewMockProvider`/`MockModeFixed`, `Provider`, and the DTO types
-  (`GraycodeRouterMessage`, `GraycodeRouterResponse`, `GraycodeRouterStreamEvent`, `GraycodeRouterUsage`,
+  (`EyrieMessage`, `EyrieResponse`, `EyrieStreamEvent`, `EyrieUsage`,
   `StreamResult`, `ChatOptions`, `ContinuationConfig`, `ContentPart`,
-  `ImageURLPart`, `InputAudioPart`, `ToolCall`, `ToolResult`, `GraycodeRouterTool`,
-  `GraycodeRouterConfig`, `ResponseFormat`, `ToolChoiceOption`).
+  `ImageURLPart`, `InputAudioPart`, `ToolCall`, `ToolResult`, `EyrieTool`,
+  `EyrieConfig`, `ResponseFormat`, `ToolChoiceOption`).
 
 The narrow consumed surface makes a **non-breaking, alias-based decomposition**
 practical.
@@ -62,14 +62,14 @@ practical.
 Extract a leaf `core` package holding the contract and wire-level plumbing, then
 move each concern into its own subpackage that imports `core`. The `client`
 package remains as a compatibility facade: every moved type becomes a Go type
-alias (`type GraycodeRouterMessage = core.GraycodeRouterMessage`), every moved function a thin
+alias (`type EyrieMessage = core.EyrieMessage`), every moved function a thin
 wrapper or function variable. Type aliases preserve type identity, so **no
 consumer code changes and no version bump semantics change**.
 
 Target layout:
 
 ```
-graycode-router/
+eyrie/
   client/            // facade: aliases + wrappers (shrinks each phase)
     core/            // Provider, messages, options, errors, retry, transport, SSE
     adapters/        // one file per protocol family; imports core only
@@ -101,20 +101,20 @@ inside the tree.
 Phase 1 is DONE (2026-07-12):
 - [x] Created `client/core` with `Provider`, message/response/stream/usage/tool
       types, `ChatOptions`, `ResponseFormat`, `ToolChoiceOption`,
-      `ContinuationConfig`, `GraycodeRouterConfig`, `GraycodeRouterError`, `RetryConfig` +
+      `ContinuationConfig`, `EyrieConfig`, `EyrieError`, `RetryConfig` +
       `DoWithRetry`, `ParseProviderError`/`FormatAPIError`, `CopyResponse`.
       (SSE parsing, transport, `userAgent`, `defaultTimeout` deferred to the
       adapters phase — embeddings did not need them.)
 - [x] In `client`, every moved name is aliased (`client/aliases.go`); internal
       call sites bridge through unexported vars (`doWithRetry = core.DoWithRetry`).
-- [x] `go test ./...` green in graycode-router; hawk builds + tests green.
+- [x] `go test ./...` green in eyrie; hawk builds + tests green.
 
 ### Phase 2: embeddings (smallest proven cluster, 4 deps)
 
 Phase 2 is DONE (2026-07-12):
 - [x] Moved embedding DTOs, `Embedder`, defaults, and `EmbeddingCachedProvider`
       to `client/embeddings` (imports `core` only).
-- [x] `OpenAIClient.CreateEmbedding` / `GraycodeRouterClient.CreateEmbedding` stayed in
+- [x] `OpenAIClient.CreateEmbedding` / `EyrieClient.CreateEmbedding` stayed in
       `client` (`embedding_methods.go`) — methods must live with their
       receiver's package; they implement `embeddings.Embedder`.
 - [x] Facade aliases for the full embedding API in `client/aliases.go`.
@@ -174,10 +174,10 @@ Learned in Phases 1–2 (apply to later phases):
 
 ### Phase 5: enforcement + deprecation
 - [x] Add `scripts/check-client-layering.sh` (mirror of hawk's
-      `check-graycode-router-client-imports.sh`) to CI: fail on any sibling→sibling import
+      `check-eyrie-client-imports.sh`) to CI: fail on any sibling→sibling import
       that bypasses `core`, and on any in-tree import of the facade.
 - [ ] Mark facade aliases `// Deprecated:` pointing at the subpackage; migrate
-      graycode-router-internal callers (`conversation`, `router`, `runtime`, `setup`,
+      eyrie-internal callers (`conversation`, `router`, `runtime`, `setup`,
       examples) to the subpackages; leave external aliases indefinitely.
 
 ## Testing Strategy
@@ -197,11 +197,11 @@ Learned in Phases 1–2 (apply to later phases):
 | Hidden unexported coupling beyond the measured sets | med | Phases are one-cluster-at-a-time; the compiler finds every missed reference at move time; abort/expand `core` rather than weaken boundaries |
 | Type identity breakage for consumers doing type switches | high | Use aliases (`=`), never new named types, for everything that already exists |
 | Method sets split from their types | high | Methods move with their receiver's file into the same subpackage — never leave methods behind |
-| GraycodeRouter module-pin drift in Hawk during the refactor | low | Land phases as individual PRs; update Hawk after each; `make sync` reports drift |
+| Eyrie module-pin drift in Hawk during the refactor | low | Land phases as individual PRs; update Hawk after each; `make sync` reports drift |
 | Facade grows stale re-exports | low | Phase 5 CI check + deprecation comments |
 
 ## References
 
-- hawk's boundary script: `hawk/scripts/check-graycode-router-client-imports.sh`
+- hawk's boundary script: `hawk/scripts/check-eyrie-client-imports.sh`
 - hawk's DTO layer (proof the consumer surface is narrow): `hawk/internal/types/client.go`
 - Session decomposition precedent: `hawk/docs/session-decomposition.md`

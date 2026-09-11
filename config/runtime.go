@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 // OpenAICompatibleRuntimeMode identifies the runtime mode.

@@ -1,11 +1,11 @@
 package config
 
 import (
-	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 // BuildRoutingPolicyFromDeployments builds deployment routing from configured deployments.
-// Graycode should not author routing rules — consume this JSON from graycode-router only.
+// Hawk should not author routing rules — consume this JSON from eyrie only.
 func BuildRoutingPolicyFromDeployments(deployments map[string]DeploymentConfig) *RoutingPolicy {
 	if len(deployments) == 0 {
 		return &RoutingPolicy{}
@@ -109,7 +109,7 @@ func longcatProviderStages(deployments map[string]DeploymentConfig) []RoutingSta
 		return nil
 	}
 	// Single OpenAI-compatible endpoint only (longcat-direct).
-	// Official LongCat also documents /anthropic; graycode does not require it when OpenAI works.
+	// Official LongCat also documents /anthropic; hawk does not require it when OpenAI works.
 	return singleDeploymentStages("longcat-direct", 1)
 }
 

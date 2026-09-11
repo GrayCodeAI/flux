@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 // staticProviderNames is a snapshot of every provider in the static runtime

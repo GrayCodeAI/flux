@@ -10,15 +10,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 func main() {
-	c := client.Client(&client.GraycodeRouterConfig{
+	c := client.Client(&client.EyrieConfig{
 		Provider: client.DetectProvider(),
 	})
 
-	messages := []client.GraycodeRouterMessage{
+	messages := []client.EyrieMessage{
 		{Role: "user", Content: "Write a short poem about programming."},
 	}
 

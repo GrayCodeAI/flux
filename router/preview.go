@@ -3,7 +3,7 @@ package router
 import (
 	"encoding/json"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 // RoutingResolution describes which routing policy matched a canonical model.

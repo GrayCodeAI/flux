@@ -1,4 +1,4 @@
-module github.com/GrayCodeAI/graycode-router
+module github.com/GrayCodeAI/eyrie
 
 go 1.26.6
 

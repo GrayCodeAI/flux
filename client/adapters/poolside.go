@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/eyrie/client/core"
 )
 
 // PoolsideClient uses Poolside's OpenAI-compatible transport and retries a
@@ -22,11 +22,11 @@ func NewPoolsideClient(apiKey, baseURL string, opts ...core.ClientOption) *Pools
 
 func (c *PoolsideClient) Name() string { return "poolside" }
 
-func (c *PoolsideClient) Chat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
+func (c *PoolsideClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *PoolsideClient) StreamChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *PoolsideClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	primary, err := c.openAI.Chat(ctx, messages, opts)
 	if err != nil {
 		return nil, err
@@ -41,8 +41,8 @@ func (c *PoolsideClient) StreamChat(ctx context.Context, messages []core.Graycod
 	return streamResultFromChat(recovered), nil
 }
 
-func (c *PoolsideClient) reasoningOnlyFallbackChat(ctx context.Context, messages []core.GraycodeRouterMessage, opts core.ChatOptions) (*core.GraycodeRouterResponse, error) {
-	// A Laguna stream can exhaust itself in reasoning when Graycode's large tool
+func (c *PoolsideClient) reasoningOnlyFallbackChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+	// A Laguna stream can exhaust itself in reasoning when Hawk's large tool
 	// catalog is attached. Preserve tools on the primary request, but make the
 	// one-shot recovery text-only so the model emits its final answer.
 	opts.Tools = nil

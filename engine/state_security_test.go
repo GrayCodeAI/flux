@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/config"
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestMigrateProviderSecretsImportsBeforeSanitizing(t *testing.T) {

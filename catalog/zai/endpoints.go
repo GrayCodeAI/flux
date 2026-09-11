@@ -1,6 +1,6 @@
 // Package zai resolves Z.AI (Zhipu GLM) API base URLs for General (pay-as-you-go)
 // and Coding Plan subscriptions across International vs China regions.
-// Graycode uses the OpenAI-compatible surface only.
+// Hawk uses the OpenAI-compatible surface only.
 package zai
 
 import (

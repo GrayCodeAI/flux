@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
+	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
 )
 
 // VertexGeminiBaseURL returns the Google Vertex AI publisher endpoint for Gemini.

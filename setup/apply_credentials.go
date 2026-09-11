@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
-	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/config"
 )
 
-// ApplyCredentialsResult is the full graycode-router response after API keys are applied:
+// ApplyCredentialsResult is the full eyrie response after API keys are applied:
 // refreshed catalog, provider.json (deployments + routing), and paths.
 type ApplyCredentialsResult struct {
 	Catalog            *catalog.RefreshResult
@@ -56,7 +56,7 @@ func ApplyCredentialsForProvider(ctx context.Context, providerID string, creds c
 }
 
 // ApplyCredentials discovers the model catalog from env API keys, then writes
-// ~/.graycode/provider.json deployments and routing derived from the catalog.
+// ~/.hawk/provider.json deployments and routing derived from the catalog.
 func ApplyCredentials(ctx context.Context, creds catalog.Credentials) (*ApplyCredentialsResult, error) {
 	catResult, err := DiscoverModelCatalog(ctx, creds)
 	if err != nil {

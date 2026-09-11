@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
+	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
 )
 
 func TestOpenCodeGoUsesMessagesAPI(t *testing.T) {

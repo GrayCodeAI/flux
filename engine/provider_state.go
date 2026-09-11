@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/eyrie/config"
 )
 
 var providerStateLocks sync.Map
@@ -17,7 +17,7 @@ func lockProviderStatePath(path string) func() {
 	value, _ := providerStateLocks.LoadOrStore(key, &sync.Mutex{})
 	mu, ok := value.(*sync.Mutex)
 	if !ok {
-		panic("graycode-router engine: provider-state lock map contains a non-mutex value")
+		panic("eyrie engine: provider-state lock map contains a non-mutex value")
 	}
 	mu.Lock()
 	return mu.Unlock

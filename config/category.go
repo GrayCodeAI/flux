@@ -99,7 +99,7 @@ func DefaultCategories() map[ModelCategory]CategoryConfig {
 }
 
 // GetCategoryRegistry returns the global category registry.
-// It loads overrides from Graycode user config if present.
+// It loads overrides from Hawk user config if present.
 func GetCategoryRegistry() *CategoryRegistry {
 	registryOnce.Do(func() {
 		globalRegistry = &CategoryRegistry{
@@ -117,16 +117,13 @@ func ResetCategoryRegistry() {
 }
 
 func (r *CategoryRegistry) loadOverrides() {
-	configDir := os.Getenv("GRAYCODE_ROUTER_CONFIG_DIR")
-	if configDir == "" {
-		configDir = os.Getenv("HAWK_CONFIG_DIR")
-	}
+	configDir := os.Getenv("EYRIE_CONFIG_DIR")
 	if configDir == "" {
 		dir, err := os.UserConfigDir()
 		if err != nil || dir == "" {
 			return
 		}
-		configDir = filepath.Join(dir, "graycode-router")
+		configDir = filepath.Join(dir, "eyrie")
 	}
 	path := filepath.Join(configDir, "categories.json")
 	data, err := os.ReadFile(path) // #nosec G304 -- path is built from os.UserConfigDir(), not untrusted input

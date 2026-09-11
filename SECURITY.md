@@ -1,4 +1,4 @@
-# Security Policy — graycode-router
+# Security Policy — eyrie
 
 ## Supported versions
 
@@ -7,15 +7,15 @@ minor versions once `1.x` ships. Older versions receive critical-severity
 fixes only on a best-effort basis.
 
 The current canonical version is the contents of the [`VERSION`](./VERSION)
-file at the repo root. See [`VERSIONING.md`](https://github.com/GrayCodeAI/graycode-cli/blob/main/VERSIONING.md)
+file at the repo root. See [`VERSIONING.md`](https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md)
 for the eco-wide versioning scheme.
 
 ## Reporting a vulnerability
 
 **Do not open a public GitHub issue for security vulnerabilities.** Instead:
 
-1. Open a private [GitHub Security Advisory](https://github.com/GrayCodeAI/graycode-router/security/advisories/new), **or**
-2. Email `security@graycode.ai` with the details below.
+1. Open a private [GitHub Security Advisory](https://github.com/GrayCodeAI/eyrie/security/advisories/new), **or**
+2. Email `security@hawk.ai` with the details below.
 
 Include in your report:
 
@@ -62,10 +62,10 @@ This policy covers the code in this repository and the release artefacts
 published from it. It does not cover:
 
 - Third-party dependencies (report to upstream).
-- LLM provider services that graycode-router integrates with (report to the
+- LLM provider services that eyrie integrates with (report to the
   provider).
 - Local filesystem misuse where an attacker already has shell access (out of
   threat model).
 
-For graycode-router-specific threat-model notes, see the README and any docs in
+For eyrie-specific threat-model notes, see the README and any docs in
 this repo.

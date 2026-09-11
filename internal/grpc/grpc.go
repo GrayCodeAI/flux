@@ -1,6 +1,6 @@
-// Package grpc holds a dependency-free skeleton for an graycode-router gRPC API.
+// Package grpc holds a dependency-free skeleton for an eyrie gRPC API.
 //
-// graycode-router does not currently import google.golang.org/grpc, and per repo policy
+// eyrie does not currently import google.golang.org/grpc, and per repo policy
 // that dependency is not added speculatively. This file therefore defines only
 // the service contract and a no-op default implementation so the rest of the
 // codebase can reference the gRPC surface today. The real server wiring lives
@@ -13,7 +13,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/GrayCodeAI/graycode-router/conversation"
+	"github.com/GrayCodeAI/eyrie/conversation"
 )
 
 // ChatRequest is the unary Chat request payload. It mirrors the HTTP
@@ -33,7 +33,7 @@ type ChatResponse struct {
 	FinishReason string
 }
 
-// ChatService is the graycode-router gRPC service contract: a single unary Chat RPC.
+// ChatService is the eyrie gRPC service contract: a single unary Chat RPC.
 // A concrete implementation will adapt conversation.Engine; see README.md.
 type ChatService interface {
 	Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error)
@@ -53,7 +53,7 @@ var ErrUnimplemented = errUnimplemented{}
 
 type errUnimplemented struct{}
 
-func (errUnimplemented) Error() string { return "graycode-router/grpc: ChatService not implemented" }
+func (errUnimplemented) Error() string { return "eyrie/grpc: ChatService not implemented" }
 
 func (noopChatService) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, error) {
 	return nil, ErrUnimplemented
@@ -86,7 +86,7 @@ func (s *EngineChatService) Chat(ctx context.Context, req *ChatRequest) (*ChatRe
 		return nil, ErrUnimplemented
 	}
 	if req == nil {
-		return nil, fmt.Errorf("graycode-router/grpc: chat request is required")
+		return nil, fmt.Errorf("eyrie/grpc: chat request is required")
 	}
 	ch, err := s.engine.Prompt(ctx, req.Message, conversation.PromptOpts{
 		Model:        req.Model,

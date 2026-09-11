@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-router/catalog/live"
+	"github.com/GrayCodeAI/eyrie/catalog/live"
 )
 
 func TestCatalogFromLegacyCompiles(t *testing.T) {

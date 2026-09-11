@@ -89,7 +89,7 @@ func TestParseAnthropicResponse_Mixed(t *testing.T) {
 }
 
 // TestParseAnthropicResponse_OrgID: the OrganizationID parameter
-// flows through to GraycodeRouterResponse.OrganizationID.
+// flows through to EyrieResponse.OrganizationID.
 func TestParseAnthropicResponse_OrgID(t *testing.T) {
 	t.Parallel()
 	var ar anthropicResponse

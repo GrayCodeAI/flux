@@ -44,13 +44,13 @@ class APIError extends Error {
   body: string;
 
   constructor(statusCode: number, body: string) {
-    super(`graycode-router: ${statusCode} ${body}`);
+    super(`eyrie: ${statusCode} ${body}`);
     this.statusCode = statusCode;
     this.body = body;
   }
 }
 
-class GraycodeRouterClient {
+class EyrieClient {
   private baseURL: string;
   private headers: Record<string, string>;
 

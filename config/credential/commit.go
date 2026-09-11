@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 // ValidateCredentialBeforeSave checks format/placeholders without a live API probe.

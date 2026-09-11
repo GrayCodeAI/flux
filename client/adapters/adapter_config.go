@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/eyrie/client/core"
 )
 
 // Functional-option setter surface for the two protocol adapters (see

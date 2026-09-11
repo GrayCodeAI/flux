@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestRegisterCustomGatewayValidatesHostMetadata(t *testing.T) {

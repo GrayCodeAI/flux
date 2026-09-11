@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 func TestBuildRoutingPolicyFromDeployments_OpenAI(t *testing.T) {

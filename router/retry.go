@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-router/types"
+	"github.com/GrayCodeAI/eyrie/types"
 )
 
 // RetryConfig controls retry behavior at the router level.

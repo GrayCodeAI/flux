@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestResolveProviderRequest(t *testing.T) {

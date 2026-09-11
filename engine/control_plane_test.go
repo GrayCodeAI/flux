@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/config"
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestControlPlaneUsesInjectedCredentialStore(t *testing.T) {
@@ -50,7 +50,7 @@ func TestControlPlaneUsesInjectedCredentialStore(t *testing.T) {
 
 	if eng.catalogPath != filepath.Join(filepath.Dir(eng.providerConfigPath), "model_catalog.json") {
 		// Both paths must derive from the injected StateDir. The exact assertion
-		// catches accidental fallback to process-global Graycode paths.
+		// catches accidental fallback to process-global Hawk paths.
 		t.Fatalf("control-plane paths escaped injected state dir: catalog=%q provider=%q", eng.catalogPath, eng.providerConfigPath)
 	}
 }

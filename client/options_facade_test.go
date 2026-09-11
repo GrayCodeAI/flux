@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/eyrie/client/core"
 )
 
 type recordingConfigurable struct {

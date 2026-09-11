@@ -111,38 +111,38 @@ func TestFormatAPIError_OmitsRequestIDWhenEmpty(t *testing.T) {
 	}
 }
 
-// TestFormatAPIError_ReturnsGraycodeRouterError: the returned error is a
-// concrete *GraycodeRouterError, dispatchable via errors.As. This is the
+// TestFormatAPIError_ReturnsEyrieError: the returned error is a
+// concrete *EyrieError, dispatchable via errors.As. This is the
 // core contract that lets retry/fallback middleware use the
 // structured IsRetriable()/IsAuthError()/IsRateLimited() helpers
 // instead of regex-parsing the message.
-func TestFormatAPIError_ReturnsGraycodeRouterError(t *testing.T) {
+func TestFormatAPIError_ReturnsEyrieError(t *testing.T) {
 	t.Parallel()
 	err := FormatAPIError("openai", "chat", 429, "req_429",
 		ProviderErrorDetail{Message: "rate limited"}, nil)
-	var graycodeRouterErr *GraycodeRouterError
-	if !errors.As(err, &graycodeRouterErr) {
-		t.Fatalf("FormatAPIError must return *GraycodeRouterError, got %T (%v)", err, err)
+	var eyrieErr *EyrieError
+	if !errors.As(err, &eyrieErr) {
+		t.Fatalf("FormatAPIError must return *EyrieError, got %T (%v)", err, err)
 	}
-	if graycodeRouterErr.Provider != "openai" {
-		t.Errorf("Provider = %q, want openai", graycodeRouterErr.Provider)
+	if eyrieErr.Provider != "openai" {
+		t.Errorf("Provider = %q, want openai", eyrieErr.Provider)
 	}
-	if graycodeRouterErr.Op != "chat" {
-		t.Errorf("Op = %q, want chat", graycodeRouterErr.Op)
+	if eyrieErr.Op != "chat" {
+		t.Errorf("Op = %q, want chat", eyrieErr.Op)
 	}
-	if graycodeRouterErr.StatusCode != 429 {
-		t.Errorf("StatusCode = %d, want 429", graycodeRouterErr.StatusCode)
+	if eyrieErr.StatusCode != 429 {
+		t.Errorf("StatusCode = %d, want 429", eyrieErr.StatusCode)
 	}
-	if graycodeRouterErr.RequestID != "req_429" {
-		t.Errorf("RequestID = %q, want req_429", graycodeRouterErr.RequestID)
+	if eyrieErr.RequestID != "req_429" {
+		t.Errorf("RequestID = %q, want req_429", eyrieErr.RequestID)
 	}
-	if !graycodeRouterErr.IsRateLimited() {
+	if !eyrieErr.IsRateLimited() {
 		t.Errorf("IsRateLimited = false, want true for 429")
 	}
-	if !graycodeRouterErr.IsRetriable() {
+	if !eyrieErr.IsRetriable() {
 		t.Errorf("IsRetriable = false, want true for 429")
 	}
-	if graycodeRouterErr.IsAuthError() {
+	if eyrieErr.IsAuthError() {
 		t.Errorf("IsAuthError = true, want false for 429")
 	}
 }
@@ -154,14 +154,14 @@ func TestFormatAPIError_AuthError(t *testing.T) {
 	for _, status := range []int{401, 403} {
 		err := FormatAPIError("openai", "chat", status, "req",
 			ProviderErrorDetail{Message: "unauthorized", Code: "invalid_api_key"}, nil)
-		var graycodeRouterErr *GraycodeRouterError
-		if !errors.As(err, &graycodeRouterErr) {
-			t.Fatalf("status %d: not *GraycodeRouterError: %T", status, err)
+		var eyrieErr *EyrieError
+		if !errors.As(err, &eyrieErr) {
+			t.Fatalf("status %d: not *EyrieError: %T", status, err)
 		}
-		if !graycodeRouterErr.IsAuthError() {
+		if !eyrieErr.IsAuthError() {
 			t.Errorf("status %d: IsAuthError = false, want true", status)
 		}
-		if graycodeRouterErr.IsRetriable() {
+		if eyrieErr.IsRetriable() {
 			t.Errorf("status %d: IsRetriable = true, want false (auth errors don't retry)", status)
 		}
 	}
@@ -173,11 +173,11 @@ func TestFormatAPIError_RetriableCodes(t *testing.T) {
 	for _, status := range []int{408, 429, 500, 502, 503, 504, 529} {
 		err := FormatAPIError("openai", "chat", status, "req",
 			ProviderErrorDetail{Message: "try again"}, nil)
-		var graycodeRouterErr *GraycodeRouterError
-		if !errors.As(err, &graycodeRouterErr) {
-			t.Fatalf("status %d: not *GraycodeRouterError: %T", status, err)
+		var eyrieErr *EyrieError
+		if !errors.As(err, &eyrieErr) {
+			t.Fatalf("status %d: not *EyrieError: %T", status, err)
 		}
-		if !graycodeRouterErr.IsRetriable() {
+		if !eyrieErr.IsRetriable() {
 			t.Errorf("status %d: IsRetriable = false, want true", status)
 		}
 	}
@@ -185,7 +185,7 @@ func TestFormatAPIError_RetriableCodes(t *testing.T) {
 
 // TestFormatAPIError_InnerErrorUnwrap: a non-nil inner error passed
 // in (e.g. a body read error from ParseProviderError) is wired into
-// GraycodeRouterError.Err, so errors.Is / errors.Unwrap traverse it. This
+// EyrieError.Err, so errors.Is / errors.Unwrap traverse it. This
 // fixes the contract gap where Unwrap() always returned nil even
 // when the provider body failed to read.
 func TestFormatAPIError_InnerErrorUnwrap(t *testing.T) {
@@ -194,9 +194,9 @@ func TestFormatAPIError_InnerErrorUnwrap(t *testing.T) {
 	err := FormatAPIError("openai", "chat", 500, "req_inner",
 		ProviderErrorDetail{Message: "bad gateway"}, inner)
 
-	var graycodeRouterErr *GraycodeRouterError
-	if !errors.As(err, &graycodeRouterErr) {
-		t.Fatalf("FormatAPIError must return *GraycodeRouterError, got %T (%v)", err, err)
+	var eyrieErr *EyrieError
+	if !errors.As(err, &eyrieErr) {
+		t.Fatalf("FormatAPIError must return *EyrieError, got %T (%v)", err, err)
 	}
 	if !errors.Is(err, io.ErrUnexpectedEOF) {
 		t.Errorf("errors.Is(err, io.ErrUnexpectedEOF) = false, want true (Err field must be wired)")

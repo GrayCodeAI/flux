@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
-	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 // PreflightStatus is ok, warn, or fail.
@@ -26,7 +26,7 @@ type PreflightCheck struct {
 	Detail string          `json:"detail"`
 }
 
-// PreflightReport summarizes whether graycode can chat.
+// PreflightReport summarizes whether hawk can chat.
 type PreflightReport struct {
 	Ready  bool             `json:"ready"`
 	Checks []PreflightCheck `json:"checks"`
@@ -45,7 +45,7 @@ func Preflight(ctx context.Context) PreflightReport {
 	if !exists || size == 0 {
 		checks = append(checks, PreflightCheck{
 			Name: "catalog", Status: PreflightWarn,
-			Detail: "model catalog cache missing — graycode will discover on /config or refresh automatically",
+			Detail: "model catalog cache missing — hawk will discover on /config or refresh automatically",
 		})
 	} else {
 		compiled, err := catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{
@@ -87,7 +87,7 @@ func Preflight(ctx context.Context) PreflightReport {
 	}
 
 	// Provider credentials configured
-	hasCreds := graycoderoutercfg.HasAnyConfiguredDeployment(ctx)
+	hasCreds := eyriecfg.HasAnyConfiguredDeployment(ctx)
 	if !hasCreds {
 		checks = append(checks, PreflightCheck{
 			Name: "credentials", Status: PreflightFail,

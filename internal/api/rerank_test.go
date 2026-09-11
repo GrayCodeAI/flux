@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/storage"
+	"github.com/GrayCodeAI/eyrie/storage"
 )
 
 type mockReranker struct {

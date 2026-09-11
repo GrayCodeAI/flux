@@ -12,18 +12,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/graycode-router/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 func main() {
-	primary := client.Client(&client.GraycodeRouterConfig{
+	primary := client.Client(&client.EyrieConfig{
 		Provider: "anthropic",
 	})
-	secondary := client.Client(&client.GraycodeRouterConfig{
+	secondary := client.Client(&client.EyrieConfig{
 		Provider: "openai",
 	})
 
-	messages := []client.GraycodeRouterMessage{
+	messages := []client.EyrieMessage{
 		{Role: "user", Content: "Explain what a fallback chain is in one sentence."},
 	}
 

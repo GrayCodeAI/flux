@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 // ProviderFeatures tracks which capabilities each provider supports.

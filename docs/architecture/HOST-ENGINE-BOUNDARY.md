@@ -1,12 +1,12 @@
-# Host–GraycodeRouter Engine Boundary
+# Host–Eyrie Engine Boundary
 
 Status: accepted. The host-facing compatibility contract is
 `engine.ContractVersion == "2"`.
 
 ## Decision
 
-Graycode is the product face. It owns the terminal UI, agent loop, tool execution,
-permissions, conversation history, checkpoints, and product semantics. GraycodeRouter is
+Hawk is the product face. It owns the terminal UI, agent loop, tool execution,
+permissions, conversation history, checkpoints, and product semantics. Eyrie is
 the engine. It owns credentials, provider/deployment metadata, model discovery,
 catalog compilation, selection, transport construction, provider request and
 stream normalization, resilience, normalized usage, and provider telemetry.
@@ -15,11 +15,11 @@ stream normalization, resilience, normalized usage, and provider telemetry.
 User
   |
   v
-Graycode (face: UX, session, tools, permissions)
+Hawk (face: UX, session, tools, permissions)
   |
   | stable DTOs and methods
   v
-github.com/GrayCodeAI/graycode-router/engine  [contract v2]
+github.com/GrayCodeAI/eyrie/engine  [contract v2]
   |
   +--> injected secret store
   +--> injected state paths
@@ -30,14 +30,14 @@ github.com/GrayCodeAI/graycode-router/engine  [contract v2]
 Provider model APIs
 ```
 
-The dependency is one-way: GraycodeRouter must not import Graycode. Graycode's integration layer
-may import `graycode-router/engine`; Graycode command, conversation, and UI packages must not
-assemble GraycodeRouter's `catalog`, `client`, `config`, `credentials`, `router`,
+The dependency is one-way: Eyrie must not import Hawk. Hawk's integration layer
+may import `eyrie/engine`; Hawk command, conversation, and UI packages must not
+assemble Eyrie's `catalog`, `client`, `config`, `credentials`, `router`,
 `runtime`, or `setup` packages.
 
 ## Composition root
 
-Graycode constructs one `engine.Engine` from host-owned dependencies:
+Hawk constructs one `engine.Engine` from host-owned dependencies:
 
 ```go
 e, err := engine.New(engine.Options{
@@ -53,7 +53,7 @@ e, err := engine.New(engine.Options{
 `StateDir` derives `model_catalog.json` and `provider.json` when explicit paths
 are absent. Explicit paths win. The store, paths, remote catalog URL, and custom
 gateways belong to the Engine instance; production behavior does not depend on
-ambient Graycode paths or a process-global custom-gateway registry. The global
+ambient Hawk paths or a process-global custom-gateway registry. The global
 registry remains an opt-in compatibility path through
 `UseRegisteredCustomGateways`.
 
@@ -77,7 +77,7 @@ MigrateProviderSecretsContext
 Provider-specific wire types, authentication headers, retry behavior, and raw
 stream events do not cross this boundary. `Model` keeps distinct `Owner`,
 `ProviderID`, `GatewayID`, `CanonicalID`, `Source`, and `LiveMetadata` fields so
-Graycode does not reconstruct catalog meaning.
+Hawk does not reconstruct catalog meaning.
 
 ## Credential-to-conversation flow
 
@@ -98,10 +98,10 @@ Engine.ApplyCredentials / ListLiveModels
   +--> pass a provider-scoped environment to its live fetcher
   +--> merge/compile catalog and atomically update model_catalog.json
   v
-Engine.ListModels --> Graycode picker --> Engine.SetSelection
+Engine.ListModels --> Hawk picker --> Engine.SetSelection
   |
   v
-Graycode builds provider-neutral GenerateRequest from its conversation
+Hawk builds provider-neutral GenerateRequest from its conversation
   |
   +--> Engine.Generate
   `--> Engine.Stream --> normalized route/content/thinking/tool/usage events
@@ -125,21 +125,21 @@ Legacy provider files may contain credential-shaped fields. The explicit
 `MigrateProviderSecretsContext` flow maps every recognized secret to the
 injected store before writing a sanitized provider file. An unmapped secret or
 store failure aborts the migration and restores the original state; no
-plaintext backup is created. Graycode should run security status/migration before
+plaintext backup is created. Hawk should run security status/migration before
 normal provider-state writes.
 
 ## Selection and generation
 
 Hosts express capabilities (`streaming`, `tools`, `vision`, structured JSON,
 reasoning, and context size) plus an intent or explicit provider/model. An
-explicit model is a hard constraint unless the host enables fallback. GraycodeRouter
+explicit model is a hard constraint unless the host enables fallback. Eyrie
 owns canonicalization, gateway ownership, deployment routing, and capability
 matching.
 
-GraycodeRouter generation is stateless from Graycode's point of view:
+Eyrie generation is stateless from Hawk's point of view:
 
 ```text
-Graycode owns                         GraycodeRouter owns
+Hawk owns                         Eyrie owns
 ----------                        -----------
 conversation history              route decision
 tool permission and execution     provider transport
@@ -151,7 +151,7 @@ session lifecycle                 normalized usage/telemetry
 `Stream` is pull-based, cancellable, and must be closed. It emits the selected
 route before provider events and normalizes content, thinking, tool calls,
 usage, retry/continuation, TTFT, and completion. Unknown future event types are
-additive and must be ignored safely. GraycodeRouter emits tool requests; Graycode authorizes
+additive and must be ignored safely. Eyrie emits tool requests; Hawk authorizes
 and executes tools, appends results to its history, and begins the next model
 turn.
 
@@ -171,25 +171,25 @@ diagnostics; live readiness is an explicit network operation.
 
 ## Release and sibling-repository order
 
-The boundary is delivered GraycodeRouter-first:
+The boundary is delivered Eyrie-first:
 
 ```text
-1. Change and verify standalone GraycodeRouter
-2. Commit GraycodeRouter and publish a resolvable release/commit
-3. Update Graycode's GraycodeRouter module version when required
-4. Update Graycode's GraycodeRouter module pin to that exact published commit
-5. Verify Graycode integration, boundary checks, and clean-clone/module builds
-6. Commit the Graycode module-pin update in Graycode's repository
+1. Change and verify standalone Eyrie
+2. Commit Eyrie and publish a resolvable release/commit
+3. Update Hawk's Eyrie module version when required
+4. Update Hawk's Eyrie module pin to that exact published commit
+5. Verify Hawk integration, boundary checks, and clean-clone/module builds
+6. Commit the Hawk module-pin update in Hawk's repository
 ```
 
-Graycode must never depend on an uncommitted GraycodeRouter worktree. The parent workspace
+Hawk must never depend on an uncommitted Eyrie worktree. The parent workspace
 uses a sibling checkout for source identity during local development; a
 resolvable published module version is also required for workflows that build
-Graycode with `GOWORK=off`.
+Hawk with `GOWORK=off`.
 
 ## Compatibility policy
 
-Lower-level GraycodeRouter packages remain public for non-Graycode consumers and staged
-migration, but they are not part of Graycode's product boundary. Additive fields
+Lower-level Eyrie packages remain public for non-Hawk consumers and staged
+migration, but they are not part of Hawk's product boundary. Additive fields
 and stream events are allowed within contract v2. Removing or changing stable
 DTO semantics requires a contract-version and semantic-version boundary.

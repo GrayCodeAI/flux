@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 // ModelCostTier is a relative cost band for model selection.

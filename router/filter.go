@@ -1,6 +1,6 @@
 package router
 
-import "github.com/GrayCodeAI/graycode-router/client"
+import "github.com/GrayCodeAI/eyrie/client"
 
 type ToolFilter struct {
 	modelTools map[string][]string
@@ -10,7 +10,7 @@ func NewToolFilter(modelTools map[string][]string) *ToolFilter {
 	return &ToolFilter{modelTools: modelTools}
 }
 
-func (f *ToolFilter) FilterTools(model string, tools []client.GraycodeRouterTool) []client.GraycodeRouterTool {
+func (f *ToolFilter) FilterTools(model string, tools []client.EyrieTool) []client.EyrieTool {
 	if f == nil || len(f.modelTools) == 0 {
 		return tools
 	}
@@ -22,7 +22,7 @@ func (f *ToolFilter) FilterTools(model string, tools []client.GraycodeRouterTool
 	for _, t := range supported {
 		supportedSet[t] = true
 	}
-	var filtered []client.GraycodeRouterTool
+	var filtered []client.EyrieTool
 	for _, t := range tools {
 		if len(t.Parameters) > 0 {
 			filtered = append(filtered, t)

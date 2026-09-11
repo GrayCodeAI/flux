@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/eyrie/client/core"
 )
 
 func TestCreateEmbedding_Validation(t *testing.T) {

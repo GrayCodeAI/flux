@@ -3,7 +3,7 @@
 // These exported constants are the canonical, ecosystem-wide attribute keys for
 // describing LLM / AI agent operations. They follow the OpenTelemetry GenAI
 // semantic conventions (gen_ai.*) and are shared as the reference set that the
-// other graycode-eco repos (graycode, harrier, shrike, swift) should mirror when emitting
+// other graycode-eco repos (hawk, harrier, shrike, swift) should mirror when emitting
 // spans, so dashboards and exporters can correlate cost/usage/identity across
 // the whole ecosystem.
 //
@@ -12,7 +12,7 @@
 // This file is stdlib-only and purely additive (constant declarations only).
 //
 // Spec: https://opentelemetry.io/docs/specs/semconv/gen-ai/
-package graycoderouter
+package eyrie
 
 // GenAI semantic convention attribute keys. These mirror the OpenTelemetry
 // gen_ai.* namespace plus the small set of ecosystem extensions

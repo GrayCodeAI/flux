@@ -3,7 +3,7 @@ package client
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/eyrie/client/core"
 )
 
 // ProviderThinkingFormat is the wire encoding for extended thinking / reasoning.

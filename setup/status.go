@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
-	"github.com/GrayCodeAI/graycode-router/config"
-	"github.com/GrayCodeAI/graycode-router/router"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/router"
 )
 
-// StatusReport summarizes deployment routing readiness (graycode-router provider status).
+// StatusReport summarizes deployment routing readiness (eyrie provider status).
 type StatusReport struct {
 	DeploymentRouting  bool
 	ProviderConfig     string
@@ -111,7 +111,7 @@ func FormatStatus(report StatusReport) string {
 	if report.DeploymentRouting {
 		b.WriteString("enabled\n")
 	} else {
-		b.WriteString("disabled (single-route GraycodeRouter transport)\n")
+		b.WriteString("disabled (single-route Eyrie transport)\n")
 	}
 	fmt.Fprintf(&b, "Provider config: %s", report.ProviderConfig)
 	if report.ConfigVersion > 0 {
@@ -132,7 +132,7 @@ func FormatStatus(report StatusReport) string {
 		fmt.Fprintf(&b, "  cached: no (using embedded catalog: %d models)\n", report.CatalogModels)
 	}
 	if report.CatalogStale {
-		b.WriteString("  stale: yes — graycode refreshes automatically; use `graycode models refresh` or `/refresh-model-catalog` for a manual run\n")
+		b.WriteString("  stale: yes — hawk refreshes automatically; use `hawk models refresh` or `/refresh-model-catalog` for a manual run\n")
 	}
 	if report.ActiveModel != "" {
 		fmt.Fprintf(&b, "Active canonical model: %s\n", report.ActiveModel)

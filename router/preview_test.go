@@ -3,7 +3,7 @@ package router
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 func TestResolveRoutingModelOverride(t *testing.T) {

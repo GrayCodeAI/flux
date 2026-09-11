@@ -56,9 +56,9 @@ func geminiSSEServer(t *testing.T, frames []string) *httptest.Server {
 
 // drainGeminiStream consumes the full event stream with a deadline and
 // returns the collected events. Used by all the streaming tests.
-func drainGeminiStream(t *testing.T, sr *StreamResult, timeout time.Duration) []GraycodeRouterStreamEvent {
+func drainGeminiStream(t *testing.T, sr *StreamResult, timeout time.Duration) []EyrieStreamEvent {
 	t.Helper()
-	var out []GraycodeRouterStreamEvent
+	var out []EyrieStreamEvent
 	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
 	for {
@@ -87,7 +87,7 @@ func TestGemini_Stream_SharedParser_Text(t *testing.T) {
 	defer srv.Close()
 
 	c := NewGeminiClient("test-key", srv.URL)
-	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 		{Role: "user", Content: "hi"},
 	}, ChatOptions{Model: "gemini-test"})
 	if err != nil {
@@ -136,7 +136,7 @@ func TestGemini_Stream_SharedParser_ToolCall(t *testing.T) {
 	defer srv.Close()
 
 	c := NewGeminiClient("test-key", srv.URL)
-	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 		{Role: "user", Content: "weather?"},
 	}, ChatOptions{Model: "gemini-test"})
 	if err != nil {
@@ -146,8 +146,8 @@ func TestGemini_Stream_SharedParser_ToolCall(t *testing.T) {
 
 	events := drainGeminiStream(t, sr, 5*time.Second)
 
-	var toolEvts []GraycodeRouterStreamEvent
-	var doneEvt *GraycodeRouterStreamEvent
+	var toolEvts []EyrieStreamEvent
+	var doneEvt *EyrieStreamEvent
 	for i := range events {
 		if events[i].Type == "tool_call" {
 			toolEvts = append(toolEvts, events[i])
@@ -193,7 +193,7 @@ func TestGemini_Stream_SharedParser_DoneWithUsage(t *testing.T) {
 	defer srv.Close()
 
 	c := NewGeminiClient("test-key", srv.URL)
-	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 		{Role: "user", Content: "go"},
 	}, ChatOptions{Model: "gemini-test"})
 	if err != nil {
@@ -202,7 +202,7 @@ func TestGemini_Stream_SharedParser_DoneWithUsage(t *testing.T) {
 	defer sr.Close()
 	events := drainGeminiStream(t, sr, 5*time.Second)
 
-	var doneEvt *GraycodeRouterStreamEvent
+	var doneEvt *EyrieStreamEvent
 	for i := range events {
 		if events[i].Type == "done" {
 			doneEvt = &events[i]
@@ -233,7 +233,7 @@ func TestGemini_Stream_SharedParser_EmptyStream(t *testing.T) {
 	defer srv.Close()
 
 	c := NewGeminiClient("test-key", srv.URL)
-	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 		{Role: "user", Content: "x"},
 	}, ChatOptions{Model: "gemini-test"})
 	if err != nil {
@@ -269,7 +269,7 @@ func TestGemini_Stream_SharedParser_ContextCancel(t *testing.T) {
 
 	c := NewGeminiClient("test-key", srv.URL)
 	ctx, cancel := context.WithCancel(context.Background())
-	sr, err := c.StreamChat(ctx, []GraycodeRouterMessage{
+	sr, err := c.StreamChat(ctx, []EyrieMessage{
 		{Role: "user", Content: "x"},
 	}, ChatOptions{Model: "gemini-test"})
 	if err != nil {
@@ -316,7 +316,7 @@ func TestGemini_Stream_SharedParser_LargeEvent(t *testing.T) {
 	defer srv.Close()
 
 	c := NewGeminiClient("test-key", srv.URL)
-	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 		{Role: "user", Content: "x"},
 	}, ChatOptions{Model: "gemini-test"})
 	if err != nil {
@@ -325,7 +325,7 @@ func TestGemini_Stream_SharedParser_LargeEvent(t *testing.T) {
 	defer sr.Close()
 	events := drainGeminiStream(t, sr, 10*time.Second)
 
-	var contentEvt *GraycodeRouterStreamEvent
+	var contentEvt *EyrieStreamEvent
 	for i := range events {
 		if events[i].Type == "content" {
 			contentEvt = &events[i]
@@ -341,7 +341,7 @@ func TestGemini_Stream_SharedParser_LargeEvent(t *testing.T) {
 }
 
 // TestGemini_Stream_SharedParser_FeatureFlag: when
-// GRAYCODE_ROUTER_GEMINI_SHARED_PARSER=0, the old streamLoop path is used.
+// EYRIE_GEMINI_SHARED_PARSER=0, the old streamLoop path is used.
 func TestGemini_Stream_SharedParser_FeatureFlag(t *testing.T) {
 	frames := []string{
 		`{"candidates":[{"content":{"parts":[{"text":"shared-on"}],"role":"model"},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}`,
@@ -353,7 +353,7 @@ func TestGemini_Stream_SharedParser_FeatureFlag(t *testing.T) {
 
 	t.Run("shared-on-by-default", func(t *testing.T) {
 		_ = os.Unsetenv(geminiSharedParserEnvVar)
-		sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+		sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 			{Role: "user", Content: "x"},
 		}, ChatOptions{Model: "gemini-test"})
 		if err != nil {
@@ -371,7 +371,7 @@ func TestGemini_Stream_SharedParser_FeatureFlag(t *testing.T) {
 
 	t.Run("opt-out-with-0", func(t *testing.T) {
 		t.Setenv(geminiSharedParserEnvVar, "0")
-		sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+		sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 			{Role: "user", Content: "x"},
 		}, ChatOptions{Model: "gemini-test"})
 		if err != nil {
@@ -389,7 +389,7 @@ func TestGemini_Stream_SharedParser_FeatureFlag(t *testing.T) {
 
 	t.Run("opt-out-with-false", func(t *testing.T) {
 		t.Setenv(geminiSharedParserEnvVar, "false")
-		sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+		sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 			{Role: "user", Content: "x"},
 		}, ChatOptions{Model: "gemini-test"})
 		if err != nil {
@@ -401,7 +401,7 @@ func TestGemini_Stream_SharedParser_FeatureFlag(t *testing.T) {
 
 	t.Run("explicit-1-stays-on", func(t *testing.T) {
 		t.Setenv(geminiSharedParserEnvVar, "1")
-		sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+		sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 			{Role: "user", Content: "x"},
 		}, ChatOptions{Model: "gemini-test"})
 		if err != nil {
@@ -428,7 +428,7 @@ func TestProcessGeminiStream_PreservesDoneWithUsage(t *testing.T) {
 	out := processGeminiStream(ctx, sseCh, slogDiscard())
 	close(sseCh)
 
-	events := collectGraycodeRouterStreamEvents(t, out, 2*time.Second)
+	events := collectEyrieStreamEvents(t, out, 2*time.Second)
 	if len(events) != 1 {
 		t.Fatalf("expected 1 event, got %d: %+v", len(events), events)
 	}
@@ -459,7 +459,7 @@ func TestProcessGeminiStream_DoneWithoutUsage(t *testing.T) {
 	close(sseCh)
 
 	out := processGeminiStream(ctx, sseCh, slogDiscard())
-	events := collectGraycodeRouterStreamEvents(t, out, 2*time.Second)
+	events := collectEyrieStreamEvents(t, out, 2*time.Second)
 	if len(events) != 2 {
 		t.Fatalf("expected 2 events, got %d: %+v", len(events), events)
 	}
@@ -487,7 +487,7 @@ func TestProcessGeminiStream_EmptyStream_EmitsDone(t *testing.T) {
 	close(sseCh)
 
 	out := processGeminiStream(ctx, sseCh, slogDiscard())
-	events := collectGraycodeRouterStreamEvents(t, out, 2*time.Second)
+	events := collectEyrieStreamEvents(t, out, 2*time.Second)
 	if len(events) != 1 {
 		t.Fatalf("expected 1 event, got %d: %+v", len(events), events)
 	}
@@ -496,13 +496,13 @@ func TestProcessGeminiStream_EmptyStream_EmitsDone(t *testing.T) {
 	}
 }
 
-// collectGraycodeRouterStreamEvents reads events until the channel closes
+// collectEyrieStreamEvents reads events until the channel closes
 // or the deadline fires. Used by the processGeminiStream direct tests.
-func collectGraycodeRouterStreamEvents(t *testing.T, ch <-chan GraycodeRouterStreamEvent, timeout time.Duration) []GraycodeRouterStreamEvent {
+func collectEyrieStreamEvents(t *testing.T, ch <-chan EyrieStreamEvent, timeout time.Duration) []EyrieStreamEvent {
 	t.Helper()
 	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
-	var out []GraycodeRouterStreamEvent
+	var out []EyrieStreamEvent
 	for {
 		select {
 		case <-deadline.C:
@@ -532,7 +532,7 @@ func TestGemini_Stream_SharedParser_PreservesClientState(t *testing.T) {
 		t.Fatal("retry config not initialized")
 	}
 
-	sr, err := c.StreamChat(context.Background(), []GraycodeRouterMessage{
+	sr, err := c.StreamChat(context.Background(), []EyrieMessage{
 		{Role: "user", Content: "x"},
 	}, ChatOptions{Model: "gemini-test"})
 	if err != nil {

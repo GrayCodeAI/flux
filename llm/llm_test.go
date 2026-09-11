@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
-// TestLlmParity pins the wire schema of llm.GraycodeRouterMessage (with a ContentPart)
+// TestLlmParity pins the wire schema of llm.EyrieMessage (with a ContentPart)
 // to the exact JSON the eagle llm contract produces.
 func TestLlmParity(t *testing.T) {
-	msg := llm.GraycodeRouterMessage{
+	msg := llm.EyrieMessage{
 		Role:    "user",
 		Content: "hello",
 		ContentParts: []llm.ContentPart{

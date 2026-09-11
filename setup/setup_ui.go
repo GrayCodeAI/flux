@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
-	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 // ModelUI is one selectable model for host /config UIs.
@@ -22,7 +22,7 @@ type ProviderUI struct {
 	Models      []ModelUI `json:"models"`
 }
 
-// SetupUI is JSON-safe metadata returned to graycode (no secrets).
+// SetupUI is JSON-safe metadata returned to hawk (no secrets).
 type SetupUI struct {
 	Providers []ProviderUI `json:"providers"`
 }

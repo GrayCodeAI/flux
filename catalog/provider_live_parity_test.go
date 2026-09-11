@@ -3,9 +3,9 @@ package catalog_test
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
-	"github.com/GrayCodeAI/graycode-router/catalog/live"
-	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog/live"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 func TestAllProviders_LiveFetchParity(t *testing.T) {

@@ -54,7 +54,7 @@ func (gp *GuardrailProvider) Inner() Provider {
 }
 
 // Chat sends a chat request and validates the response against guardrails.
-func (gp *GuardrailProvider) Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error) {
+func (gp *GuardrailProvider) Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error) {
 	resp, err := gp.inner.Chat(ctx, messages, opts)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (gp *GuardrailProvider) Chat(ctx context.Context, messages []GraycodeRouter
 // StreamChat sends a streaming request and validates content events.
 // Blocked violations cause the stream to be cancelled and an error event emitted.
 // Redactions are applied to individual content chunks.
-func (gp *GuardrailProvider) StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error) {
+func (gp *GuardrailProvider) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
 	result, err := gp.inner.StreamChat(ctx, messages, opts)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (gp *GuardrailProvider) StreamChat(ctx context.Context, messages []Graycode
 	}
 
 	origEvents := result.Events
-	wrappedEvents := make(chan GraycodeRouterStreamEvent, cap(origEvents))
+	wrappedEvents := make(chan EyrieStreamEvent, cap(origEvents))
 
 	go func() {
 		defer close(wrappedEvents)
@@ -88,7 +88,7 @@ func (gp *GuardrailProvider) StreamChat(ctx context.Context, messages []Graycode
 				violations, checkErr := gp.guardrails.Check(ctx, evt.Content)
 				if checkErr != nil {
 					select {
-					case wrappedEvents <- GraycodeRouterStreamEvent{
+					case wrappedEvents <- EyrieStreamEvent{
 						Type:  "error",
 						Error: checkErr.Error(),
 					}:

@@ -1,8 +1,8 @@
-# Contributing to graycode-router
+# Contributing to eyrie
 
 Thanks for your interest! This guide covers the conventions used across the
 graycode-eco. The eco-wide standards (versioning, release tooling, repo layout)
-are defined in <https://github.com/GrayCodeAI/graycode-cli/blob/main/VERSIONING.md>.
+are defined in <https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md>.
 
 ## Quick start
 
@@ -120,8 +120,8 @@ Before requesting review:
 
 ## Reporting bugs
 
-Open an issue using the bug-report template. Include the `graycode-router`
-version (`graycode-router --version` for binaries, `graycode-router.Version` for
+Open an issue using the bug-report template. Include the `eyrie`
+version (`eyrie --version` for binaries, `eyrie.Version` for
 libraries — see this repo's `VERSION` file), reproduction steps, expected
 behaviour, and actual behaviour.
 

@@ -5,12 +5,12 @@ package client
 //
 // Messages with ToolUse or ToolResult are never merged, since those have
 // special provider semantics and must remain separate.
-func MergeConsecutiveRoles(messages []GraycodeRouterMessage) []GraycodeRouterMessage {
+func MergeConsecutiveRoles(messages []EyrieMessage) []EyrieMessage {
 	if len(messages) == 0 {
 		return messages
 	}
 
-	var result []GraycodeRouterMessage
+	var result []EyrieMessage
 	for _, msg := range messages {
 		if len(result) == 0 {
 			result = append(result, msg)
@@ -45,6 +45,6 @@ func MergeConsecutiveRoles(messages []GraycodeRouterMessage) []GraycodeRouterMes
 }
 
 // hasToolData returns true if the message contains tool use or tool result data.
-func hasToolData(msg GraycodeRouterMessage) bool {
+func hasToolData(msg EyrieMessage) bool {
 	return len(msg.ToolUse) > 0 || len(msg.ToolResults) > 0
 }

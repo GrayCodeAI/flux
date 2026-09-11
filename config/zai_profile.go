@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/GrayCodeAI/graycode-router/catalog/zai"
+	"github.com/GrayCodeAI/eyrie/catalog/zai"
 )
 
 // ResolveZAIOpenAIBase resolves the OpenAI-compat base for a Z.AI gateway id.

@@ -3,7 +3,7 @@ package config
 import (
 	"context"
 
-	"github.com/GrayCodeAI/graycode-router/config/credential"
+	"github.com/GrayCodeAI/eyrie/config/credential"
 )
 
 func init() {

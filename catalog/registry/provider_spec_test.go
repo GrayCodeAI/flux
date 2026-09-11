@@ -3,8 +3,8 @@ package registry_test
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog/opencodego"
-	"github.com/GrayCodeAI/graycode-router/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/catalog/opencodego"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 func TestAllProviders_Count(t *testing.T) {
@@ -26,7 +26,7 @@ func TestProviderSpecs_AgnesOpenAIOnlyLongCatOpenAIPrimary(t *testing.T) {
 	}
 
 	// LongCat: official docs expose BOTH OpenAI (/openai) and Anthropic (/anthropic).
-	// Graycode uses the OpenAI primary only — Anthropic is not required when OpenAI works.
+	// Hawk uses the OpenAI primary only — Anthropic is not required when OpenAI works.
 	longcat, ok := registry.SpecByProviderID("longcat")
 	if !ok {
 		t.Fatal("missing longcat")

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestDiscoveryCredentials_UsesStoreNotProcessEnv(t *testing.T) {
@@ -26,7 +26,7 @@ func TestDiscoveryCredentials_UsesStoreNotProcessEnv(t *testing.T) {
 
 func TestDiscoveryCredentials_IncludesTokenPlanRegionFromProviderConfig(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 
 	cfg := &ProviderConfig{Version: "1", XiaomiMimoTokenPlanRegion: "sgp"}
 	if err := SaveProviderConfig(cfg, ""); err != nil {

@@ -24,18 +24,18 @@ type Configurable interface {
 	SetMimoAuth()
 }
 
-// GraycodeRouterConfigurable is the setter surface the top-level GraycodeRouterClient exposes
+// EyrieConfigurable is the setter surface the top-level EyrieClient exposes
 // for options that configure the universal client rather than an adapter.
-type GraycodeRouterConfigurable interface {
+type EyrieConfigurable interface {
 	SetCoalescingTTL(ttl time.Duration)
 }
 
 // ClientOption configures clients. Options built with the constructors below
-// apply to any Configurable adapter; options built with NewGraycodeRouterOption apply
-// to the top-level GraycodeRouterClient.
+// apply to any Configurable adapter; options built with NewEyrieOption apply
+// to the top-level EyrieClient.
 type ClientOption struct {
-	applyConfigurable   func(Configurable)
-	applyGraycodeRouter func(GraycodeRouterConfigurable)
+	applyConfigurable func(Configurable)
+	applyEyrie        func(EyrieConfigurable)
 }
 
 // NewOption builds a ClientOption from an adapter-level apply function.
@@ -43,23 +43,23 @@ func NewOption(fn func(Configurable)) ClientOption {
 	return ClientOption{applyConfigurable: fn}
 }
 
-// NewGraycodeRouterOption builds a ClientOption from an GraycodeRouterClient-level apply function.
-func NewGraycodeRouterOption(fn func(GraycodeRouterConfigurable)) ClientOption {
-	return ClientOption{applyGraycodeRouter: fn}
+// NewEyrieOption builds a ClientOption from an EyrieClient-level apply function.
+func NewEyrieOption(fn func(EyrieConfigurable)) ClientOption {
+	return ClientOption{applyEyrie: fn}
 }
 
-// Apply runs the option against an adapter. No-op for GraycodeRouterClient-level options.
+// Apply runs the option against an adapter. No-op for EyrieClient-level options.
 func (o ClientOption) Apply(c Configurable) {
 	if o.applyConfigurable != nil {
 		o.applyConfigurable(c)
 	}
 }
 
-// ApplyGraycodeRouter runs the option against the top-level client. No-op for
+// ApplyEyrie runs the option against the top-level client. No-op for
 // adapter-level options.
-func (o ClientOption) ApplyGraycodeRouter(e GraycodeRouterConfigurable) {
-	if o.applyGraycodeRouter != nil {
-		o.applyGraycodeRouter(e)
+func (o ClientOption) ApplyEyrie(e EyrieConfigurable) {
+	if o.applyEyrie != nil {
+		o.applyEyrie(e)
 	}
 }
 

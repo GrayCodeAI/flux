@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/eyrie/config"
 )
 
 // --- SetActiveModel ---
@@ -26,7 +26,7 @@ func TestSetActiveModel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
-			t.Setenv("HAWK_CONFIG_DIR", dir)
+			t.Setenv("EYRIE_CONFIG_DIR", dir)
 			if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 				t.Fatal(err)
 			}
@@ -40,7 +40,7 @@ func TestSetActiveModel(t *testing.T) {
 
 func TestSetActiveModel_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestSetActiveModel_RoundTrip(t *testing.T) {
 
 func TestSetActiveModel_OverwritesPrevious(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestSetActiveProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
-			t.Setenv("HAWK_CONFIG_DIR", dir)
+			t.Setenv("EYRIE_CONFIG_DIR", dir)
 			if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 				t.Fatal(err)
 			}
@@ -105,7 +105,7 @@ func TestSetActiveProvider(t *testing.T) {
 
 func TestSetActiveProvider_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -124,8 +124,8 @@ func TestSetActiveProvider_RoundTrip(t *testing.T) {
 
 func TestActiveModel_NoConfig(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 	got := ActiveModel(context.Background())
 	if got != "" {
 		t.Fatalf("expected empty active model with no config, got %q", got)
@@ -134,8 +134,8 @@ func TestActiveModel_NoConfig(t *testing.T) {
 
 func TestActiveProvider_NoConfig(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 	got := ActiveProvider(context.Background())
 	if got != "" {
 		t.Fatalf("expected empty active provider with no config, got %q", got)
@@ -144,7 +144,7 @@ func TestActiveProvider_NoConfig(t *testing.T) {
 
 func TestActiveModel_AfterSet(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte(`{"active_model":"gpt-4o","active_provider":"openai"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestActiveModel_AfterSet(t *testing.T) {
 
 func TestActiveProvider_AfterSet(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte(`{"active_provider":"openai"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestActiveProvider_AfterSet(t *testing.T) {
 
 func TestClearActiveSelection_ClearsValues(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestClearActiveSelection_ClearsValues(t *testing.T) {
 
 func TestClearActiveSelection_NoConfigFile(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	err := ClearActiveSelection(context.Background())
 	if err != nil {
 		t.Fatalf("expected nil error when no config file, got %v", err)
@@ -211,7 +211,7 @@ func TestClearActiveSelection_NoConfigFile(t *testing.T) {
 
 func TestClearActiveSelection_Idempotent(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -230,8 +230,8 @@ func TestClearActiveSelection_Idempotent(t *testing.T) {
 
 func TestInferProviderForModel_WithPrefix(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	// With no catalog loaded, inferProviderForModel falls back to prefix parsing.
 	got := inferProviderForModel(context.Background(), "anthropic/claude-opus-4-6")
@@ -242,8 +242,8 @@ func TestInferProviderForModel_WithPrefix(t *testing.T) {
 
 func TestInferProviderForModel_OpenAIPrefix(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	got := inferProviderForModel(context.Background(), "openai/gpt-4o")
 	if got != "openai" {
@@ -253,8 +253,8 @@ func TestInferProviderForModel_OpenAIPrefix(t *testing.T) {
 
 func TestInferProviderForModel_NoPrefix(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	// Without a known prefix, should return empty when catalog is unavailable.
 	got := inferProviderForModel(context.Background(), "gpt-4o")
@@ -265,8 +265,8 @@ func TestInferProviderForModel_NoPrefix(t *testing.T) {
 
 func TestInferProviderForModel_EmptyModel(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	got := inferProviderForModel(context.Background(), "")
 	if got != "" {
@@ -278,7 +278,7 @@ func TestInferProviderForModel_EmptyModel(t *testing.T) {
 
 func TestSetActiveModel_PreservesProvider(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte(`{"active_provider":"openai"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}

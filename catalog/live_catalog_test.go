@@ -3,7 +3,7 @@ package catalog_test
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 func TestFirstModelForProvider(t *testing.T) {

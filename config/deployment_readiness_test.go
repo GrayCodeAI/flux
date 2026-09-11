@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 func TestDeploymentConfiguredMatchesStrictFactoryRequirements(t *testing.T) {

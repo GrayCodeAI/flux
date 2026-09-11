@@ -3,7 +3,7 @@ package adapters
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/client/core"
+	"github.com/GrayCodeAI/eyrie/client/core"
 )
 
 func TestAnthropicBaseFromOpenAIV1(t *testing.T) {
@@ -21,7 +21,7 @@ func TestAnthropicBaseFromOpenAIV1(t *testing.T) {
 
 func TestStreamResultFromChat(t *testing.T) {
 	t.Parallel()
-	result := streamResultFromChat(&core.GraycodeRouterResponse{
+	result := streamResultFromChat(&core.EyrieResponse{
 		Content:      "Hi there!",
 		FinishReason: "stop",
 	})
@@ -38,11 +38,11 @@ func TestStreamResultFromChat(t *testing.T) {
 
 func TestStreamResultFromChat_FullResponse(t *testing.T) {
 	t.Parallel()
-	resp := &core.GraycodeRouterResponse{
+	resp := &core.EyrieResponse{
 		Thinking:     "Let me think...",
 		Content:      "Hello there!",
 		ToolCalls:    []core.ToolCall{{Name: "get_weather", Arguments: map[string]interface{}{"city": "NYC"}}},
-		Usage:        &core.GraycodeRouterUsage{TotalTokens: 42},
+		Usage:        &core.EyrieUsage{TotalTokens: 42},
 		FinishReason: "",
 	}
 	result := streamResultFromChat(resp)

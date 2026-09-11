@@ -3,7 +3,7 @@ package config
 import (
 	"context"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 // DiscoveryEnvMap returns merged credential env (keychain + provider.json routing) for status UI.

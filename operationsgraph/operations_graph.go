@@ -1,4 +1,4 @@
-// Package graph provides graph-based execution graph implementation for graycode-router.
+// Package graph provides graph-based execution graph implementation for eyrie.
 package operationsgraph
 
 import (
@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-router/graph"
+	graphcontracts "github.com/GrayCodeAI/eyrie/graph"
 )
 
 // OperationNode represents a node in the operations graph.
@@ -30,7 +30,7 @@ type OperationEdge struct {
 	Attrs     map[string]interface{} `json:"attrs,omitempty"`
 }
 
-// OperationsGraph represents a graph of operations for graycode-router.
+// OperationsGraph represents a graph of operations for eyrie.
 type OperationsGraph struct {
 	mu    sync.RWMutex
 	ID    string                    `json:"id"`

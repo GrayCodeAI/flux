@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
-	"github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/config"
 )
 
 func TestDefaultModelProviderFilter_FromProviderConfig(t *testing.T) {
@@ -50,6 +50,6 @@ func TestDefaultModelProviderFilter_LoadDoesNotPanic(t *testing.T) {
 
 func TestDefaultModelProviderFilter_WithEmptyDir(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	_ = DefaultModelProviderFilter(context.Background())
 }

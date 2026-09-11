@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 func testModelCatalog() catalog.ModelCatalog {
@@ -168,8 +168,8 @@ func TestLoadProviderConfigWithErrorRejectsConflictingVersionAliases(t *testing.
 func TestGetProviderConfigDir(t *testing.T) {
 	// Test with env var set
 	dir := t.TempDir()
-	os.Setenv("HAWK_CONFIG_DIR", dir)
-	defer os.Unsetenv("HAWK_CONFIG_DIR")
+	os.Setenv("EYRIE_CONFIG_DIR", dir)
+	defer os.Unsetenv("EYRIE_CONFIG_DIR")
 
 	got, err := GetProviderConfigDir()
 	if err != nil {
@@ -180,29 +180,17 @@ func TestGetProviderConfigDir(t *testing.T) {
 	}
 
 	// Test without env var (uses OS config dir when available)
-	os.Unsetenv("HAWK_CONFIG_DIR")
+	os.Unsetenv("EYRIE_CONFIG_DIR")
 	got, _ = GetProviderConfigDir()
-	if !strings.HasSuffix(got, filepath.Join("graycode-router")) {
-		t.Errorf("expected path ending in graycode-router, got %q", got)
-	}
-}
-
-func TestGetProviderConfigDirPrefersGraycodeRouterNamespace(t *testing.T) {
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", "/tmp/graycode-router-config")
-	t.Setenv("HAWK_CONFIG_DIR", "/tmp/legacy-hawk-config")
-	got, err := GetProviderConfigDir()
-	if err != nil {
-		t.Fatalf("GetProviderConfigDir() error = %v", err)
-	}
-	if got != "/tmp/graycode-router-config" {
-		t.Fatalf("GetProviderConfigDir() = %q, want GRAYCODE_ROUTER_CONFIG_DIR", got)
+	if !strings.HasSuffix(got, filepath.Join("eyrie")) {
+		t.Errorf("expected path ending in eyrie, got %q", got)
 	}
 }
 
 func TestGetProviderConfigPath(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("HAWK_CONFIG_DIR", dir)
-	defer os.Unsetenv("HAWK_CONFIG_DIR")
+	os.Setenv("EYRIE_CONFIG_DIR", dir)
+	defer os.Unsetenv("EYRIE_CONFIG_DIR")
 
 	got, err := GetProviderConfigPath()
 	if err != nil {
