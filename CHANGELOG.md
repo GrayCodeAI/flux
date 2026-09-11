@@ -7,7 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 
 ## [Unreleased]
 
-## [0.3.0] — 2026-09-11
+## [0.6.0] — 2026-09-11
+
+Versions v0.3.0, v0.4.0 and v0.5.0 were published in May 2026 under the
+module path `github.com/hawk/eyrie`. Their tags are gone but the Go module
+proxy still serves them, so this release skips to v0.6.0.
 
 ### Changed — Shared MiMo auth-retry helper (2026-08-16)
 - **Deduplicated `doRequestWithMimoAuthRetry`** between the OpenAI and

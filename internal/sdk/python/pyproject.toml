@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "eyrie-sdk"
-version = "0.3.0"
+version = "0.6.0"
 description = "Eyrie conversation DAG HTTP API client"
 requires-python = ">=3.10"
 dependencies = ["httpx"]

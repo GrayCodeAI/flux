@@ -1,6 +1,6 @@
 {
   "name": "eyrie-sdk",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "description": "Eyrie conversation DAG HTTP API client",
   "main": "eyrie.ts",
   "types": "eyrie.ts",
