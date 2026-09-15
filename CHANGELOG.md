@@ -7,23 +7,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Changed
+- **Renamed host product references from hawk to rho.** Host config paths
+  (`~/.rho/`), the `rho_build`/`rho_build_concise` tool namespaces, the
+  `rho_response` schema name, and the `EXPORT_RHO_FIXTURE` env var now use the
+  rho identity. Retired ecosystem repos (`shrike`, `harrier`, `kestrel`,
+  `merlin`) are no longer referenced.
+
 ## [0.0.1] — 2026-09-15
 
 Reset to v0.0.1 for the rename to `flux`.
 
 ### Changed
-- **Renamed the project from eyrie to flux.** Module path is now
+- **Renamed the project to flux.** Module path is now
   `github.com/GrayCodeAI/flux`. All packages, docs, SDK stubs, CI workflows,
   and issue templates reference the new name; no Go API surface changed.
 - **Logo redesigned** for the flux identity — abstract flow arcs around a
-  glowing bolt; the hawk/nest artwork is gone.
+  glowing bolt; the previous nest artwork is gone.
 - **Makefile drops linker LDFLAGS.** flux is a library; the version is
   embedded from the VERSION file, not injected into a main package.
 
-Versions v0.3.0–v0.6.0 were published under the previous module paths
-(`github.com/hawk/flux`, then `github.com/GrayCodeAI/eyrie`). They remain on
-the Go module proxy under those old paths; new consumption starts at v0.0.1
-of `github.com/GrayCodeAI/flux`.
+Versions v0.3.0–v0.6.0 were published under the previous module paths. They
+remain on the Go module proxy under those old paths; new consumption starts at
+v0.0.1 of `github.com/GrayCodeAI/flux`.
 
 ### Changed — Shared MiMo auth-retry helper (2026-08-16)
 - **Deduplicated `doRequestWithMimoAuthRetry`** between the OpenAI and
@@ -108,8 +114,7 @@ of `github.com/GrayCodeAI/flux`.
   5. Whitespace collapse
   Reports aggregate `BytesSaved` and `PercentOff` across all tools
   in the slice. Safe to call concurrently.
-  Aligns flux with the rest of the hawk-eco ecosystem (`hawk`, `shrike`,
-  `harrier`, `kestrel`, `merlin`).
+  Aligns flux with the rest of the rho-eco ecosystem.
 
 ### Added
 - Output guardrails framework (PII, secrets, injection, harmful content)
@@ -190,7 +195,7 @@ of `github.com/GrayCodeAI/flux`.
 
 **Config**
 - Provider detection from env vars (priority order)
-- `~/.hawk/provider.json` config file I/O
+- `~/.rho/provider.json` config file I/O
 - `ApplyProviderConfigToEnv` — applies config to `os.Environ`
 - OpenAI-compatible runtime resolution
 - Provider profile management

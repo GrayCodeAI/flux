@@ -26,7 +26,7 @@ const DefaultRequestTimeout = 15 * time.Second
 var DefaultClient = &http.Client{Timeout: DefaultRequestTimeout}
 
 // ProbeError builds a credential-probe error message for a non-2xx response.
-// The wording is part of the public surface that hawk surfaces to users when
+// The wording is part of the public surface that rho surfaces to users when
 // /config probe fails, so the strings here are stable.
 //
 // status is the HTTP status code returned by the provider. The function

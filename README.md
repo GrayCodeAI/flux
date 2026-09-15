@@ -30,22 +30,22 @@
 
 ## What is flux
 
-flux is the LLM provider runtime that powers the [hawk](https://github.com/GrayCodeAI/hawk) coding agent. It handles everything between your application and LLM APIs — authentication, model resolution, streaming, retries, rate limiting, and caching.
+flux is the LLM provider runtime that powers the [rho](https://github.com/GrayCodeAI/rho) coding agent. It handles everything between your application and LLM APIs — authentication, model resolution, streaming, retries, rate limiting, and caching.
 
 When your app calls a model, flux figures out which provider to use, how to talk to it, and how to stream the response back. Switch from Anthropic to Ollama? flux handles the translation. API returns 529? flux retries with backoff. Response hits `max_tokens`? flux continues automatically.
 
 **Your app never talks to an LLM API directly. flux does.**
 
-Hawk is the product face: it owns UX, agent orchestration, tools, permissions,
+Rho is the product face: it owns UX, agent orchestration, tools, permissions,
 sessions, and product semantics. Flux is the provider engine: it owns
 credentials, catalog and route resolution, provider transports, normalized
-streams, retry/fallback, usage, and provider telemetry. Hawk integrates through
+streams, retry/fallback, usage, and provider telemetry. Rho integrates through
 the stable [`engine`](engine/) facade rather than assembling Flux's internal
 provider packages.
 
 ## Ecosystem Boundaries
 
-flux is a Hawk support engine. Keep the dependency edge one-way.
+flux is a Rho support engine. Keep the dependency edge one-way.
 
 Hosts may import exactly four packages:
 
@@ -58,13 +58,12 @@ Hosts may import exactly four packages:
 
 Everything else is engine-internal: `client`, `catalog`, `config`,
 `credentials`, `router`, `runtime`, and their subpackages are not shared
-contracts. Enforced by `hawk/scripts/check-flux-engine-boundary.sh`
-and two Go AST tests in `hawk/internal/testaudit/`.
+contracts. Enforced by `rho/scripts/check-flux-engine-boundary.sh`
+and two Go AST tests in `rho/internal/testaudit/`.
 
-- do not import `hawk/internal/*`
-- do not import the removed legacy path `hawk/shared/types`
-- do not import other engines (`harrier`, `shrike`, `swift`, `kestrel`,
-  `merlin`) — engines are peers, not dependencies
+- do not import `rho/internal/*`
+- do not import the removed legacy path `rho/shared/types`
+- do not import other engines (`swift`) — engines are peers, not dependencies
 
 ## Quick Start
 
@@ -187,7 +186,7 @@ ANTHROPIC_API_KEY=sk-... go run ./examples/basic/
 
 ## Supported Providers
 
-22 provider gateways in `catalog/registry/providers.go` (hawk `/config` uses the same list), listed in registry `SortOrder`:
+22 provider gateways in `catalog/registry/providers.go` (rho `/config` uses the same list), listed in registry `SortOrder`:
 
 | Provider | ID | Env variable |
 |---|---|---|
@@ -319,10 +318,8 @@ flux is part of the graycode-eco:
 
 | Component | Repository | Purpose |
 |---|---|---|
-| **hawk** | [GrayCodeAI/hawk](https://github.com/GrayCodeAI/hawk) | AI coding agent |
+| **rho** | [GrayCodeAI/rho](https://github.com/GrayCodeAI/rho) | AI coding agent |
 | **flux** | This repo | LLM provider runtime |
-| **shrike** | [GrayCodeAI/shrike](https://github.com/GrayCodeAI/shrike) | Tokenizer & compression |
-| **harrier** | [GrayCodeAI/harrier](https://github.com/GrayCodeAI/harrier) | Graph-based memory |
 | **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture |
 
 ## Development

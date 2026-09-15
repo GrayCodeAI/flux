@@ -1,5 +1,5 @@
-# Canonical hawk-eco Makefile for Go LIBRARY repos.
-# flux is a versioned Go library consumed by Hawk (no standalone binary).
+# Canonical rho-eco Makefile for Go LIBRARY repos.
+# flux is a versioned Go library consumed by Rho (no standalone binary).
 
 # ---------------------------------------------------------------------------
 # Project metadata
@@ -8,7 +8,7 @@ NAME      := flux
 
 # ---------------------------------------------------------------------------
 # Versioning — sourced from VERSION file; falls back to git describe.
-# See https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md.
+# See https://github.com/GrayCodeAI/rho/blob/main/VERSIONING.md.
 # ---------------------------------------------------------------------------
 VERSION ?= $(shell cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]' || git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
@@ -49,7 +49,7 @@ all: lint test build ## Default — lint, test, build.
 # ---------------------------------------------------------------------------
 # Build / install / release.
 # ---------------------------------------------------------------------------
-build: ## Build all library packages (flux is a library consumed by hawk; no standalone binary).
+build: ## Build all library packages (flux is a library consumed by rho; no standalone binary).
 	go build ./...
 
 # ---------------------------------------------------------------------------

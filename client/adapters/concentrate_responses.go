@@ -329,7 +329,7 @@ func (c *ConcentrateResponsesClient) buildRequest(messages []core.FluxMessage, o
 			if err := json.Unmarshal([]byte(opts.ResponseFormat.Schema), &schema); err != nil {
 				return responsesRequest{}, fmt.Errorf("concentrate: invalid response schema: %w", err)
 			}
-			format["name"] = "hawk_response"
+			format["name"] = "rho_response"
 			format["schema"] = schema
 		}
 		req.Text = &responsesTextConfig{Format: format}

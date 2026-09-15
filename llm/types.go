@@ -1,11 +1,11 @@
-// Package llm is the canonical provider port contract for the hawk ecosystem.
+// Package llm is the canonical provider port contract for the rho ecosystem.
 //
 // It is the single source of truth for the conversation DTOs and the Provider
-// interface that hawk (product face) and flux (provider engine) speak across
+// interface that rho (product face) and flux (provider engine) speak across
 // their boundary. Both sides alias to these types, so there is exactly one
 // definition of each DTO and no per-call conversion.
 //
-// hawk owns the product vocabulary (hence names like FluxMessage); flux
+// rho owns the product vocabulary (hence names like FluxMessage); flux
 // implements the port. flux's internal transport types stay flux-scoped and
 // never appear here.
 package llm

@@ -22,12 +22,12 @@
 
 ## Context
 
-A deep code review of `flux` and `hawk` (see `docs/plans/review-2026-06-summary.md`
+A deep code review of `flux` and `rho` (see `docs/plans/review-2026-06-summary.md`
 — to be created if you want it archived here) surfaced 7 critical and 9 high
 items. This plan covers **all flux items** (C1, C2, C6, C7, H1, H2, H3, H4)
 broken into a sequence of small, reviewable PRs.
 
-The hawk-side companion plan lives at `../hawk/docs/plans/fix-critical-and-high-review.md`.
+The rho-side companion plan lives at `../rho/docs/plans/fix-critical-and-high-review.md`.
 
 ## Scope (flux)
 
@@ -314,7 +314,7 @@ instead of using the structured type.
 2. `doWithRetry` checks `var fluxErr *FluxError; if errors.As(err, &fluxErr) { … }`
    instead of string-matching status codes.
 3. All provider error returns flow through `formatAPIError`.
-4. Public API consumers (hawk) can now use `errors.As` for typed errors.
+4. Public API consumers (rho) can now use `errors.As` for typed errors.
 
 **Files**:
 - `client/errors.go` (extend `FluxError` with `Unwrap()`, helpers)

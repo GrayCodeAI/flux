@@ -3,7 +3,7 @@
 **Status:** In Progress — Phases 1–3 implemented 2026-07-13; layering guard live
 **Author:** Claude (architecture review session)
 **Date:** 2026-07-12
-**Repos affected:** flux (all changes), hawk (no code changes required; update
+**Repos affected:** flux (all changes), rho (no code changes required; update
 the published Flux module pin)
 
 ## Problem Statement
@@ -42,8 +42,8 @@ and a public API surface far larger than what consumers use.
   `buildAnthropicCachedRequest`, `defaultTimeout`, `emit`, `openAIImageURL`,
   `parseImageString`, `parseSSEStream`, `processAnthropicStream`,
   `processOpenAIStream`, `userAgent`.
-- hawk (the primary consumer) accesses `flux/client` from **4 files only** —
-  it maintains its own DTO layer (`hawk/internal/types/client.go`) and converts
+- rho (the primary consumer) accesses `flux/client` from **4 files only** —
+  it maintains its own DTO layer (`rho/internal/types/client.go`) and converts
   at the boundary. Entry points consumed: `Client`, `FluxClient` methods
   (`Chat`, `StreamChat`, `StreamChatContinue`, `SetAPIKey`, `Ping`,
   `GetProviders`), `StreamChatWithContinuation`, `ParseInlineToolCalls`,
@@ -88,7 +88,7 @@ inside the tree.
 
 - **Big-bang rename (`client/v2`)** — breaks every consumer including examples
   and SDK bindings; rejected.
-- **Move whole package to `internal/`** — hawk and examples import it; rejected.
+- **Move whole package to `internal/`** — rho and examples import it; rejected.
 - **Split without a core package** (e.g., extract embeddings directly) — impossible
   without import cycles: subpackages need client types while the facade re-exports
   subpackage API. The core extraction is the unlock; everything else follows.
@@ -107,7 +107,7 @@ Phase 1 is DONE (2026-07-12):
       adapters phase — embeddings did not need them.)
 - [x] In `client`, every moved name is aliased (`client/aliases.go`); internal
       call sites bridge through unexported vars (`doWithRetry = core.DoWithRetry`).
-- [x] `go test ./...` green in flux; hawk builds + tests green.
+- [x] `go test ./...` green in flux; rho builds + tests green.
 
 ### Phase 2: embeddings (smallest proven cluster, 4 deps)
 
@@ -173,7 +173,7 @@ Learned in Phases 1–2 (apply to later phases):
 - [ ] One sub-move per PR, same alias recipe.
 
 ### Phase 5: enforcement + deprecation
-- [x] Add `scripts/check-client-layering.sh` (mirror of hawk's
+- [x] Add `scripts/check-client-layering.sh` (mirror of rho's
       `check-flux-client-imports.sh`) to CI: fail on any sibling→sibling import
       that bypasses `core`, and on any in-tree import of the facade.
 - [ ] Mark facade aliases `// Deprecated:` pointing at the subpackage; migrate
@@ -184,9 +184,9 @@ Learned in Phases 1–2 (apply to later phases):
 
 - Unit tests: move with their files; each phase must keep `go test ./...` green
   with zero test-logic edits (rename-only diffs).
-- Integration tests: `catalogtest` + hawk `internal/engine` suite against the
+- Integration tests: `catalogtest` + rho `internal/engine` suite against the
   branch via `go.work` replace.
-- E2E tests: `hawk path` smoke + one live streamed chat per protocol family
+- E2E tests: `rho path` smoke + one live streamed chat per protocol family
   (anthropic-messages, openai-chat-completions, gemini-generate-content) before
   each merge.
 
@@ -197,11 +197,11 @@ Learned in Phases 1–2 (apply to later phases):
 | Hidden unexported coupling beyond the measured sets | med | Phases are one-cluster-at-a-time; the compiler finds every missed reference at move time; abort/expand `core` rather than weaken boundaries |
 | Type identity breakage for consumers doing type switches | high | Use aliases (`=`), never new named types, for everything that already exists |
 | Method sets split from their types | high | Methods move with their receiver's file into the same subpackage — never leave methods behind |
-| Flux module-pin drift in Hawk during the refactor | low | Land phases as individual PRs; update Hawk after each; `make sync` reports drift |
+| Flux module-pin drift in Rho during the refactor | low | Land phases as individual PRs; update Rho after each; `make sync` reports drift |
 | Facade grows stale re-exports | low | Phase 5 CI check + deprecation comments |
 
 ## References
 
-- hawk's boundary script: `hawk/scripts/check-flux-client-imports.sh`
-- hawk's DTO layer (proof the consumer surface is narrow): `hawk/internal/types/client.go`
-- Session decomposition precedent: `hawk/docs/session-decomposition.md`
+- rho's boundary script: `rho/scripts/check-flux-client-imports.sh`
+- rho's DTO layer (proof the consumer surface is narrow): `rho/internal/types/client.go`
+- Session decomposition precedent: `rho/docs/session-decomposition.md`

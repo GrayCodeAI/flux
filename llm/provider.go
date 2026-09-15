@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-// Provider is hawk's hawk-owned view of the provider engine: a composition of
-// the role interfaces below. It is the single integration surface — hawk never
-// holds an *fluxengine.Engine, and flux never imports hawk/internal.
+// Provider is rho's rho-owned view of the provider engine: a composition of
+// the role interfaces below. It is the single integration surface — rho never
+// holds an *fluxengine.Engine, and flux never imports rho/internal.
 //
 // Callers that need only a subset depend on the relevant role interface
 // directly (e.g. session_factory depends only on Generator), keeping the

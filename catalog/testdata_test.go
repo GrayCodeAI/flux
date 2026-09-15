@@ -7,18 +7,18 @@ import (
 	"testing"
 )
 
-// Run with EXPORT_HAWK_FIXTURE=1 to refresh hawk/internal/catalogtest/testdata/minimal_v1.json
-func TestExportHawkCatalogFixture(t *testing.T) {
+// Run with EXPORT_RHO_FIXTURE=1 to refresh rho/internal/catalogtest/testdata/minimal_v1.json
+func TestExportRhoCatalogFixture(t *testing.T) {
 	t.Parallel()
-	if os.Getenv("EXPORT_HAWK_FIXTURE") != "1" {
-		t.Skip("set EXPORT_HAWK_FIXTURE=1 to export") // TODO: https://github.com/GrayCodeAI/flux/issues/30
+	if os.Getenv("EXPORT_RHO_FIXTURE") != "1" {
+		t.Skip("set EXPORT_RHO_FIXTURE=1 to export") // TODO: https://github.com/GrayCodeAI/flux/issues/30
 	}
 	c := SeedCatalog()
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := filepath.Join("..", "..", "hawk", "internal", "catalogtest", "testdata", "minimal_v1.json")
+	out := filepath.Join("..", "..", "rho", "internal", "catalogtest", "testdata", "minimal_v1.json")
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -88,7 +88,7 @@
 
     <text x="198" y="157"
           font-family="'SF Mono','Fira Code',monospace"
-          font-size="12" fill="#4ECDC4" opacity="0.65" letter-spacing="1.5">the foundation layer for hawk</text>
+          font-size="12" fill="#4ECDC4" opacity="0.65" letter-spacing="1.5">the foundation layer for rho</text>
   </g>
 
   <rect width="600" height="200" fill="none" stroke="#4ecdc4" stroke-width="1" rx="12" opacity="0.6"/>

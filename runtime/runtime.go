@@ -1,10 +1,10 @@
 // Package runtime is the **recommended entry point** for host applications
-// (e.g. hawk). Start by calling runtime.Load to get a *Runtime, then
+// (e.g. rho). Start by calling runtime.Load to get a *Runtime, then
 // rt.ChatProvider to obtain a client.Provider that you can hand to your
 // agent loop.
 //
 // Note: the "stable" surface of flux is actually a set of cooperating
-// subpackages, not just this one. The full list hawk (and other host
+// subpackages, not just this one. The full list rho (and other host
 // applications) actually import is:
 //
 //	github.com/GrayCodeAI/flux/runtime          (this package — bootstrap facade)

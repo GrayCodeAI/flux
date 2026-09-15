@@ -75,7 +75,7 @@ func fallbackTokenCount(text string) int {
 }
 
 // compressForSummary keeps PromptOptimizer self-contained. It performs a small
-// whitespace-normalizing reduction instead of depending on shrike's full pipeline.
+// whitespace-normalizing reduction instead of depending on a full tokenizer pipeline.
 func compressForSummary(text string) string {
 	text = strings.TrimSpace(text)
 	if text == "" {

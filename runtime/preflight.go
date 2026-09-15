@@ -26,7 +26,7 @@ type PreflightCheck struct {
 	Detail string          `json:"detail"`
 }
 
-// PreflightReport summarizes whether hawk can chat.
+// PreflightReport summarizes whether rho can chat.
 type PreflightReport struct {
 	Ready  bool             `json:"ready"`
 	Checks []PreflightCheck `json:"checks"`
@@ -45,7 +45,7 @@ func Preflight(ctx context.Context) PreflightReport {
 	if !exists || size == 0 {
 		checks = append(checks, PreflightCheck{
 			Name: "catalog", Status: PreflightWarn,
-			Detail: "model catalog cache missing — hawk will discover on /config or refresh automatically",
+			Detail: "model catalog cache missing — rho will discover on /config or refresh automatically",
 		})
 	} else {
 		compiled, err := catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{

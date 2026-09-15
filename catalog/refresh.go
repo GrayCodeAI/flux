@@ -96,7 +96,7 @@ func (r *RefreshResult) Summary() string {
 	)
 }
 
-// DiscoverReport returns a multi-line report for `hawk models refresh` / `flux catalog discover`.
+// DiscoverReport returns a multi-line report for `rho models refresh` / `flux catalog discover`.
 func (r *RefreshResult) DiscoverReport() string {
 	if r == nil || r.Compiled == nil {
 		return "Catalog discovery: no data"

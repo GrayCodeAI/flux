@@ -99,7 +99,7 @@ func DefaultCategories() map[ModelCategory]CategoryConfig {
 }
 
 // GetCategoryRegistry returns the global category registry.
-// It loads overrides from Hawk user config if present.
+// It loads overrides from Rho user config if present.
 func GetCategoryRegistry() *CategoryRegistry {
 	registryOnce.Do(func() {
 		globalRegistry = &CategoryRegistry{

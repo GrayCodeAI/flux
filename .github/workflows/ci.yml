@@ -1,4 +1,4 @@
-# Strict CI pipeline for hawk-eco Go repos.
+# Strict CI pipeline for rho-eco Go repos.
 # All jobs must pass — no continue-on-error except where explicitly noted.
 
 name: CI

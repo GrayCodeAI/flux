@@ -11,7 +11,7 @@ import (
 // once. The marker file name is stable so upgraded installs do not re-import.
 func envFileMigrationMarkerPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hawk", ".legacy-env-migrated")
+	return filepath.Join(home, ".rho", ".legacy-env-migrated")
 }
 
 func envFileMigrationDone() bool {
@@ -25,7 +25,7 @@ func markEnvFileMigrationDone() {
 }
 
 // MigrateEnvFileCredentials imports API keys from plaintext credential files
-// (~/.hawk/env, ~/.hawk/.env) into the OS secret store and removes them.
+// (~/.rho/env, ~/.rho/.env) into the OS secret store and removes them.
 func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -34,7 +34,7 @@ func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 	total := 0
-	for _, path := range []string{hawkEnvPath(), hawkDotEnvPath()} {
+	for _, path := range []string{rhoEnvPath(), rhoDotEnvPath()} {
 		n, err := migrateEnvFileAt(ctx, path)
 		if err != nil && !os.IsNotExist(err) {
 			return total, err
@@ -83,18 +83,18 @@ func migrateEnvFileAt(ctx context.Context, path string) (int, error) {
 	return migrated, nil
 }
 
-func hawkEnvPath() string {
+func rhoEnvPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hawk", "env")
+	return filepath.Join(home, ".rho", "env")
 }
 
-func hawkDotEnvPath() string {
+func rhoDotEnvPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hawk", ".env")
+	return filepath.Join(home, ".rho", ".env")
 }
 
 func readEnvFile(path string) (map[string]string, error) {
-	data, err := os.ReadFile(path) // #nosec G304 -- path is built from os.UserHomeDir() in hawkDotEnvPath, not untrusted input
+	data, err := os.ReadFile(path) // #nosec G304 -- path is built from os.UserHomeDir() in rhoDotEnvPath, not untrusted input
 	if err != nil {
 		return nil, err
 	}

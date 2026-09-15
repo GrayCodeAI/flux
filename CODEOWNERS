@@ -9,7 +9,7 @@
 /types/       @GrayCodeAI/llm-team
 /catalog/     @GrayCodeAI/llm-team
 /router/      @GrayCodeAI/llm-team
-/flux.go     @GrayCodeAI/llm-team
+/version.go  @GrayCodeAI/llm-team
 /VERSION      @GrayCodeAI/maintainers
 
 # CI / release

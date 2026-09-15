@@ -1,4 +1,4 @@
-// Package setup wires catalog-backed deployment routing for hawk and flux CLIs.
+// Package setup wires catalog-backed deployment routing for rho and flux CLIs.
 package setup
 
 import (

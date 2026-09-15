@@ -42,7 +42,7 @@ func (c *PoolsideClient) StreamChat(ctx context.Context, messages []core.FluxMes
 }
 
 func (c *PoolsideClient) reasoningOnlyFallbackChat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.FluxResponse, error) {
-	// A Laguna stream can exhaust itself in reasoning when Hawk's large tool
+	// A Laguna stream can exhaust itself in reasoning when Rho's large tool
 	// catalog is attached. Preserve tools on the primary request, but make the
 	// one-shot recovery text-only so the model emits its final answer.
 	opts.Tools = nil

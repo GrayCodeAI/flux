@@ -2,7 +2,7 @@
 
 Thanks for your interest! This guide covers the conventions used across the
 graycode-eco. The eco-wide standards (versioning, release tooling, repo layout)
-are defined in <https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md>.
+are defined in <https://github.com/GrayCodeAI/rho/blob/main/VERSIONING.md>.
 
 ## Quick start
 

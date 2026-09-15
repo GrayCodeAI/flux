@@ -170,7 +170,7 @@ func TestConcentrateResponsesClient_StructuredOutputUsesTextFormat(t *testing.T)
 	if req.Text == nil || req.Text.Format["type"] != "json_schema" {
 		t.Fatalf("text format = %#v", req.Text)
 	}
-	if req.Text.Format["name"] != "hawk_response" {
+	if req.Text.Format["name"] != "rho_response" {
 		t.Fatalf("schema name = %#v", req.Text.Format["name"])
 	}
 	if _, ok := req.Text.Format["schema"].(map[string]interface{}); !ok {

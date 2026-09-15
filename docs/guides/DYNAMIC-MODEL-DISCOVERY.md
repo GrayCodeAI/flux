@@ -2,13 +2,13 @@
 
 Status: implemented through the `flux/engine` contract v2.
 
-This guide describes the host-facing path used by Hawk. Hawk is the face; Flux
+This guide describes the host-facing path used by Rho. Rho is the face; Flux
 is the engine and source of truth for provider metadata, credentials, live
 model discovery, catalog compilation, selection, and provider transport.
 
 ## Ownership
 
-| Hawk owns | Flux owns |
+| Rho owns | Flux owns |
 |---|---|
 | credential and model-picker UX | safe credential resolution and persistence |
 | conversation/session state | provider registry and deployment metadata |
@@ -17,17 +17,17 @@ model discovery, catalog compilation, selection, and provider transport.
 | product settings and lifecycle | model ownership, aliases, selection, and routing |
 | normalized request construction | provider adapters, streams, usage, and errors |
 
-Hawk calls its integration wrapper, which delegates to `flux/engine`. Hawk UI,
+Rho calls its integration wrapper, which delegates to `flux/engine`. Rho UI,
 command, and conversation packages do not call Flux's lower-level runtime or
 client packages.
 
 ## End-to-end path
 
 ```text
-User enters API key or custom-gateway settings in Hawk
+User enters API key or custom-gateway settings in Rho
   |
   v
-Hawk integration --> Engine.ResolveCredential
+Rho integration --> Engine.ResolveCredential
   |
   v
 Engine.SaveCredential
@@ -47,10 +47,10 @@ Engine.ApplyCredentials / Engine.ListLiveModels
   `--> atomically compile the injected catalog path
   |
   v
-Engine.ListModels --> Hawk picker --> Engine.SetSelection
+Engine.ListModels --> Rho picker --> Engine.SetSelection
   |
   v
-Hawk conversation --> Engine.Generate or Engine.Stream --> provider API
+Rho conversation --> Engine.Generate or Engine.Stream --> provider API
   |
   `--> normalized route, content, thinking, tool-call, usage, and done events
 ```
@@ -61,7 +61,7 @@ exist in the same store.
 
 ## Engine construction and isolation
 
-Create the Engine once at Hawk's composition root and inject all host-owned
+Create the Engine once at Rho's composition root and inject all host-owned
 state:
 
 ```go
@@ -116,7 +116,7 @@ The stable model DTO intentionally distinguishes:
 - `GatewayID`: selected/listed gateway or deployment identity.
 - `Source` and `LiveMetadata`: origin and provider-native metadata.
 
-Hawk should render these fields; it should not infer ownership from model-name
+Rho should render these fields; it should not infer ownership from model-name
 prefixes or parse raw provider responses.
 
 ## Provider registry
@@ -134,7 +134,7 @@ ProviderSpec
 
 Provider-specific HTTP parsing remains inside registered fetchers/adapters.
 Adding a built-in provider should normally require registry data, its adapter
-or live fetcher, and tests—not new branches in Hawk UI code.
+or live fetcher, and tests—not new branches in Rho UI code.
 
 Custom OpenAI-compatible gateways are invocation-scoped Engine options rather
 than registry mutations. Their URLs must be HTTP(S) with a host and must not
@@ -181,14 +181,14 @@ failed live response is not silently represented as successful live readiness.
 
 ## Selection and conversation handoff
 
-Hawk persists a choice through `Engine.SetSelection(provider, model)`. Flux
+Rho persists a choice through `Engine.SetSelection(provider, model)`. Flux
 validates provider/model ownership, preserves custom model IDs, canonicalizes
 built-in aliases, and stores routing metadata at the injected provider path.
 
-At generation time Hawk passes provider-neutral messages, tools,
+At generation time Rho passes provider-neutral messages, tools,
 requirements, preferences, limits, and metadata. `Resolve`, `Generate`, and
 `Stream` use the same Engine-owned catalog, provider state, credentials, and
-custom-gateway snapshot. Hawk neither constructs a provider client nor exports
+custom-gateway snapshot. Rho neither constructs a provider client nor exports
 credentials into the process environment.
 
 ## Local and live preflight
@@ -211,7 +211,7 @@ Live (VerifyLive=true)
 
 Local preflight is safe for normal startup and offline diagnostics. Live
 preflight is an explicit network check and should be labeled accordingly in
-Hawk.
+Rho.
 
 ## State and secret safety
 
@@ -230,7 +230,7 @@ Engine provider-state mutations:
 
 `MigrateProviderSecretsContext` is the explicit legacy migration. If mapping or
 store persistence fails, it aborts and restores the original provider state.
-Hawk diagnostics can use `ProviderStateSecurityStatus`, `CatalogHealth`, and
+Rho diagnostics can use `ProviderStateSecurityStatus`, `CatalogHealth`, and
 the safe credential/gateway reports without reading either file directly.
 
 ## Failure handling
@@ -246,26 +246,26 @@ the safe credential/gateway reports without reading either file directly.
 | custom gateway URL contains embedded data | reject configuration |
 | stream caller exits | close/cancel the Engine stream |
 
-Provider-specific friendly error formatting remains Flux-owned; Hawk decides
+Provider-specific friendly error formatting remains Flux-owned; Rho decides
 where and how to display it.
 
-## Release order for Hawk
+## Release order for Rho
 
-Flux is changed and released before Hawk advances its dependency:
+Flux is changed and released before Rho advances its dependency:
 
 ```text
 standalone Flux change
   --> Flux tests (two passes)
   --> signed Flux commit
   --> publish a resolvable Flux module release/commit
-  --> update Hawk module dependency when needed
-  --> update Hawk's Flux module pin to the same published commit
-  --> Hawk integration + boundary + clean-clone verification (two passes)
-  --> commit Hawk code and gitlink together
+  --> update Rho module dependency when needed
+  --> update Rho's Flux module pin to the same published commit
+  --> Rho integration + boundary + clean-clone verification (two passes)
+  --> commit Rho code and gitlink together
 ```
 
 The parent workspace must use a committed Flux checkout, never working-tree-
-only code, and Hawk's module pin must resolve to that same published commit.
+only code, and Rho's module pin must resolve to that same published commit.
 Both workspace builds and `GOWORK=off` builds must expose the same Engine
 contract.
 
@@ -274,4 +274,4 @@ contract.
 - `docs/architecture/HOST-ENGINE-BOUNDARY.md` — ownership and compatibility
   policy.
 - `CREDENTIAL-SETUP-FLOW.md` — product setup flow.
-- Hawk's dynamic-model and architecture docs — host integration and UI behavior.
+- Rho's dynamic-model and architecture docs — host integration and UI behavior.

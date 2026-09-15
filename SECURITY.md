@@ -7,7 +7,7 @@ minor versions once `1.x` ships. Older versions receive critical-severity
 fixes only on a best-effort basis.
 
 The current canonical version is the contents of the [`VERSION`](./VERSION)
-file at the repo root. See [`VERSIONING.md`](https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md)
+file at the repo root. See [`VERSIONING.md`](https://github.com/GrayCodeAI/rho/blob/main/VERSIONING.md)
 for the eco-wide versioning scheme.
 
 ## Reporting a vulnerability
@@ -15,7 +15,7 @@ for the eco-wide versioning scheme.
 **Do not open a public GitHub issue for security vulnerabilities.** Instead:
 
 1. Open a private [GitHub Security Advisory](https://github.com/GrayCodeAI/flux/security/advisories/new), **or**
-2. Email `security@hawk.ai` with the details below.
+2. Email `security@rho.ai` with the details below.
 
 Include in your report:
 

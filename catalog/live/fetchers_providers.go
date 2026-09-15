@@ -977,7 +977,7 @@ func FetchConcentrate(env map[string]string) ([]Entry, error) {
 		// capabilities but omits the provider-level supports.tools field.
 		// The Responses API and model-details endpoint advertise function
 		// calling for these routed models, so preserve that capability for
-		// Hawk's tool-enabled coding loop.
+		// Rho's tool-enabled coding loop.
 		entry.Features = append(entry.Features, "function_calling")
 		entries = append(entries, entry)
 	}

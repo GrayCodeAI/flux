@@ -59,7 +59,7 @@ func apiKeyEnvFromDeployment(dep Deployment) string {
 }
 
 // CredentialStatusForProvider reports whether a provider needs an API key (local vs required).
-// For set/empty status use hawk config.EnvKeyStatus or credentials.HasSecret — catalog does not read env.
+// For set/empty status use rho config.EnvKeyStatus or credentials.HasSecret — catalog does not read env.
 func CredentialStatusForProvider(compiled *CompiledCatalog, providerID string) string {
 	providerID = canonicalProviderID(providerID)
 	if providerID == "" {

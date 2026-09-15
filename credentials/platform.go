@@ -26,7 +26,7 @@ func KeyringUnavailableHelp() string {
 		return "install and unlock a Secret Service provider (e.g. gnome-keyring or KWallet). " +
 			"Ensure DBUS_SESSION_BUS_ADDRESS is set in your shell; on headless systems run: eval $(gnome-keyring-daemon --start --components=secrets)"
 	case "darwin":
-		return "allow Keychain access when macOS prompts for Hawk"
+		return "allow Keychain access when macOS prompts for Rho"
 	case "windows":
 		return "ensure Windows Credential Manager is available"
 	default:

@@ -6,7 +6,7 @@ func TestAnthropicNameToCanonical(t *testing.T) {
 	t.Parallel()
 	tests := []struct{ input, want string }{
 		{"claude-sonnet-4-6-20250814", "claude-sonnet-4-6"},
-		{"us.hawk.claude-opus-4-6-v1:0", "claude-opus-4-6"},
+		{"us.rho.claude-opus-4-6-v1:0", "claude-opus-4-6"},
 		{"claude-3-5-haiku-20241022", "claude-3-5-haiku"},
 		{"claude-3-7-sonnet-20250219", "claude-3-7-sonnet"},
 		{"claude-opus-4-5-20251101", "claude-opus-4-5"},

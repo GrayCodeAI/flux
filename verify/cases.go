@@ -2,7 +2,7 @@ package verify
 
 import "github.com/GrayCodeAI/flux/client"
 
-// CanonicalCases is a small, provider-neutral suite covering the behaviors hawk
+// CanonicalCases is a small, provider-neutral suite covering the behaviors rho
 // depends on: basic chat, deterministic content, and tool calling with valid
 // arguments. It is intentionally minimal so it is cheap to run against a live
 // endpoint; extend it per provider as needed.

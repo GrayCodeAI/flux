@@ -13,7 +13,7 @@ import (
 	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
-// ProviderConfig mirrors the Hawk provider.json file.
+// ProviderConfig mirrors the Rho provider.json file.
 type ProviderConfig struct {
 	ConfigVersion              int                         `json:"config_version,omitempty"`
 	Version                    string                      `json:"_version,omitempty"`

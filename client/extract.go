@@ -76,8 +76,8 @@ Rules:
 
 // ExtractRelationships extracts subject-predicate-object triples from text using
 // schema-validated structured output with retry. It is a typed convenience layer
-// over ChatWithStructuredOutput, modeled on CocoIndex's ExtractByLlm; Harrier and
-// other knowledge-graph consumers can call it instead of hand-rolling extraction
+// over ChatWithStructuredOutput, modeled on CocoIndex's ExtractByLlm;
+// knowledge-graph consumers can call it instead of hand-rolling extraction
 // prompts and JSON parsing.
 func (c *FluxClient) ExtractRelationships(ctx context.Context, text string, opts ExtractOptions) ([]Relationship, error) {
 	if strings.TrimSpace(text) == "" {

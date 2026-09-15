@@ -89,7 +89,7 @@ func ChatWithContinuation(ctx context.Context, p Provider, messages []FluxMessag
 // It returns a StreamResult whose Events channel transparently continues across
 // multiple LLM calls, emitting a "continuation" event at each boundary.
 //
-// DEPRECATION NOTE: hawk's Session loop has its own max_tokens recovery
+// DEPRECATION NOTE: rho's Session loop has its own max_tokens recovery
 // (internal/engine/stream.go around the `recoveryCount` loop) that doesn't
 // add a synthetic "Continue." user message, and the flux conversation
 // engine (flux/conversation.Engine) has its own OutputGroupID-based
@@ -97,7 +97,7 @@ func ChatWithContinuation(ctx context.Context, p Provider, messages []FluxMessag
 // conversation shapes (no synthetic user turns) and are the recommended
 // pattern for new code. This client-level helper remains for
 // backwards-compatibility with the embedded flux HTTP server and
-// non-hawk consumers; new code should implement continuation at the
+// non-rho consumers; new code should implement continuation at the
 // engine or call-site level instead.
 //
 // Will be removed in flux v0.3.0. See flux/CHANGELOG.md for the

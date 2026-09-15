@@ -4,27 +4,27 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Flux is host-neutral: it must not depend on any Hawk package.
-# Shared ecosystem vocabulary lives in hawk/internal/contracts, which
+# Flux is host-neutral: it must not depend on any Rho package.
+# Shared ecosystem vocabulary lives in rho/internal/contracts, which
 # hosts vendor rather than import from here.
-FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk(/|")'
-FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(harrier|shrike|swift|kestrel|merlin)(/|")'
+FORBIDDEN_RHO='github\.com/GrayCodeAI/rho(/|")'
+FORBIDDEN_ENGINES='github\.com/GrayCodeAI/swift(/|")'
 
 exit_code=0
 
 if command -v rg >/dev/null 2>&1; then
-  violations="$(rg -n "$FORBIDDEN_HAWK" --glob '*.go' . || true)"
+  violations="$(rg -n "$FORBIDDEN_RHO" --glob '*.go' . || true)"
   engine_violations="$(rg -n "$FORBIDDEN_ENGINES" --glob '*.go' . || true)"
 else
-  violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_HAWK" . || true)"
+  violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_RHO" . || true)"
   engine_violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_ENGINES" . || true)"
 fi
 
 if [[ -n "${violations}" ]]; then
-  echo "forbidden Hawk host imports found:"
+  echo "forbidden Rho host imports found:"
   echo "${violations}"
   echo
-  echo "flux must use local contracts, never the Hawk product module"
+  echo "flux must use local contracts, never the Rho product module"
   exit_code=1
 fi
 

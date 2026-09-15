@@ -8,7 +8,7 @@ import (
 func TestFilterRelationships_DropsEmpty(t *testing.T) {
 	t.Parallel()
 	in := []Relationship{
-		{Subject: "flux", Predicate: "part_of", Object: "hawk-eco"},
+		{Subject: "flux", Predicate: "part_of", Object: "rho-eco"},
 		{Subject: "", Predicate: "x", Object: "y"},   // empty subject
 		{Subject: "a", Predicate: "  ", Object: "b"}, // blank predicate
 		{Subject: "c", Predicate: "rel", Object: ""}, // empty object

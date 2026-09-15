@@ -24,7 +24,7 @@ func SecretStoreName() string { return credentials.PlatformSecretStoreName() }
 
 // SetSecretStoreServiceName overrides the OS secret-store service name (default
 // "flux"). Hosts call this once at startup so existing credentials filed under
-// their product name (e.g. "hawk") stay readable.
+// their product name (e.g. "rho") stay readable.
 func SetSecretStoreServiceName(name string) { credentials.SetServiceName(name) }
 
 // -- Test-fixture re‑exports -------------------------------------------------

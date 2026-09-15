@@ -15,7 +15,7 @@ When starting any new work (feature, fix, refactor, chore), always create a feat
 
 ## Observability
 
-See [hawk/docs/OTEL-CONVENTIONS.md](https://github.com/GrayCodeAI/hawk/blob/main/docs/OTEL-CONVENTIONS.md) for the shared OpenTelemetry attribute vocabulary (`gen_ai.*`, `cost.usd`, etc.) used across all GrayCodeAI repos.
+See [rho/docs/OTEL-CONVENTIONS.md](https://github.com/GrayCodeAI/rho/blob/main/docs/OTEL-CONVENTIONS.md) for the shared OpenTelemetry attribute vocabulary (`gen_ai.*`, `cost.usd`, etc.) used across all GrayCodeAI repos.
 
 ## Build & Test
 
@@ -49,9 +49,9 @@ make ci                          # Full CI suite
 
 ## Common Pitfalls
 
-- `engine`, `llm`, `graph` and `tools` are the host contract surface. Hawk
+- `engine`, `llm`, `graph` and `tools` are the host contract surface. Rho
   must not assemble `client`, `catalog`, `config`, `credentials`, `router` or
-  `runtime`. Six symbols Hawk needs (`ChatOptions`, `ContinuationConfig`,
+  `runtime`. Six symbols Rho needs (`ChatOptions`, `ContinuationConfig`,
   `StreamResult`, `ResponseFormat`, `ImageURLPart`, `InputAudioPart`) live in
   `llm` with no `engine` alias; widening the facade to cover them is a
   deliberate API change, not an incidental one.
@@ -59,7 +59,7 @@ make ci                          # Full CI suite
   consumers; preserve its method set and the facade's type identity
 - Streaming tests need careful goroutine management
 - `go.work` here should stay minimal; the parent `graycode-eco/go.work`
-  connects this independent `flux` checkout beside Hawk for local development.
+  connects this independent `flux` checkout beside Rho for local development.
   Do not add extra local `replace` directives here without coordinating with
   the parent workspace.
 
@@ -145,7 +145,7 @@ make ci                          # Full CI suite
 | Main test file | `client/client_test.go` (httptest servers, provider detection) |
 | Linter config | `.golangci.yml` (govet, ineffassign, misspell — minimal) |
 
-This is an independent repository consumed by Hawk. In the local
-`graycode-eco` parent workspace it is checked out beside `hawk` as `../flux`
+This is an independent repository consumed by Rho. In the local
+`graycode-eco` parent workspace it is checked out beside `rho` as `../flux`
 and connected through the parent `go.work`; publish changes here, then update
-Hawk's module pin through a separate PR.
+Rho's module pin through a separate PR.
