@@ -8,11 +8,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 ## [Unreleased]
 
 ### Changed
-- **Renamed host product references from hawk to rho.** Host config paths
-  (`~/.rho/`), the `rho_build`/`rho_build_concise` tool namespaces, the
-  `rho_response` schema name, and the `EXPORT_RHO_FIXTURE` env var now use the
-  rho identity. Retired ecosystem repos (`shrike`, `harrier`, `kestrel`,
-  `merlin`) are no longer referenced.
+- **Renamed host product references to rho.** Host config paths (`~/.rho/`),
+  the `rho_build`/`rho_build_concise` tool namespaces, the `rho_response`
+  schema name, and the `EXPORT_RHO_FIXTURE` env var now use the rho identity.
+  References to retired ecosystem repos were removed.
+- **Credential env-file migration falls back to the pre-rename host config
+  directory** so installs created before the rename still migrate.
 
 ## [0.0.1] — 2026-09-15
 

@@ -311,6 +311,37 @@ func TestMigrateEnvFileCredentials_BothPaths(t *testing.T) {
 	}
 }
 
+func TestMigrateEnvFileCredentials_LegacyPaths(t *testing.T) {
+	ms := &MapStore{}
+	cs := &CombinedStore{Keychain: ms}
+	SetDefaultStore(cs)
+	t.Cleanup(func() { SetDefaultStore(nil) })
+
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	legacyDir := filepath.Join(dir, ".hawk")
+	if err := os.MkdirAll(legacyDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	envPath := filepath.Join(legacyDir, "env")
+	if err := os.WriteFile(envPath, []byte("ANTHROPIC_API_KEY=sk-legacy\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	n, err := MigrateEnvFileCredentials(ctx)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("expected 1 migrated from legacy path, got %d", n)
+	}
+	if _, err := os.Stat(envPath); !os.IsNotExist(err) {
+		t.Error("legacy ~/.hawk/env should be removed after migration")
+	}
+}
+
 func TestMigrateEnvFileCredentialsAt_NilKeychain(t *testing.T) {
 	// When DefaultStore is a CombinedStore with nil Keychain, migration should fail.
 	cs := &CombinedStore{Keychain: nil}

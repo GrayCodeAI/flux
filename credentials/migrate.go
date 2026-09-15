@@ -25,7 +25,9 @@ func markEnvFileMigrationDone() {
 }
 
 // MigrateEnvFileCredentials imports API keys from plaintext credential files
-// (~/.rho/env, ~/.rho/.env) into the OS secret store and removes them.
+// (~/.rho/env, ~/.rho/.env) into the OS secret store and removes them. It also
+// checks the pre-rename host config directory (~/.hawk/env, ~/.hawk/.env) so
+// installs created before the rename still migrate.
 func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -34,7 +36,7 @@ func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 	total := 0
-	for _, path := range []string{rhoEnvPath(), rhoDotEnvPath()} {
+	for _, path := range []string{rhoEnvPath(), rhoDotEnvPath(), legacyEnvPath(), legacyDotEnvPath()} {
 		n, err := migrateEnvFileAt(ctx, path)
 		if err != nil && !os.IsNotExist(err) {
 			return total, err
@@ -91,6 +93,19 @@ func rhoEnvPath() string {
 func rhoDotEnvPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".rho", ".env")
+}
+
+// legacyEnvPath is the pre-rename host config file path, kept so installs
+// created before the rename still migrate.
+func legacyEnvPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".hawk", "env")
+}
+
+// legacyDotEnvPath is the pre-rename host dotenv file path.
+func legacyDotEnvPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".hawk", ".env")
 }
 
 func readEnvFile(path string) (map[string]string, error) {

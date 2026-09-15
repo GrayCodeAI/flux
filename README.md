@@ -63,7 +63,6 @@ and two Go AST tests in `rho/internal/testaudit/`.
 
 - do not import `rho/internal/*`
 - do not import the removed legacy path `rho/shared/types`
-- do not import other engines (`swift`) — engines are peers, not dependencies
 
 ## Quick Start
 
@@ -320,7 +319,6 @@ flux is part of the graycode-eco:
 |---|---|---|
 | **rho** | [GrayCodeAI/rho](https://github.com/GrayCodeAI/rho) | AI coding agent |
 | **flux** | This repo | LLM provider runtime |
-| **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture |
 
 ## Development
 

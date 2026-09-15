@@ -33,7 +33,7 @@ func BehaviorPresetFrom(s string) (BehaviorPreset, error) {
 }
 
 // FinalizeErrorCode classifies a finalize warning or violation, mirroring the
-// FINALIZE_ERROR_CODE enum in proto/rho/contracts/v1/tool.proto.
+// FINALIZE_ERROR_CODE enum in the host tool contract.
 type FinalizeErrorCode int
 
 const (
@@ -90,7 +90,7 @@ func (r FinalizeResult) Ok() bool {
 }
 
 // ToolMeta is the canonical identity envelope attached to tool-call events,
-// mirroring the ToolMeta message in proto/rho/contracts/v1/tool.proto.
+// mirroring the ToolMeta message in the host tool contract.
 // version is an additive-only bump: new additive fields do NOT change it.
 type ToolMeta struct {
 	Version   string        `json:"version"`
@@ -102,11 +102,11 @@ type ToolMeta struct {
 }
 
 // ToolNamespace is a CLOSED enum identifying the harness that owns a tool,
-// mirroring the ToolNamespace enum in proto/rho/contracts/v1/tool.proto. A new
+// mirroring the ToolNamespace enum in the host tool contract. A new
 // unknown namespace is a wire-breaking change that intentionally fails
 // ToolNamespaceFrom (forward-safety): a deploy that rolls the contract forward
 // before the consumer code cannot silently mis-route a tool it doesn't
-// understand. ToolNamespaceAcp is reserved for the forthcoming rho-acp repo.
+// understand. ToolNamespaceAcp is reserved for a forthcoming ACP harness.
 type ToolNamespace string
 
 const (
@@ -116,7 +116,7 @@ const (
 	ToolNamespaceCodex           ToolNamespace = "codex"    // codex harness
 	ToolNamespaceOpencode        ToolNamespace = "opencode" // opencode harness
 	ToolNamespaceMcp             ToolNamespace = "mcp"      // MCP servers (falcon)
-	ToolNamespaceAcp             ToolNamespace = "acp"      // reserved: rho-acp
+	ToolNamespaceAcp             ToolNamespace = "acp"      // reserved: ACP harness
 )
 
 // ToolNamespaceFrom parses a namespace string into a ToolNamespace. The set is

@@ -69,7 +69,7 @@ Setup is **gateway-first**: pick the gateway on the Gateways tab, paste any non-
   → Pick model    → ListModels (auto) when credentials exist
 ```
 
-## Host API (rho uses `internal/fluxclient` only)
+## Host API (rho integrates through `flux/engine`)
 
 - `ResolveCredentialForHost` / `SaveCredentialForHost`
 - `ApplyFluxCredentials`
