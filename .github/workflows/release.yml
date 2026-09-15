@@ -1,7 +1,7 @@
-# Release workflow for eyrie (Go library — no binaries).
+# Release workflow for flux (Go library — no binaries).
 # Triggered when a v* tag is pushed; publishes a GitHub Release with
 # auto-generated notes. Consumers depend on the tag via
-# `go get github.com/GrayCodeAI/eyrie@vX.Y.Z`.
+# `go get github.com/GrayCodeAI/flux@vX.Y.Z`.
 
 name: release
 

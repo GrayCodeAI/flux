@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 func TestControlPlaneUsesInjectedCredentialStore(t *testing.T) {

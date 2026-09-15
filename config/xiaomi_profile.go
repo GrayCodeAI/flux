@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
+	"github.com/GrayCodeAI/flux/catalog/xiaomi"
 )
 
 const (

@@ -7,7 +7,7 @@
 //
 // Everything here is stdlib-only. The Redis backend speaks RESP directly over a
 // net.Conn rather than pulling in a redis client dependency.
-package eyrie
+package flux
 
 import (
 	"bufio"
@@ -98,7 +98,7 @@ func (m *MemoryBackend) Delete(_ context.Context, key string) error {
 
 // ErrRedisNil is returned by the RESP client for a nil bulk-string reply
 // (i.e. a missing key). It is handled internally and never surfaced from Get.
-var ErrRedisNil = errors.New("eyrie: redis nil reply")
+var ErrRedisNil = errors.New("flux: redis nil reply")
 
 // maxRespBulkLen caps the size of a single RESP bulk-string reply to prevent
 // memory-exhaustion from a malicious or buggy Redis server. 64 MB is well
@@ -225,7 +225,7 @@ func (r *RedisBackend) ensureConn(ctx context.Context) error {
 	d := net.Dialer{Timeout: r.timeout}
 	conn, err := d.DialContext(ctx, "tcp", r.addr)
 	if err != nil {
-		return fmt.Errorf("eyrie: redis dial %s: %w", r.addr, err)
+		return fmt.Errorf("flux: redis dial %s: %w", r.addr, err)
 	}
 	r.conn = conn
 	r.rw = bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
@@ -278,19 +278,19 @@ func readReply(r *bufio.Reader) ([]byte, error) {
 	case '+': // simple string, e.g. "+OK"
 		return line, nil
 	case '-': // error
-		return nil, fmt.Errorf("eyrie: redis error: %s", string(line))
+		return nil, fmt.Errorf("flux: redis error: %s", string(line))
 	case ':': // integer, e.g. DEL count
 		return line, nil
 	case '$': // bulk string
 		n, err := strconv.Atoi(string(line))
 		if err != nil {
-			return nil, fmt.Errorf("eyrie: bad bulk length %q: %w", line, err)
+			return nil, fmt.Errorf("flux: bad bulk length %q: %w", line, err)
 		}
 		if n < 0 {
 			return nil, ErrRedisNil
 		}
 		if n > maxRespBulkLen {
-			return nil, fmt.Errorf("eyrie: redis bulk string length %d exceeds max %d", n, maxRespBulkLen)
+			return nil, fmt.Errorf("flux: redis bulk string length %d exceeds max %d", n, maxRespBulkLen)
 		}
 		buf := make([]byte, n+2) // include trailing CRLF
 		if _, err := readFull(r, buf); err != nil {
@@ -298,7 +298,7 @@ func readReply(r *bufio.Reader) ([]byte, error) {
 		}
 		return buf[:n], nil
 	default:
-		return nil, fmt.Errorf("eyrie: unexpected RESP prefix %q", string(prefix))
+		return nil, fmt.Errorf("flux: unexpected RESP prefix %q", string(prefix))
 	}
 }
 

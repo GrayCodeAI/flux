@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/flux/client/core"
 )
 
 func TestNewConcentrateResponsesClient(t *testing.T) {
@@ -87,10 +87,10 @@ func TestConcentrateResponsesClient_ChatUsesResponsesContract(t *testing.T) {
 	client.httpClient = &http.Client{Transport: transport}
 	resp, err := client.Chat(
 		context.Background(),
-		[]core.EyrieMessage{{Role: "user", Content: "Hi"}},
+		[]core.FluxMessage{{Role: "user", Content: "Hi"}},
 		core.ChatOptions{
 			Model: "gpt-5",
-			Tools: []core.EyrieTool{{
+			Tools: []core.FluxTool{{
 				Name: "read_file", Description: "Read a file",
 				Parameters: map[string]interface{}{"type": "object"},
 			}},
@@ -113,7 +113,7 @@ func TestConcentrateResponsesClient_ChatUsesResponsesContract(t *testing.T) {
 func TestConcentrateResponsesClient_BuildRequestPreservesToolTurn(t *testing.T) {
 	t.Parallel()
 	client := NewConcentrateResponsesClient("cn-key", "https://api.concentrate.ai/v1")
-	req, err := client.buildRequest([]core.EyrieMessage{
+	req, err := client.buildRequest([]core.FluxMessage{
 		{Role: "user", Content: "Read main.go"},
 		{Role: "assistant", ToolUse: []core.ToolCall{{
 			ID: "call_1", Name: "read_file", Arguments: map[string]interface{}{"path": "main.go"},
@@ -123,7 +123,7 @@ func TestConcentrateResponsesClient_BuildRequestPreservesToolTurn(t *testing.T) 
 		}}},
 	}, core.ChatOptions{
 		Model: "gpt-5",
-		Tools: []core.EyrieTool{{
+		Tools: []core.FluxTool{{
 			Name: "read_file", Parameters: map[string]interface{}{"type": "object"},
 		}},
 		ToolChoice: &core.ToolChoiceOption{Type: "tool", Name: "read_file", DisableParallelToolUse: true},
@@ -246,7 +246,7 @@ func TestConcentrateResponsesClient_StreamTextUsageAndDone(t *testing.T) {
 	}
 	defer result.Close()
 
-	var got []core.EyrieStreamEvent
+	var got []core.FluxStreamEvent
 	timeout := time.After(2 * time.Second)
 	for {
 		select {
@@ -296,7 +296,7 @@ func TestConcentrateResponsesClient_StreamToolCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer result.Close()
-	var got []core.EyrieStreamEvent
+	var got []core.FluxStreamEvent
 	for event := range result.Events {
 		got = append(got, event)
 	}
@@ -360,7 +360,7 @@ func TestConcentrateResponsesClient_ChatRetriesOn500ThenSucceeds(t *testing.T) {
 	client.httpClient = &http.Client{Transport: transport}
 	client.SetRetry(core.NewRetryConfig(2, time.Millisecond, 2*time.Millisecond, 500))
 
-	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-5"})
+	resp, err := client.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-5"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}
@@ -372,7 +372,7 @@ func TestConcentrateResponsesClient_ChatRetriesOn500ThenSucceeds(t *testing.T) {
 	}
 }
 
-func TestConcentrateResponsesClient_ChatErrorIsStructuredEyrieError(t *testing.T) {
+func TestConcentrateResponsesClient_ChatErrorIsStructuredFluxError(t *testing.T) {
 	t.Parallel()
 	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		resp := jsonResponse(http.StatusUnauthorized, map[string]any{
@@ -385,35 +385,35 @@ func TestConcentrateResponsesClient_ChatErrorIsStructuredEyrieError(t *testing.T
 	client.httpClient = &http.Client{Transport: transport}
 	client.SetRetry(core.RetryConfig{}) // no retries: classify the terminal error
 
-	_, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-5"})
+	_, err := client.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-5"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	var eyrieErr *core.EyrieError
-	if !errors.As(err, &eyrieErr) {
-		t.Fatalf("error is %T, want *core.EyrieError (%v)", err, err)
+	var fluxErr *core.FluxError
+	if !errors.As(err, &fluxErr) {
+		t.Fatalf("error is %T, want *core.FluxError (%v)", err, err)
 	}
-	if eyrieErr.Provider != "concentrate" || eyrieErr.Op != "chat" {
-		t.Fatalf("provider/op = %s/%s", eyrieErr.Provider, eyrieErr.Op)
+	if fluxErr.Provider != "concentrate" || fluxErr.Op != "chat" {
+		t.Fatalf("provider/op = %s/%s", fluxErr.Provider, fluxErr.Op)
 	}
-	if eyrieErr.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401", eyrieErr.StatusCode)
+	if fluxErr.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", fluxErr.StatusCode)
 	}
-	if !eyrieErr.IsAuthError() {
+	if !fluxErr.IsAuthError() {
 		t.Error("IsAuthError() = false, want true")
 	}
-	if eyrieErr.IsRetriable() {
+	if fluxErr.IsRetriable() {
 		t.Error("IsRetriable() = true for 401, want false")
 	}
-	if eyrieErr.RequestID != "req_abc" {
-		t.Errorf("request id = %q, want req_abc", eyrieErr.RequestID)
+	if fluxErr.RequestID != "req_abc" {
+		t.Errorf("request id = %q, want req_abc", fluxErr.RequestID)
 	}
-	if !strings.Contains(eyrieErr.Message, "bad key") {
-		t.Errorf("message = %q, want it to carry the provider detail", eyrieErr.Message)
+	if !strings.Contains(fluxErr.Message, "bad key") {
+		t.Errorf("message = %q, want it to carry the provider detail", fluxErr.Message)
 	}
 }
 
-func TestConcentrateResponsesClient_StreamErrorIsStructuredEyrieError(t *testing.T) {
+func TestConcentrateResponsesClient_StreamErrorIsStructuredFluxError(t *testing.T) {
 	t.Parallel()
 	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		resp := jsonResponse(http.StatusTooManyRequests, map[string]any{
@@ -430,19 +430,19 @@ func TestConcentrateResponsesClient_StreamErrorIsStructuredEyrieError(t *testing
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	var eyrieErr *core.EyrieError
-	if !errors.As(err, &eyrieErr) {
-		t.Fatalf("error is %T, want *core.EyrieError (%v)", err, err)
+	var fluxErr *core.FluxError
+	if !errors.As(err, &fluxErr) {
+		t.Fatalf("error is %T, want *core.FluxError (%v)", err, err)
 	}
-	if eyrieErr.Op != "stream" {
-		t.Fatalf("op = %s, want stream", eyrieErr.Op)
+	if fluxErr.Op != "stream" {
+		t.Fatalf("op = %s, want stream", fluxErr.Op)
 	}
-	if eyrieErr.StatusCode != http.StatusTooManyRequests || !eyrieErr.IsRateLimited() || !eyrieErr.IsRetriable() {
+	if fluxErr.StatusCode != http.StatusTooManyRequests || !fluxErr.IsRateLimited() || !fluxErr.IsRetriable() {
 		t.Fatalf("status = %d (rate-limited=%v, retriable=%v), want 429/true/true",
-			eyrieErr.StatusCode, eyrieErr.IsRateLimited(), eyrieErr.IsRetriable())
+			fluxErr.StatusCode, fluxErr.IsRateLimited(), fluxErr.IsRetriable())
 	}
-	if eyrieErr.RequestID != "req_429" {
-		t.Errorf("request id = %q, want req_429", eyrieErr.RequestID)
+	if fluxErr.RequestID != "req_429" {
+		t.Errorf("request id = %q, want req_429", fluxErr.RequestID)
 	}
 }
 

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Eyrie is host-neutral: it must not depend on any Hawk package.
+# Flux is host-neutral: it must not depend on any Hawk package.
 # Shared ecosystem vocabulary lives in hawk/internal/contracts, which
 # hosts vendor rather than import from here.
 FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk(/|")'
@@ -24,7 +24,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden Hawk host imports found:"
   echo "${violations}"
   echo
-  echo "eyrie must use local contracts, never the Hawk product module"
+  echo "flux must use local contracts, never the Hawk product module"
   exit_code=1
 fi
 

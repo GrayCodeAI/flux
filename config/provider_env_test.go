@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/flux/catalog"
 )
 
 func testModelCatalog() catalog.ModelCatalog {
@@ -168,8 +168,8 @@ func TestLoadProviderConfigWithErrorRejectsConflictingVersionAliases(t *testing.
 func TestGetProviderConfigDir(t *testing.T) {
 	// Test with env var set
 	dir := t.TempDir()
-	os.Setenv("EYRIE_CONFIG_DIR", dir)
-	defer os.Unsetenv("EYRIE_CONFIG_DIR")
+	os.Setenv("FLUX_CONFIG_DIR", dir)
+	defer os.Unsetenv("FLUX_CONFIG_DIR")
 
 	got, err := GetProviderConfigDir()
 	if err != nil {
@@ -180,17 +180,17 @@ func TestGetProviderConfigDir(t *testing.T) {
 	}
 
 	// Test without env var (uses OS config dir when available)
-	os.Unsetenv("EYRIE_CONFIG_DIR")
+	os.Unsetenv("FLUX_CONFIG_DIR")
 	got, _ = GetProviderConfigDir()
-	if !strings.HasSuffix(got, filepath.Join("eyrie")) {
-		t.Errorf("expected path ending in eyrie, got %q", got)
+	if !strings.HasSuffix(got, filepath.Join("flux")) {
+		t.Errorf("expected path ending in flux, got %q", got)
 	}
 }
 
 func TestGetProviderConfigPath(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("EYRIE_CONFIG_DIR", dir)
-	defer os.Unsetenv("EYRIE_CONFIG_DIR")
+	os.Setenv("FLUX_CONFIG_DIR", dir)
+	defer os.Unsetenv("FLUX_CONFIG_DIR")
 
 	got, err := GetProviderConfigPath()
 	if err != nil {

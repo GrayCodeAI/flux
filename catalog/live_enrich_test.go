@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
 func TestFetchLiveModelEntriesForProvider_ConcentratePublicCatalogNeedsNoKey(t *testing.T) {

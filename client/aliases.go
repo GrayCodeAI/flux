@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/adapters"
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/client/embeddings"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/flux/client/adapters"
+	"github.com/GrayCodeAI/flux/client/core"
+	"github.com/GrayCodeAI/flux/client/embeddings"
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 // The provider contract and request/response data types live in
@@ -20,28 +20,28 @@ import (
 type (
 	// Provider is the core interface for LLM providers.
 	Provider = core.Provider
-	// EyrieConfig holds client configuration.
-	EyrieConfig = core.EyrieConfig
+	// FluxConfig holds client configuration.
+	FluxConfig = core.FluxConfig
 	// ContentPart represents a piece of content in a multi-modal message.
 	ContentPart = core.ContentPart
 	// ImageURLPart represents an image content part.
 	ImageURLPart = core.ImageURLPart
 	// InputAudioPart represents an audio content part (base64 encoded).
 	InputAudioPart = core.InputAudioPart
-	// EyrieMessage represents a chat message.
-	EyrieMessage = core.EyrieMessage
+	// FluxMessage represents a chat message.
+	FluxMessage = core.FluxMessage
 	// ToolResult represents the result of a tool execution.
 	ToolResult = core.ToolResult
-	// EyrieTool represents a tool definition.
-	EyrieTool = core.EyrieTool
-	// EyrieUsage tracks token usage.
-	EyrieUsage = core.EyrieUsage
-	// EyrieResponse is the response from a chat call.
-	EyrieResponse = core.EyrieResponse
+	// FluxTool represents a tool definition.
+	FluxTool = core.FluxTool
+	// FluxUsage tracks token usage.
+	FluxUsage = core.FluxUsage
+	// FluxResponse is the response from a chat call.
+	FluxResponse = core.FluxResponse
 	// ToolCall represents a tool invocation.
 	ToolCall = core.ToolCall
-	// EyrieStreamEvent is a streaming event.
-	EyrieStreamEvent = core.EyrieStreamEvent
+	// FluxStreamEvent is a streaming event.
+	FluxStreamEvent = core.FluxStreamEvent
 	// StreamResult wraps a streaming response with cleanup.
 	StreamResult = core.StreamResult
 	// ResponseFormat specifies the desired output format for the model response.
@@ -52,9 +52,9 @@ type (
 	ToolChoiceOption = core.ToolChoiceOption
 	// ContinuationConfig controls output continuation behavior.
 	ContinuationConfig = core.ContinuationConfig
-	// EyrieError is a structured error that preserves provider context,
+	// FluxError is a structured error that preserves provider context,
 	// HTTP metadata, and request identification for debugging.
-	EyrieError = core.EyrieError
+	FluxError = core.FluxError
 	// RetryConfig controls retry behavior for HTTP clients.
 	RetryConfig = core.RetryConfig
 	// SSEEvent is one server-sent event from a streaming response body.
@@ -156,7 +156,7 @@ func DetectResponseHealth(sig ResponseSignals) ResponseHealth {
 }
 
 // ResponseHasContent reports whether a response carries content or tool calls.
-func ResponseHasContent(resp *EyrieResponse) bool {
+func ResponseHasContent(resp *FluxResponse) bool {
 	return core.ResponseHasContent(resp)
 }
 
@@ -234,14 +234,14 @@ var (
 // NewStreamResult creates a StreamResult with a cancel function for resource
 // cleanup. The request ID is optional; pass "" when it is not yet available.
 // The canonical constructor lives in
-// github.com/GrayCodeAI/eyrie/llm; this is a thin facade
+// github.com/GrayCodeAI/flux/llm; this is a thin facade
 // wrapper that keeps the public client API stable.
-func NewStreamResult(events <-chan EyrieStreamEvent, cancel context.CancelFunc) *StreamResult {
+func NewStreamResult(events <-chan FluxStreamEvent, cancel context.CancelFunc) *StreamResult {
 	return llm.NewStreamResult(events, "", cancel)
 }
 
 // NewStreamResultWithRequestID is NewStreamResult carrying the provider's request ID.
-func NewStreamResultWithRequestID(events <-chan EyrieStreamEvent, requestID string, cancel context.CancelFunc) *StreamResult {
+func NewStreamResultWithRequestID(events <-chan FluxStreamEvent, requestID string, cancel context.CancelFunc) *StreamResult {
 	return llm.NewStreamResult(events, requestID, cancel)
 }
 

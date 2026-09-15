@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/config/credential"
+	fluxcfg "github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/config/credential"
 )
 
 func TestProbeGemini_UsesHeaderNotQuery(t *testing.T) {
@@ -49,13 +49,13 @@ func TestProbeCredential_XiaomiTokenPlan_ResolvesBaseFromProviderConfig(t *testi
 	defer srv.Close()
 
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("FLUX_CONFIG_DIR", dir)
 	mockBase := strings.TrimRight(srv.URL, "/") + "/v1"
-	cfg := &eyriecfg.ProviderConfig{
+	cfg := &fluxcfg.ProviderConfig{
 		Version:                    "1",
 		XiaomiMimoTokenPlanBaseURL: mockBase,
 	}
-	if err := eyriecfg.SaveProviderConfig(cfg, ""); err != nil {
+	if err := fluxcfg.SaveProviderConfig(cfg, ""); err != nil {
 		t.Fatal(err)
 	}
 

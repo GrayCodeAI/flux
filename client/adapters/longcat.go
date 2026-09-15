@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/flux/client/core"
 
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/flux/types"
 )
 
 // LongCatClient uses the OpenAI-compatible LongCat endpoint first, with
@@ -50,8 +50,8 @@ func (c *LongCatClient) Name() string {
 	return "longcat"
 }
 
-func (c *LongCatClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
-	return c.router.Chat(ctx, messages, opts, ChatProtocolCompletions, func(err error, _ *core.EyrieResponse) bool {
+func (c *LongCatClient) Chat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.FluxResponse, error) {
+	return c.router.Chat(ctx, messages, opts, ChatProtocolCompletions, func(err error, _ *core.FluxResponse) bool {
 		if err != nil && c.router.Anthropic != nil && longcatFallbackChatError(err) {
 			c.logger.Info("LongCat: OpenAI endpoint failed; retrying via Anthropic compatibility",
 				"error", err)
@@ -61,7 +61,7 @@ func (c *LongCatClient) Chat(ctx context.Context, messages []core.EyrieMessage, 
 	})
 }
 
-func (c *LongCatClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *LongCatClient) StreamChat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.router.StreamChat(ctx, messages, opts, ProtocolStreamConfig{
 		Primary: ChatProtocolCompletions,
 		FallbackOnError: func(err error) bool {
@@ -102,9 +102,9 @@ func longcatRetryableChatError(err error) bool {
 	if n := parseHTTPStatusFromError(msg); n > 0 {
 		return n >= 500 || n == http.StatusUnauthorized || n == http.StatusForbidden
 	}
-	var eyrieErr *core.EyrieError
-	if errors.As(err, &eyrieErr) {
-		return eyrieErr.IsRetriable()
+	var fluxErr *core.FluxError
+	if errors.As(err, &fluxErr) {
+		return fluxErr.IsRetriable()
 	}
 	return types.IsTransient(err)
 }

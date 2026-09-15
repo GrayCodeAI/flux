@@ -10,15 +10,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/flux/client"
 )
 
 func main() {
-	c := client.Client(&client.EyrieConfig{
+	c := client.Client(&client.FluxConfig{
 		Provider: client.DetectProvider(),
 	})
 
-	messages := []client.EyrieMessage{
+	messages := []client.FluxMessage{
 		{Role: "user", Content: "Write a short poem about programming."},
 	}
 

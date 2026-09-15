@@ -44,13 +44,13 @@ class APIError extends Error {
   body: string;
 
   constructor(statusCode: number, body: string) {
-    super(`eyrie: ${statusCode} ${body}`);
+    super(`flux: ${statusCode} ${body}`);
     this.statusCode = statusCode;
     this.body = body;
   }
 }
 
-class EyrieClient {
+class FluxClient {
   private baseURL: string;
   private headers: Record<string, string>;
 

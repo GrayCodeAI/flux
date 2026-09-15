@@ -7,9 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 func TestModelPolicyIncludesInvocationScopedCustomGateways(t *testing.T) {

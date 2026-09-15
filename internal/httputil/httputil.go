@@ -1,5 +1,5 @@
 // Package httputil provides shared HTTP server primitives used across
-// eyrie's API surfaces. Centralizing these eliminates drift in auth
+// flux's API surfaces. Centralizing these eliminates drift in auth
 // comparison, body decoding, JSON responses, security headers, and
 // loopback validation that previously existed as duplicated copies
 // in internal/api/server.go and other handlers.

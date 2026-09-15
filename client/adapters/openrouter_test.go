@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/flux/client/core"
 )
 
 func TestNewOpenRouterClient_OpenAI(t *testing.T) {
@@ -39,7 +39,7 @@ func TestOpenRouterClient_ChatUsesOpenAIPath(t *testing.T) {
 	defer server.Close()
 
 	client := NewOpenRouterClient("key", server.URL, &OpenRouterCompat, core.WithRetry(core.NewRetryConfig(0, 0, 0)))
-	resp, err := client.Chat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude", MaxTokens: 16})
+	resp, err := client.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude", MaxTokens: 16})
 	if err != nil {
 		t.Fatal(err)
 	}

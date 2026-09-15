@@ -1,4 +1,4 @@
-// Example: basic chat with eyrie.
+// Example: basic chat with flux.
 //
 // Run:
 //
@@ -10,15 +10,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/flux/client"
 )
 
 func main() {
-	c := client.Client(&client.EyrieConfig{
+	c := client.Client(&client.FluxConfig{
 		Provider: client.DetectProvider(),
 	})
 
-	messages := []client.EyrieMessage{
+	messages := []client.FluxMessage{
 		{Role: "user", Content: "What is 2 + 2?"},
 	}
 

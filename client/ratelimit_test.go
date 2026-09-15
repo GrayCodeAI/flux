@@ -118,7 +118,7 @@ func TestRateLimitProviderDelegation(t *testing.T) {
 	}
 
 	// Chat delegation
-	resp, err := wrapped.Chat(context.Background(), []EyrieMessage{
+	resp, err := wrapped.Chat(context.Background(), []FluxMessage{
 		{Role: "user", Content: "test"},
 	}, ChatOptions{Model: "test"})
 	if err != nil {
@@ -129,7 +129,7 @@ func TestRateLimitProviderDelegation(t *testing.T) {
 	}
 
 	// StreamChat delegation
-	sr, err := wrapped.StreamChat(context.Background(), []EyrieMessage{
+	sr, err := wrapped.StreamChat(context.Background(), []FluxMessage{
 		{Role: "user", Content: "test"},
 	}, ChatOptions{Model: "test"})
 	if err != nil {
@@ -151,13 +151,13 @@ func TestRateLimitChatBlockedByContext(t *testing.T) {
 
 	ctx := context.Background()
 	// Exhaust the single token
-	_, _ = wrapped.Chat(ctx, []EyrieMessage{{Role: "user", Content: "first"}}, ChatOptions{})
+	_, _ = wrapped.Chat(ctx, []FluxMessage{{Role: "user", Content: "first"}}, ChatOptions{})
 
 	// Now use an already-cancelled context
 	ctx2, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := wrapped.Chat(ctx2, []EyrieMessage{{Role: "user", Content: "blocked"}}, ChatOptions{})
+	_, err := wrapped.Chat(ctx2, []FluxMessage{{Role: "user", Content: "blocked"}}, ChatOptions{})
 	if err == nil {
 		t.Error("expected error when rate limited with cancelled context")
 	}

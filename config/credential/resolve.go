@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
 // CredentialProviderOption is one row for host provider pickers (JSON-safe).

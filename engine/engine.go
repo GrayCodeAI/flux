@@ -8,19 +8,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/llm"
-	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/registry"
+	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/llm"
+	"github.com/GrayCodeAI/flux/setup"
 )
 
 // ContractVersion is the compatibility version of the host-facing API.
 const ContractVersion = "2"
 
-// Options supplies host-owned dependencies. A zero value uses Eyrie's safe
+// Options supplies host-owned dependencies. A zero value uses Flux's safe
 // defaults. Product-specific paths are deliberately not inferred here.
 type Options struct {
 	SecretStore        credentials.Store
@@ -28,7 +28,7 @@ type Options struct {
 	CatalogPath        string
 	ProviderConfigPath string
 	// RemoteCatalogURL is the trusted published catalog source used by full
-	// refreshes. Empty selects Eyrie's compiled-in HTTPS catalog URL, never a
+	// refreshes. Empty selects Flux's compiled-in HTTPS catalog URL, never a
 	// process-environment override.
 	RemoteCatalogURL string
 	// CustomGateways is snapshotted per Engine. A non-nil empty slice
@@ -52,7 +52,7 @@ type Options struct {
 	CacheConfig client.CacheConfig
 }
 
-// Engine is Eyrie's narrow host facade. It is safe for concurrent use when
+// Engine is Flux's narrow host facade. It is safe for concurrent use when
 // the configured SecretStore is safe for concurrent use.
 type Engine struct {
 	secretStore        credentials.Store
@@ -68,7 +68,7 @@ type Engine struct {
 	cacheConfig        client.CacheConfig
 }
 
-// New constructs a host-facing Eyrie engine.
+// New constructs a host-facing Flux engine.
 func New(opts Options) (*Engine, error) {
 	usesDefaultStore := opts.SecretStore == nil
 	store := opts.SecretStore
@@ -76,7 +76,7 @@ func New(opts Options) (*Engine, error) {
 		store = credentials.DefaultStore()
 	}
 	if store == nil {
-		return nil, &Error{Code: ErrorInternal, Operation: "new", Message: "eyrie engine: credential store unavailable"}
+		return nil, &Error{Code: ErrorInternal, Operation: "new", Message: "flux engine: credential store unavailable"}
 	}
 	stateDir := strings.TrimSpace(opts.StateDir)
 	catalogPath := strings.TrimSpace(opts.CatalogPath)
@@ -118,7 +118,7 @@ func New(opts Options) (*Engine, error) {
 	return engine, nil
 }
 
-// SelectionRequest asks Eyrie to resolve a concrete provider/model route.
+// SelectionRequest asks Flux to resolve a concrete provider/model route.
 type SelectionRequest struct {
 	Requirements Requirements
 	Preference   Preference
@@ -135,7 +135,7 @@ func (e *Engine) Resolve(ctx context.Context, req SelectionRequest) (Route, erro
 	return selection, nil
 }
 
-// Generate performs a blocking generation through Eyrie's resolved transport.
+// Generate performs a blocking generation through Flux's resolved transport.
 func (e *Engine) Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
 	ctx = nonNilContext(ctx)
 	if err := validateGenerateRequest(req); err != nil {
@@ -366,7 +366,7 @@ func (e *Engine) resolveSelection(ctx context.Context, req SelectionRequest) (Ro
 	}
 	modelID, providerID := selectCompatibleModel(compiled, req)
 	if modelID == "" {
-		return Route{}, &Error{Code: ErrorCapabilityMismatch, Operation: "resolve", Message: "eyrie engine: no catalog model satisfies the requested capabilities"}
+		return Route{}, &Error{Code: ErrorCapabilityMismatch, Operation: "resolve", Message: "flux engine: no catalog model satisfies the requested capabilities"}
 	}
 	selection.Model = modelID
 	selection.Provider = providerID
@@ -437,21 +437,21 @@ func selectCompatibleModel(compiled *catalog.CompiledCatalog, req SelectionReque
 
 func validateGenerateRequest(req GenerateRequest) error {
 	if len(req.Messages) == 0 {
-		return invalid("generate", "eyrie engine: at least one message is required")
+		return invalid("generate", "flux engine: at least one message is required")
 	}
 	for _, message := range req.Messages {
 		if strings.TrimSpace(message.Role) == "" {
-			return invalid("generate", "eyrie engine: every message requires a role")
+			return invalid("generate", "flux engine: every message requires a role")
 		}
 	}
 	if req.Limits.MaxOutputTokens < 0 {
-		return invalid("generate", "eyrie engine: max output tokens cannot be negative")
+		return invalid("generate", "flux engine: max output tokens cannot be negative")
 	}
 	if req.Limits.MaxContinuations < 0 || req.Limits.MaxTotalOutputTokens < 0 {
-		return invalid("generate", "eyrie engine: continuation limits cannot be negative")
+		return invalid("generate", "flux engine: continuation limits cannot be negative")
 	}
 	if req.Requirements.MinimumContext < 0 {
-		return invalid("generate", "eyrie engine: minimum context cannot be negative")
+		return invalid("generate", "flux engine: minimum context cannot be negative")
 	}
 	return nil
 }
@@ -461,7 +461,7 @@ func validateRequirementsFromCatalog(compiled *catalog.CompiledCatalog, modelID 
 		return nil
 	}
 	if compiled == nil {
-		return &Error{Code: ErrorCatalogUnavailable, Operation: "validate_capabilities", Model: modelID, Message: "eyrie engine: catalog unavailable for capability validation"}
+		return &Error{Code: ErrorCatalogUnavailable, Operation: "validate_capabilities", Model: modelID, Message: "flux engine: catalog unavailable for capability validation"}
 	}
 	canonical, ok := compiled.CanonicalModelForAliasOrID(modelID)
 	if !ok {
@@ -469,14 +469,14 @@ func validateRequirementsFromCatalog(compiled *catalog.CompiledCatalog, modelID 
 	}
 	model, ok := compiled.ModelsByID[canonical]
 	if !ok {
-		return &Error{Code: ErrorModelUnavailable, Operation: "validate_capabilities", Model: modelID, Message: fmt.Sprintf("eyrie engine: model %q is not in the catalog", modelID)}
+		return &Error{Code: ErrorModelUnavailable, Operation: "validate_capabilities", Model: modelID, Message: fmt.Sprintf("flux engine: model %q is not in the catalog", modelID)}
 	}
 	if req.MinimumContext > 0 && model.ContextWindow < req.MinimumContext {
-		return &Error{Code: ErrorCapabilityMismatch, Operation: "validate_capabilities", Model: canonical, Message: fmt.Sprintf("eyrie engine: model %q has context window %d, need at least %d", canonical, model.ContextWindow, req.MinimumContext)}
+		return &Error{Code: ErrorCapabilityMismatch, Operation: "validate_capabilities", Model: canonical, Message: fmt.Sprintf("flux engine: model %q has context window %d, need at least %d", canonical, model.ContextWindow, req.MinimumContext)}
 	}
 	if req.Tools || req.Vision || req.StructuredJSON || req.Reasoning {
 		if !offeringSupports(compiled, canonical, req) {
-			return &Error{Code: ErrorCapabilityMismatch, Operation: "validate_capabilities", Model: canonical, Message: fmt.Sprintf("eyrie engine: model %q does not satisfy requested capabilities", canonical)}
+			return &Error{Code: ErrorCapabilityMismatch, Operation: "validate_capabilities", Model: canonical, Message: fmt.Sprintf("flux engine: model %q does not satisfy requested capabilities", canonical)}
 		}
 	}
 	return nil

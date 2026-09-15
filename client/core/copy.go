@@ -1,8 +1,8 @@
 package core
 
-// CopyResponse returns a deep copy of an EyrieResponse so that callers
+// CopyResponse returns a deep copy of an FluxResponse so that callers
 // cannot mutate the cached version.
-func CopyResponse(resp *EyrieResponse) *EyrieResponse {
+func CopyResponse(resp *FluxResponse) *FluxResponse {
 	if resp == nil {
 		return nil
 	}

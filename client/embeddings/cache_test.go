@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/flux/client/core"
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 // echoMock is a minimal core.Provider that echoes the last user message and
@@ -18,7 +18,7 @@ type echoMock struct {
 	calls int
 }
 
-func (m *echoMock) Chat(_ context.Context, msgs []core.EyrieMessage, _ core.ChatOptions) (*core.EyrieResponse, error) {
+func (m *echoMock) Chat(_ context.Context, msgs []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	m.mu.Lock()
 	m.calls++
 	m.mu.Unlock()
@@ -26,17 +26,17 @@ func (m *echoMock) Chat(_ context.Context, msgs []core.EyrieMessage, _ core.Chat
 	if len(msgs) > 0 {
 		content = msgs[len(msgs)-1].Content
 	}
-	return &core.EyrieResponse{Content: "echo: " + content, FinishReason: "stop"}, nil
+	return &core.FluxResponse{Content: "echo: " + content, FinishReason: "stop"}, nil
 }
 
-func (m *echoMock) StreamChat(ctx context.Context, msgs []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (m *echoMock) StreamChat(ctx context.Context, msgs []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	resp, err := m.Chat(ctx, msgs, opts)
 	if err != nil {
 		return nil, err
 	}
-	ch := make(chan core.EyrieStreamEvent, 2)
-	ch <- core.EyrieStreamEvent{Type: "content", Content: resp.Content}
-	ch <- core.EyrieStreamEvent{Type: "done", StopReason: "stop"}
+	ch := make(chan core.FluxStreamEvent, 2)
+	ch <- core.FluxStreamEvent{Type: "content", Content: resp.Content}
+	ch <- core.FluxStreamEvent{Type: "done", StopReason: "stop"}
 	close(ch)
 	return llm.NewStreamResult(ch, "", func() {}), nil
 }
@@ -73,8 +73,8 @@ func (stubEmbedder) CreateEmbedding(_ context.Context, req EmbeddingRequest) (*E
 	return &EmbeddingResponse{Embeddings: [][]float32{vec}}, nil
 }
 
-func userMsg(s string) []core.EyrieMessage {
-	return []core.EyrieMessage{{Role: "user", Content: s}}
+func userMsg(s string) []core.FluxMessage {
+	return []core.FluxMessage{{Role: "user", Content: s}}
 }
 
 func TestEmbeddingCache_HitOnSimilarPrompt(t *testing.T) {

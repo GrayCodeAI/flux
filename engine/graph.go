@@ -1,12 +1,12 @@
 package engine
 
-import "github.com/GrayCodeAI/eyrie/operationsgraph"
+import "github.com/GrayCodeAI/flux/operationsgraph"
 
-// OperationsGraphInput is the host-facing input for Eyrie's portable
+// OperationsGraphInput is the host-facing input for Flux's portable
 // operations graph projection.
 type OperationsGraphInput = operationsgraph.Input
 
-// OperationsGraphExport is Eyrie's portable operations graph projection.
+// OperationsGraphExport is Flux's portable operations graph projection.
 type OperationsGraphExport = operationsgraph.Export
 
 // BuildOperationsGraph projects route and normalized usage telemetry without

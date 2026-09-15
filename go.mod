@@ -1,4 +1,4 @@
-module github.com/GrayCodeAI/eyrie
+module github.com/GrayCodeAI/flux
 
 go 1.26.6
 

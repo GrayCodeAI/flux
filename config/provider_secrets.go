@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
 // providerCredentialField maps one ProviderConfig field to the canonical

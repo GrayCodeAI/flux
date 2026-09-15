@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/flux/client/core"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/flux/catalog"
 )
 
 // Version mirrors core.Version for backward compatibility; the canonical
@@ -19,16 +19,16 @@ import (
 // Default is "dev" until the root package initialises.
 var Version = "dev"
 
-// SetVersion is called by the root eyrie package's init to wire the canonical
+// SetVersion is called by the root flux package's init to wire the canonical
 // version from the VERSION file into this sub-package (and client/core).
 func SetVersion(v string) {
 	Version = v
 	core.SetVersion(v)
 }
 
-// EyrieClient is the universal LLM client.
+// FluxClient is the universal LLM client.
 // It is safe for concurrent use.
-type EyrieClient struct {
+type FluxClient struct {
 	mu              sync.RWMutex
 	defaultProvider string
 	apiKeys         map[string]string
@@ -37,9 +37,9 @@ type EyrieClient struct {
 	coalescer       *Coalescer          // optional request coalescing
 }
 
-// Client creates an EyrieClient.
-func Client(cfg *EyrieConfig, opts ...ClientOption) *EyrieClient {
-	c := &EyrieClient{
+// Client creates an FluxClient.
+func Client(cfg *FluxConfig, opts ...ClientOption) *FluxClient {
+	c := &FluxClient{
 		defaultProvider: DetectProvider(),
 		apiKeys:         make(map[string]string),
 		baseURLs:        make(map[string]string),
@@ -58,19 +58,19 @@ func Client(cfg *EyrieConfig, opts ...ClientOption) *EyrieClient {
 	}
 	// Apply options (including coalescing)
 	for _, opt := range opts {
-		opt.ApplyEyrie(c)
+		opt.ApplyFlux(c)
 	}
 	return c
 }
 
 // SetCoalescingTTL enables request coalescing with the given reuse TTL.
-// Implements core.EyrieConfigurable for WithCoalescing.
-func (c *EyrieClient) SetCoalescingTTL(ttl time.Duration) {
+// Implements core.FluxConfigurable for WithCoalescing.
+func (c *FluxClient) SetCoalescingTTL(ttl time.Duration) {
 	c.coalescer = NewCoalescer(ttl)
 }
 
 // SetAPIKey sets an API key for a provider.
-func (c *EyrieClient) SetAPIKey(provider, apiKey string) {
+func (c *FluxClient) SetAPIKey(provider, apiKey string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.apiKeys[provider] = apiKey
@@ -78,7 +78,7 @@ func (c *EyrieClient) SetAPIKey(provider, apiKey string) {
 }
 
 // Ping checks connectivity to the specified (or default) provider.
-func (c *EyrieClient) Ping(ctx context.Context, provider string) error {
+func (c *FluxClient) Ping(ctx context.Context, provider string) error {
 	if provider == "" {
 		provider = c.defaultProvider
 	}
@@ -99,10 +99,10 @@ type AnthropicClientConfig struct {
 	BaseURL        string            `json:"base_url,omitempty"`
 }
 
-// ParseCustomHeaders parses HAWK_CUSTOM_HEADERS env var into a map.
+// ParseCustomHeaders parses FLUX_CUSTOM_HEADERS env var into a map.
 func ParseCustomHeaders() map[string]string {
 	result := make(map[string]string)
-	raw := os.Getenv("HAWK_CUSTOM_HEADERS")
+	raw := os.Getenv("FLUX_CUSTOM_HEADERS")
 	if raw == "" {
 		return result
 	}
@@ -129,8 +129,8 @@ var (
 
 // NewImageMessage creates a user message with an image from a URL or data URI.
 // The url parameter accepts HTTP(S) URLs or data URIs (data:image/png;base64,...).
-func NewImageMessage(url string) EyrieMessage {
-	return EyrieMessage{
+func NewImageMessage(url string) FluxMessage {
+	return FluxMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "image_url", ImageURL: &ImageURLPart{URL: url}},
@@ -139,8 +139,8 @@ func NewImageMessage(url string) EyrieMessage {
 }
 
 // NewImageMessageWithText creates a user message with text and an image from a URL or data URI.
-func NewImageMessageWithText(text, url string) EyrieMessage {
-	return EyrieMessage{
+func NewImageMessageWithText(text, url string) FluxMessage {
+	return FluxMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "text", Text: text},
@@ -151,8 +151,8 @@ func NewImageMessageWithText(text, url string) EyrieMessage {
 
 // NewBase64ImageMessage creates a user message with a base64-encoded image.
 // mediaType should be a MIME type like "image/png" or "image/jpeg".
-func NewBase64ImageMessage(data, mediaType string) EyrieMessage {
-	return EyrieMessage{
+func NewBase64ImageMessage(data, mediaType string) FluxMessage {
+	return FluxMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "image_url", ImageURL: &ImageURLPart{
@@ -163,8 +163,8 @@ func NewBase64ImageMessage(data, mediaType string) EyrieMessage {
 }
 
 // NewBase64ImageMessageWithText creates a user message with text and a base64-encoded image.
-func NewBase64ImageMessageWithText(text, data, mediaType string) EyrieMessage {
-	return EyrieMessage{
+func NewBase64ImageMessageWithText(text, data, mediaType string) FluxMessage {
+	return FluxMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "text", Text: text},
@@ -177,8 +177,8 @@ func NewBase64ImageMessageWithText(text, data, mediaType string) EyrieMessage {
 
 // NewAudioMessage creates a user message with base64-encoded audio.
 // format should be "wav" or "mp3".
-func NewAudioMessage(base64Data, format string) EyrieMessage {
-	return EyrieMessage{
+func NewAudioMessage(base64Data, format string) FluxMessage {
+	return FluxMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "input_audio", InputAudio: &InputAudioPart{
@@ -190,8 +190,8 @@ func NewAudioMessage(base64Data, format string) EyrieMessage {
 }
 
 // NewAudioMessageWithText creates a user message with text and base64-encoded audio.
-func NewAudioMessageWithText(text, base64Data, format string) EyrieMessage {
-	return EyrieMessage{
+func NewAudioMessageWithText(text, base64Data, format string) FluxMessage {
+	return FluxMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "text", Text: text},

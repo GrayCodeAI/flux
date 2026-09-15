@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
 // ConfigureProviderOpts is the complete engine input for provider setup.

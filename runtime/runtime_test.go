@@ -9,9 +9,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/registry"
+	"github.com/GrayCodeAI/flux/config"
 )
 
 // --- Runtime.ModelIDs ---
@@ -343,7 +343,7 @@ func TestDefaultPaths(t *testing.T) {
 	}
 }
 
-func TestDefaultPaths_ContainsEyrieDir(t *testing.T) {
+func TestDefaultPaths_ContainsFluxDir(t *testing.T) {
 	catalogPath, _ := DefaultPaths()
 	if !filepath.IsAbs(catalogPath) {
 		t.Fatalf("expected absolute path, got %q", catalogPath)
@@ -354,8 +354,8 @@ func TestDefaultPaths_ContainsEyrieDir(t *testing.T) {
 
 func TestLoad_WithEmptyConfigDir(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("FLUX_CONFIG_DIR", dir)
+	t.Setenv("FLUX_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -370,8 +370,8 @@ func TestLoad_WithEmptyConfigDir(t *testing.T) {
 
 func TestLoad_MissingConfigDir(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(dir, "nonexistent"))
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("FLUX_CONFIG_DIR", filepath.Join(dir, "nonexistent"))
+	t.Setenv("FLUX_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 
 	// Load should not panic even with missing config dir
 	_, _ = Load(context.Background())
@@ -381,8 +381,8 @@ func TestLoad_MissingConfigDir(t *testing.T) {
 
 func TestChatProvider_NilProvider(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("FLUX_CONFIG_DIR", dir)
+	t.Setenv("FLUX_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

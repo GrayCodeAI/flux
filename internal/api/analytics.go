@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	eyrie "github.com/GrayCodeAI/eyrie/internal/health"
-	"github.com/GrayCodeAI/eyrie/storage"
+	flux "github.com/GrayCodeAI/flux/internal/health"
+	"github.com/GrayCodeAI/flux/storage"
 )
 
 // --- Usage analytics (#166) ---
@@ -126,7 +126,7 @@ func (s *Server) handleProviderHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Collect ping-based health from the HealthChecker.
-	pingStatuses := make(map[string]eyrie.HealthStatus)
+	pingStatuses := make(map[string]flux.HealthStatus)
 	if s.healthChecker != nil {
 		pingStatuses = s.healthChecker.AllProviderHealth()
 	}

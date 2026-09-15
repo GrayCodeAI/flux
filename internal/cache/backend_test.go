@@ -1,4 +1,4 @@
-package eyrie
+package flux
 
 import (
 	"bufio"

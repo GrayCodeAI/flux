@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/internal/shrink"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/flux/internal/shrink"
+	"github.com/GrayCodeAI/flux/types"
 )
 
 func TestShrinkDescription_Basic(t *testing.T) {

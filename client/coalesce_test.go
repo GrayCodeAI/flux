@@ -14,7 +14,7 @@ func TestCoalesceKeyString(t *testing.T) {
 		Provider:  "anthropic",
 		Model:     "claude-3-5-haiku",
 		MaxTokens: 1024,
-		Messages: []EyrieMessage{
+		Messages: []FluxMessage{
 			{Role: "user", Content: "Hello"},
 		},
 	}
@@ -23,7 +23,7 @@ func TestCoalesceKeyString(t *testing.T) {
 		Provider:  "anthropic",
 		Model:     "claude-3-5-haiku",
 		MaxTokens: 1024,
-		Messages: []EyrieMessage{
+		Messages: []FluxMessage{
 			{Role: "user", Content: "Hello"},
 		},
 	}
@@ -32,7 +32,7 @@ func TestCoalesceKeyString(t *testing.T) {
 		Provider:  "openai",
 		Model:     "gpt-4",
 		MaxTokens: 512,
-		Messages: []EyrieMessage{
+		Messages: []FluxMessage{
 			{Role: "user", Content: "Hello"},
 		},
 	}
@@ -57,7 +57,7 @@ func TestCoalesceDeduplicatesIdenticalRequests(t *testing.T) {
 	var mu sync.Mutex
 	response := "coalesced response"
 
-	fn := func() (*EyrieResponse, error) {
+	fn := func() (*FluxResponse, error) {
 		mu.Lock()
 		callCount++
 		count := callCount
@@ -67,10 +67,10 @@ func TestCoalesceDeduplicatesIdenticalRequests(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		if count == 1 {
-			return &EyrieResponse{
+			return &FluxResponse{
 				Content:      response,
 				FinishReason: "end_turn",
-				Usage: &EyrieUsage{
+				Usage: &FluxUsage{
 					PromptTokens:     10,
 					CompletionTokens: 15,
 					TotalTokens:      25,
@@ -86,7 +86,7 @@ func TestCoalesceDeduplicatesIdenticalRequests(t *testing.T) {
 		Provider:  "anthropic",
 		Model:     "claude-3-5-haiku",
 		MaxTokens: 1024,
-		Messages: []EyrieMessage{
+		Messages: []FluxMessage{
 			{Role: "user", Content: "Hello"},
 		},
 	}
@@ -94,7 +94,7 @@ func TestCoalesceDeduplicatesIdenticalRequests(t *testing.T) {
 	// Launch multiple concurrent identical requests
 	numWorkers := 5
 	var wg sync.WaitGroup
-	results := make([]*EyrieResponse, numWorkers)
+	results := make([]*FluxResponse, numWorkers)
 	errs := make([]error, numWorkers)
 
 	for i := 0; i < numWorkers; i++ {
@@ -130,7 +130,7 @@ func TestCoalesceDeduplicatesIdenticalRequests(t *testing.T) {
 func TestCoalesceWaiterGetsError(t *testing.T) {
 	t.Parallel()
 	expectedErr := errors.New("API rate limit exceeded")
-	fn := func() (*EyrieResponse, error) {
+	fn := func() (*FluxResponse, error) {
 		time.Sleep(50 * time.Millisecond)
 		return nil, expectedErr
 	}
@@ -140,12 +140,12 @@ func TestCoalesceWaiterGetsError(t *testing.T) {
 	key := CoalesceKey{
 		Provider: "openai",
 		Model:    "gpt-4",
-		Messages: []EyrieMessage{{Role: "user", Content: "test"}},
+		Messages: []FluxMessage{{Role: "user", Content: "test"}},
 	}
 
 	var wg sync.WaitGroup
 	numWorkers := 3
-	results := make([]*EyrieResponse, numWorkers)
+	results := make([]*FluxResponse, numWorkers)
 	errs := make([]error, numWorkers)
 
 	for i := 0; i < numWorkers; i++ {
@@ -171,16 +171,16 @@ func TestCoalesceWaiterGetsError(t *testing.T) {
 
 func TestCoalesceRespectsContextCancellation(t *testing.T) {
 	t.Parallel()
-	fn := func() (*EyrieResponse, error) {
+	fn := func() (*FluxResponse, error) {
 		time.Sleep(500 * time.Millisecond)
-		return &EyrieResponse{Content: "slow response"}, nil
+		return &FluxResponse{Content: "slow response"}, nil
 	}
 
 	coalescer := NewCoalescer(100 * time.Millisecond)
 	key := CoalesceKey{
 		Provider: "anthropic",
 		Model:    "claude",
-		Messages: []EyrieMessage{{Role: "user", Content: "test"}},
+		Messages: []FluxMessage{{Role: "user", Content: "test"}},
 	}
 
 	// First goroutine has long context, starts the request
@@ -212,15 +212,15 @@ func TestCoalesceDifferentKeysNotDeduplicated(t *testing.T) {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	fn := func(prefix string) func() (*EyrieResponse, error) {
-		return func() (*EyrieResponse, error) {
+	fn := func(prefix string) func() (*FluxResponse, error) {
+		return func() (*FluxResponse, error) {
 			mu.Lock()
 			callCount++
 			mu.Unlock()
 
 			time.Sleep(50 * time.Millisecond)
 
-			return &EyrieResponse{
+			return &FluxResponse{
 				Content: prefix,
 			}, nil
 		}
@@ -229,9 +229,9 @@ func TestCoalesceDifferentKeysNotDeduplicated(t *testing.T) {
 	coalescer := NewCoalescer(100 * time.Millisecond)
 
 	keys := []CoalesceKey{
-		{Provider: "anthropic", Model: "claude-3-5-haiku", Messages: []EyrieMessage{{Role: "user", Content: "A"}}},
-		{Provider: "anthropic", Model: "claude-3-5-haiku", Messages: []EyrieMessage{{Role: "user", Content: "B"}}},
-		{Provider: "openai", Model: "gpt-4", Messages: []EyrieMessage{{Role: "user", Content: "C"}}},
+		{Provider: "anthropic", Model: "claude-3-5-haiku", Messages: []FluxMessage{{Role: "user", Content: "A"}}},
+		{Provider: "anthropic", Model: "claude-3-5-haiku", Messages: []FluxMessage{{Role: "user", Content: "B"}}},
+		{Provider: "openai", Model: "gpt-4", Messages: []FluxMessage{{Role: "user", Content: "C"}}},
 	}
 	responses := []string{"response A", "response B", "response C"}
 
@@ -268,15 +268,15 @@ func TestCoalesceStats(t *testing.T) {
 		t.Errorf("Expected empty stats, got: %+v", stats)
 	}
 
-	fn := func() (*EyrieResponse, error) {
+	fn := func() (*FluxResponse, error) {
 		time.Sleep(200 * time.Millisecond)
-		return &EyrieResponse{Content: "test"}, nil
+		return &FluxResponse{Content: "test"}, nil
 	}
 
 	key := CoalesceKey{
 		Provider: "anthropic",
 		Model:    "claude",
-		Messages: []EyrieMessage{{Role: "user", Content: "test"}},
+		Messages: []FluxMessage{{Role: "user", Content: "test"}},
 	}
 
 	var wg sync.WaitGroup
@@ -326,14 +326,14 @@ func waitForStats(t *testing.T, c *Coalescer, pred func(InflightStats) bool) Inf
 	}
 }
 
-func TestCoalesceIntegrationWithEyrieClient(t *testing.T) {
+func TestCoalesceIntegrationWithFluxClient(t *testing.T) {
 	t.Parallel()
-	// Test that coalescing integrates properly with EyrieClient.Chat()
+	// Test that coalescing integrates properly with FluxClient.Chat()
 	mock := NewMockProvider(MockModeFixed)
 	mock.Response = "coalesced integration response"
 	mock.Delay = 200 * time.Millisecond
 
-	c := Client(&EyrieConfig{Provider: "mock"}, WithCoalescing(200*time.Millisecond))
+	c := Client(&FluxConfig{Provider: "mock"}, WithCoalescing(200*time.Millisecond))
 
 	// Manually set the mock provider
 	c.mu.Lock()
@@ -341,12 +341,12 @@ func TestCoalesceIntegrationWithEyrieClient(t *testing.T) {
 	c.defaultProvider = "mock"
 	c.mu.Unlock()
 
-	messages := []EyrieMessage{{Role: "user", Content: "Integration test"}}
+	messages := []FluxMessage{{Role: "user", Content: "Integration test"}}
 	opts := ChatOptions{Model: "mock-model", Temperature: floatPtr(0.7), MaxTokens: 100}
 
 	var wg sync.WaitGroup
 	numWorkers := 4
-	results := make([]*EyrieResponse, numWorkers)
+	results := make([]*FluxResponse, numWorkers)
 	errs := make([]error, numWorkers)
 
 	for i := 0; i < numWorkers; i++ {
@@ -383,7 +383,7 @@ func TestCoalesceDisabledByDefault(t *testing.T) {
 	t.Parallel()
 	mock := NewMockProvider(MockModeFixed)
 	mock.Response = "test"
-	c := Client(&EyrieConfig{Provider: "mock"}) // No coalescing enabled
+	c := Client(&FluxConfig{Provider: "mock"}) // No coalescing enabled
 
 	// Manually set the mock provider
 	c.mu.Lock()
@@ -391,7 +391,7 @@ func TestCoalesceDisabledByDefault(t *testing.T) {
 	c.defaultProvider = "mock"
 	c.mu.Unlock()
 
-	messages := []EyrieMessage{{Role: "user", Content: "test"}}
+	messages := []FluxMessage{{Role: "user", Content: "test"}}
 	opts := ChatOptions{Model: "mock-model"}
 
 	// Make multiple calls - each should hit the mock

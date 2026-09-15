@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/live"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/live"
 )
 
 func TestLiveEntriesToCatalog_PreservesFullJSONInOffering(t *testing.T) {

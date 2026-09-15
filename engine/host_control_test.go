@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 func TestCatalogHealthMissingCacheDoesNotUseBootstrapFallback(t *testing.T) {

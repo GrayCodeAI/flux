@@ -100,8 +100,8 @@ func TestJoinURL(t *testing.T) {
 
 func TestUserAgent(t *testing.T) {
 	t.Parallel()
-	if got := UserAgent(); !strings.HasPrefix(got, "eyrie-") {
-		t.Errorf("UserAgent() = %q; want it to start with \"eyrie-\"", got)
+	if got := UserAgent(); !strings.HasPrefix(got, "flux-") {
+		t.Errorf("UserAgent() = %q; want it to start with \"flux-\"", got)
 	}
 }
 

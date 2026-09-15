@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/router"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/router"
 )
 
-// StatusReport summarizes deployment routing readiness (eyrie provider status).
+// StatusReport summarizes deployment routing readiness (flux provider status).
 type StatusReport struct {
 	DeploymentRouting  bool
 	ProviderConfig     string
@@ -111,7 +111,7 @@ func FormatStatus(report StatusReport) string {
 	if report.DeploymentRouting {
 		b.WriteString("enabled\n")
 	} else {
-		b.WriteString("disabled (single-route Eyrie transport)\n")
+		b.WriteString("disabled (single-route Flux transport)\n")
 	}
 	fmt.Fprintf(&b, "Provider config: %s", report.ProviderConfig)
 	if report.ConfigVersion > 0 {

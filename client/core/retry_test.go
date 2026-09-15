@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/flux/types"
 )
 
 func TestRetryDefaultRetryConfig(t *testing.T) {

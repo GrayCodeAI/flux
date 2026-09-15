@@ -3,19 +3,19 @@
 // rt.ChatProvider to obtain a client.Provider that you can hand to your
 // agent loop.
 //
-// Note: the "stable" surface of eyrie is actually a set of cooperating
+// Note: the "stable" surface of flux is actually a set of cooperating
 // subpackages, not just this one. The full list hawk (and other host
 // applications) actually import is:
 //
-//	github.com/GrayCodeAI/eyrie/runtime          (this package — bootstrap facade)
-//	github.com/GrayCodeAI/eyrie/client           (Provider interface, message/response types)
-//	github.com/GrayCodeAI/eyrie/catalog         (model catalog: pricing, capabilities, registry)
-//	github.com/GrayCodeAI/eyrie/catalog/registry (ProviderSpec catalog: 16 registered providers)
-//	github.com/GrayCodeAI/eyrie/catalog/xiaomi  (Xiaomi-specific catalog helpers)
-//	github.com/GrayCodeAI/eyrie/config          (provider config + env var resolution)
-//	github.com/GrayCodeAI/eyrie/credentials     (OS keyring + OIDC keyless CI auth)
-//	github.com/GrayCodeAI/eyrie/setup           (CLI/setup wiring, RoutingPreviewJSON)
-//	github.com/GrayCodeAI/eyrie/storage         (conversation DAG persistence)
+//	github.com/GrayCodeAI/flux/runtime          (this package — bootstrap facade)
+//	github.com/GrayCodeAI/flux/client           (Provider interface, message/response types)
+//	github.com/GrayCodeAI/flux/catalog         (model catalog: pricing, capabilities, registry)
+//	github.com/GrayCodeAI/flux/catalog/registry (ProviderSpec catalog: 16 registered providers)
+//	github.com/GrayCodeAI/flux/catalog/xiaomi  (Xiaomi-specific catalog helpers)
+//	github.com/GrayCodeAI/flux/config          (provider config + env var resolution)
+//	github.com/GrayCodeAI/flux/credentials     (OS keyring + OIDC keyless CI auth)
+//	github.com/GrayCodeAI/flux/setup           (CLI/setup wiring, RoutingPreviewJSON)
+//	github.com/GrayCodeAI/flux/storage         (conversation DAG persistence)
 //
 // They are all considered part of the public API; changes to exported
 // names are gated by semver. Anything under internal/ is implementation
@@ -30,22 +30,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/registry"
+	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/setup"
 )
 
-// Runtime is a loaded eyrie control plane: catalog cache + routing + env-backed credentials.
+// Runtime is a loaded flux control plane: catalog cache + routing + env-backed credentials.
 type Runtime struct {
 	Catalog      *catalog.CompiledCatalog
 	Provider     *config.ProviderConfig
 	ProviderPath string
 }
 
-// Apply discovers the model catalog and writes ~/.eyrie/provider.json (routing only; secrets stay in env).
+// Apply discovers the model catalog and writes ~/.flux/provider.json (routing only; secrets stay in env).
 func Apply(ctx context.Context, creds catalog.Credentials) (*ApplyResult, error) {
 	result, err := setup.ApplyCredentials(ctx, creds)
 	if err != nil {
@@ -280,7 +280,7 @@ func configuredDeploymentIDsForProvider(compiled *catalog.CompiledCatalog, provi
 	return out
 }
 
-// DefaultPaths reports standard eyrie paths on disk.
+// DefaultPaths reports standard flux paths on disk.
 func DefaultPaths() (catalogPath, providerPath string) {
 	providerPath, _ = config.GetProviderConfigPath()
 	return catalog.DefaultCachePath(), providerPath

@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 func boolPtr(v bool) *bool { return &v }
 
 func TestPreferredProvider_PrefersOpenAIOverAnthropicWhenBothConfigured(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("FLUX_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestPreferredProvider_PrefersOpenAIOverAnthropicWhenBothConfigured(t *testi
 
 func TestEffectiveSelection_InfersProviderFromModelOverride(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("FLUX_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestEffectiveSelection_InfersProviderFromModelOverride(t *testing.T) {
 
 func TestResolveChatTransport_DirectOpenAISingleProvider(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("FLUX_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "provider.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

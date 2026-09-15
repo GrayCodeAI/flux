@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/discover"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/discover"
+	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
 func TestDiscoverCatalog_MergesProviderModelsWithAPIKey(t *testing.T) {

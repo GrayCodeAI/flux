@@ -4,13 +4,12 @@
       <stop offset="0%" style="stop-color:#0d0d1f"/>
       <stop offset="100%" style="stop-color:#080812"/>
     </linearGradient>
-    <radialGradient id="eggG" cx="35%" cy="28%" r="65%">
+    <linearGradient id="boltG" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#ccfff8"/>
-      <stop offset="20%" style="stop-color:#4ecdc4"/>
-      <stop offset="58%" style="stop-color:#1a9d94"/>
-      <stop offset="100%" style="stop-color:#062e2a"/>
-    </radialGradient>
-    <radialGradient id="eggAura" cx="50%" cy="50%" r="50%">
+      <stop offset="45%" style="stop-color:#4ecdc4"/>
+      <stop offset="100%" style="stop-color:#1a9d94"/>
+    </linearGradient>
+    <radialGradient id="boltAura" cx="50%" cy="50%" r="50%">
       <stop offset="0%" style="stop-color:#4ecdc4" stop-opacity="0.5"/>
       <stop offset="100%" style="stop-color:#4ecdc4" stop-opacity="0"/>
     </radialGradient>
@@ -33,121 +32,44 @@
     <rect width="600" height="200" fill="url(#bg)"/>
 
     <!--
-      ICON: Abstract nest + egg mark
-      Inspired by: the arc of a nest seen from the side,
-      with a glowing egg at center.
-      Clean, geometric, scalable — like Vercel's triangle or Redis's cube.
+      ICON: Abstract flux mark
+      Two interleaved flow arcs around a glowing bolt —
+      provider traffic flowing in, one unified interface flowing out.
+      Clean, geometric, scalable.
       Icon area: 0..165, centered at 82,100
     -->
 
-    <!-- Egg outer bloom — only below nest level -->
-    <ellipse cx="82" cy="108" rx="30" ry="14" fill="url(#eggAura)" filter="url(#bloom)"/>
+    <!-- Aura -->
+    <circle cx="82" cy="100" r="52" fill="url(#boltAura)" filter="url(#bloom)"/>
 
-    <!-- NEST arcs -->
-    <path d="M 42 110 A 44 44 0 0 1 122 110" stroke="#1e1004" stroke-width="5.5" fill="none" stroke-linecap="round"/>
-    <path d="M 44 104 A 40 40 0 0 1 120 104" stroke="#3a2208" stroke-width="4"   fill="none" stroke-linecap="round"/>
-    <path d="M 46 98  A 36 36 0 0 1 118 98"  stroke="#5a3810" stroke-width="3"   fill="none" stroke-linecap="round"/>
-    <path d="M 48 93  A 32 32 0 0 1 116 93"  stroke="#7a5018" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <path d="M 50 88  A 28 28 0 0 1 114 88"  stroke="#9a6820" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- Nest bowl fill -->
-    <path d="M 50 88 A 28 28 0 0 1 114 88 Q 110 108 82 110 Q 54 108 50 88 Z"
-          fill="#0a0804" opacity="0.96"/>
+    <!-- Outer flow arc — inbound -->
+    <path d="M 38 128 A 46 46 0 0 1 38 72"
+          stroke="#1a9d94" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.55"/>
+    <path d="M 38 128 L 30 122 M 38 128 L 45 124"
+          stroke="#1a9d94" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.55"/>
 
-    <!-- EGGS in nest -->
-    <ellipse cx="66" cy="103" rx="10" ry="8" fill="#1a7a74" opacity="0.38" transform="rotate(-22 66 103)"/>
-    <ellipse cx="98" cy="103" rx="10" ry="8" fill="#1a7a74" opacity="0.38" transform="rotate(22 98 103)"/>
-    <!-- Center egg -->
-    <ellipse cx="82" cy="98" rx="13" ry="10" fill="url(#eggG)" filter="url(#glow5)"/>
-    <ellipse cx="78" cy="93" rx="5" ry="3.5" fill="white" opacity="0.25"/>
-    <ellipse cx="77" cy="92" rx="2.5" ry="1.8" fill="white" opacity="0.45"/>
-    <path d="M 82 89 L 80 94 L 84 96 L 81 103" stroke="#062e2a" stroke-width="1.1" fill="none" opacity="0.5"/>
-    <ellipse cx="82" cy="107" rx="14" ry="3.5" fill="#4ecdc4" opacity="0.1"/>
+    <!-- Outer flow arc — outbound -->
+    <path d="M 126 72 A 46 46 0 0 1 126 128"
+          stroke="#4ecdc4" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.8"/>
+    <path d="M 126 128 L 134 124 M 126 128 L 119 132"
+          stroke="#4ecdc4" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8"/>
 
-    <!-- HAWK SILHOUETTE — pure flat shape, no detail -->
-    <!-- Perched hawk as a single clean path: head+beak right, body oval, tail down, wings as side bumps -->
-    <!-- This is the approach used by professional icon designers -->
+    <!-- Inner flow arc — inbound -->
+    <path d="M 56 116 A 30 30 0 0 1 56 84"
+          stroke="#1a7a74" stroke-width="3.2" fill="none" stroke-linecap="round" opacity="0.7"/>
 
-    <!-- Shadow -->
-    <ellipse cx="82" cy="92" rx="20" ry="3.5" fill="#000" opacity="0.4"/>
+    <!-- Inner flow arc — outbound -->
+    <path d="M 108 84 A 30 30 0 0 1 108 116"
+          stroke="#4ecdc4" stroke-width="3.2" fill="none" stroke-linecap="round" opacity="0.9"/>
 
-    <!-- Tail -->
-    <path d="M 77 90 Q 73 96 70 104 Q 76 100 80 95 Q 82 97 82 98 Q 82 97 84 95 Q 88 100 94 104 Q 91 96 87 90 Z"
-          fill="#2e1c06"/>
-    <path d="M 72 101 Q 77 98 82 99 Q 87 98 92 101"
-          stroke="#b82c10" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.65"/>
+    <!-- Bolt — the unified interface -->
+    <path d="M 88 62 L 66 104 L 80 104 L 74 138 L 98 94 L 84 94 Z"
+          fill="url(#boltG)" filter="url(#glow5)"/>
+    <path d="M 88 62 L 66 104 L 80 104 L 74 138 L 98 94 L 84 94 Z"
+          fill="none" stroke="#ccfff8" stroke-width="0.8" opacity="0.4"/>
 
-    <!-- Body — tall slim oval -->
-    <ellipse cx="82" cy="76" rx="11" ry="16" fill="#8a6014"/>
-    <!-- Belly -->
-    <ellipse cx="83" cy="77" rx="7"  ry="11" fill="#e8d080" opacity="0.8"/>
-    <!-- Streaks -->
-    <line x1="81" y1="68" x2="82" y2="86" stroke="#9a7020" stroke-width="1" opacity="0.4"/>
-    <line x1="84" y1="67" x2="85" y2="87" stroke="#9a7020" stroke-width="1" opacity="0.4"/>
-    <!-- Belly band -->
-    <path d="M 77 76 Q 82 79 87 76 Q 88 81 87 84 Q 82 87 77 84 Q 76 81 77 76 Z" fill="#a07020" opacity="0.22"/>
-
-    <!-- Left wing — very tight fold, barely wider than body -->
-    <path d="M 71 88 Q 66 84 65 76 Q 65 68 68 66 Q 71 65 72 70 Q 72 79 71 88 Z"
-          fill="#6a4c10"/>
-    <line x1="66" y1="68" x2="67" y2="84" stroke="#2a1c04" stroke-width="1.1" opacity="0.6"/>
-    <line x1="69" y1="66" x2="70" y2="83" stroke="#2a1c04" stroke-width="1.1" opacity="0.6"/>
-
-    <!-- Right wing — very tight fold -->
-    <path d="M 93 88 Q 98 84 99 76 Q 99 68 96 66 Q 93 65 92 70 Q 92 79 93 88 Z"
-          fill="#6a4c10"/>
-    <line x1="98" y1="68" x2="97" y2="84" stroke="#2a1c04" stroke-width="1.1" opacity="0.6"/>
-    <line x1="95" y1="66" x2="94" y2="83" stroke="#2a1c04" stroke-width="1.1" opacity="0.6"/>
-
-    <!-- Neck -->
-    <path d="M 78 62 Q 76 54 79 49 Q 82 46 85 49 Q 88 54 86 62 Q 84 64 82 64 Q 80 64 78 62 Z"
-          fill="#9a7018"/>
-
-    <!-- Head -->
-    <ellipse cx="83" cy="38" rx="13" ry="12" fill="#8a6014"/>
-    <!-- Dark cap -->
-    <path d="M 73 36 Q 76 27 83 26 Q 90 27 93 36 Q 89 31 83 31 Q 77 31 73 36 Z" fill="#1e1204"/>
-    <!-- Crest feathers -->
-    <path d="M 80 26 Q 79 21 80 18" stroke="#2e1c06" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <path d="M 83 25 Q 83 20 83 17" stroke="#2e1c06" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <path d="M 86 26 Q 87 21 87 18" stroke="#2e1c06" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-
-    <!-- Cheek -->
-    <path d="M 86 39 Q 92 37 95 41 Q 94 47 89 48 Q 85 47 84 43 Q 84 40 86 39 Z"
-          fill="#d4a030" opacity="0.58"/>
-
-    <!-- Beak -->
-    <path d="M 93 35 Q 106 36 104 43 Q 100 48 93 45 Q 90 41 93 35 Z" fill="#d8aa18"/>
-    <path d="M 93 35 Q 102 36 104 41" stroke="#a88010" stroke-width="1.2" fill="none"/>
-    <path d="M 102 42 Q 106 45 103 49 Q 99 49 100 45 Z" fill="#9a7808"/>
-    <ellipse cx="93" cy="36" rx="3.8" ry="2.2" fill="#e8c030" opacity="0.85"/>
-
-    <!-- Eye -->
-    <circle cx="91" cy="37" r="5.5" fill="#0a0800"/>
-    <circle cx="91" cy="37" r="4.2" fill="#e88000"/>
-    <circle cx="91" cy="37" r="3"   fill="#c05800"/>
-    <circle cx="91" cy="37" r="1.9" fill="#060400"/>
-    <circle cx="92.8" cy="35.2" r="1.3" fill="white" opacity="0.92"/>
-    <circle cx="89.5" cy="38.5" r="0.55" fill="white" opacity="0.35"/>
-    <!-- Eyebrow -->
-    <path d="M 83 31 Q 88 29 95 31.5" stroke="#f0e8c0" stroke-width="2.2" fill="none" opacity="0.88"/>
-
-    <!-- Feet — 3 clean toes, no back toe, simple perch -->
-    <line x1="79" y1="91" x2="77" y2="97" stroke="#c09030" stroke-width="2.8" stroke-linecap="round"/>
-    <line x1="85" y1="91" x2="87" y2="97" stroke="#c09030" stroke-width="2.8" stroke-linecap="round"/>
-    <!-- Left 3 toes -->
-    <path d="M 77 97 Q 71 100 68 105" stroke="#a07820" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <path d="M 77 97 Q 76 102 75 107" stroke="#a07820" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <path d="M 77 97 Q 81 100 84 105" stroke="#a07820" stroke-width="2"   fill="none" stroke-linecap="round"/>
-    <path d="M 68 105 Q 65 108 66 111" stroke="#3a2408" stroke-width="2"   fill="none" stroke-linecap="round"/>
-    <path d="M 75 107 Q 73 110 74 113" stroke="#3a2408" stroke-width="2"   fill="none" stroke-linecap="round"/>
-    <path d="M 84 105 Q 87 108 86 111" stroke="#3a2408" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <!-- Right 3 toes -->
-    <path d="M 87 97 Q 81 100 78 105" stroke="#a07820" stroke-width="2"   fill="none" stroke-linecap="round"/>
-    <path d="M 87 97 Q 87 102 87 107" stroke="#a07820" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <path d="M 87 97 Q 91 100 94 105" stroke="#a07820" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-    <path d="M 78 105 Q 75 108 76 111" stroke="#3a2408" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    <path d="M 87 107 Q 86 110 87 113" stroke="#3a2408" stroke-width="2"   fill="none" stroke-linecap="round"/>
-    <path d="M 94 105 Q 97 108 96 111" stroke="#3a2408" stroke-width="2"   fill="none" stroke-linecap="round"/>
+    <!-- Highlight -->
+    <path d="M 86 70 L 72 98" stroke="white" stroke-width="1.4" opacity="0.3" stroke-linecap="round"/>
 
     <!-- Divider -->
     <line x1="168" y1="24" x2="168" y2="176" stroke="#4ecdc4" stroke-width="0.8" opacity="0.18"/>
@@ -156,23 +78,18 @@
     <text x="196" y="96"
           font-family="'SF Mono','Fira Code','Cascadia Code','Courier New',monospace"
           font-size="72" font-weight="800"
-          fill="#4ECDC4" filter="url(#textGlow)" letter-spacing="-3">Eyrie</text>
+          fill="#4ECDC4" filter="url(#textGlow)" letter-spacing="-3">Flux</text>
 
     <text x="198" y="126"
           font-family="'SF Mono','Fira Code',monospace"
-          font-size="14.5" fill="#6a7490" letter-spacing="0.5">Universal LLM provider library</text>
+          font-size="14.5" fill="#6a7490" letter-spacing="0.5">Universal LLM provider runtime</text>
 
-    <line x1="198" y1="138" x2="568" y2="138" stroke="#e05555" stroke-width="0.8" opacity="0.5"/>
+    <line x1="198" y1="138" x2="568" y2="138" stroke="#4ecdc4" stroke-width="0.8" opacity="0.5"/>
 
     <text x="198" y="157"
           font-family="'SF Mono','Fira Code',monospace"
           font-size="12" fill="#4ECDC4" opacity="0.65" letter-spacing="1.5">the foundation layer for hawk</text>
-
-    <rect x="198" y="168" width="62" height="20" rx="4" fill="#e05555" opacity="0.1"/>
-    <rect x="198" y="168" width="62" height="20" rx="4" fill="none" stroke="#e05555" stroke-width="0.9" opacity="0.5"/>
-    <text x="229" y="182" font-family="'SF Mono',monospace" font-size="10.5"
-          fill="#e05555" text-anchor="middle" opacity="0.85">v0.0.1</text>
   </g>
 
-  <rect width="600" height="200" fill="none" stroke="#e05555" stroke-width="1" rx="12" opacity="0.6"/>
+  <rect width="600" height="200" fill="none" stroke="#4ecdc4" stroke-width="1" rx="12" opacity="0.6"/>
 </svg>

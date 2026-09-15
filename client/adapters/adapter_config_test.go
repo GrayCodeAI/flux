@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
-	"github.com/GrayCodeAI/eyrie/types"
+	"github.com/GrayCodeAI/flux/client/core"
+	"github.com/GrayCodeAI/flux/types"
 )
 
 func TestAnthropicConfigSetters(t *testing.T) {

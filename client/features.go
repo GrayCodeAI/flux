@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/flux/catalog"
 )
 
 // ProviderFeatures tracks which capabilities each provider supports.

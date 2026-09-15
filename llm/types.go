@@ -1,23 +1,23 @@
 // Package llm is the canonical provider port contract for the hawk ecosystem.
 //
 // It is the single source of truth for the conversation DTOs and the Provider
-// interface that hawk (product face) and eyrie (provider engine) speak across
+// interface that hawk (product face) and flux (provider engine) speak across
 // their boundary. Both sides alias to these types, so there is exactly one
 // definition of each DTO and no per-call conversion.
 //
-// hawk owns the product vocabulary (hence names like EyrieMessage); eyrie
-// implements the port. eyrie's internal transport types stay eyrie-scoped and
+// hawk owns the product vocabulary (hence names like FluxMessage); flux
+// implements the port. flux's internal transport types stay flux-scoped and
 // never appear here.
 package llm
 
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/tools"
+	"github.com/GrayCodeAI/flux/tools"
 )
 
-// EyrieConfig holds client configuration.
-type EyrieConfig struct {
+// FluxConfig holds client configuration.
+type FluxConfig struct {
 	Provider   string `json:"provider,omitempty"`
 	APIKey     string `json:"-"`
 	BaseURL    string `json:"base_url,omitempty"`
@@ -45,8 +45,8 @@ type InputAudioPart struct {
 	Format string `json:"format"`
 }
 
-// EyrieMessage is the provider-neutral conversation message shape.
-type EyrieMessage struct {
+// FluxMessage is the provider-neutral conversation message shape.
+type FluxMessage struct {
 	Role         string        `json:"role"`
 	Content      string        `json:"content,omitempty"`
 	Thinking     string        `json:"thinking,omitempty"`
@@ -63,8 +63,8 @@ type ToolCall = tools.ToolCall
 // ToolResult is a tool execution result. Aliased to tools.ToolResult.
 type ToolResult = tools.ToolResult
 
-// EyrieTool is a tool definition.
-type EyrieTool struct {
+// FluxTool is a tool definition.
+type FluxTool struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	Parameters  map[string]interface{} `json:"parameters"`
@@ -90,7 +90,7 @@ type ChatOptions struct {
 	Temperature          *float64        `json:"temperature,omitempty"`
 	MaxTokens            int             `json:"max_tokens,omitempty"`
 	Stream               bool            `json:"stream,omitempty"`
-	Tools                []EyrieTool     `json:"tools,omitempty"`
+	Tools                []FluxTool      `json:"tools,omitempty"`
 	System               string          `json:"system,omitempty"`
 	EnableCaching        bool            `json:"enable_caching,omitempty"`
 	ResponseFormat       *ResponseFormat `json:"response_format,omitempty"`
@@ -167,8 +167,8 @@ type ContinuationConfig struct {
 	MaxTotalTokens   int
 }
 
-// EyrieUsage tracks token usage.
-type EyrieUsage struct {
+// FluxUsage tracks token usage.
+type FluxUsage struct {
 	PromptTokens        int `json:"prompt_tokens"`
 	CompletionTokens    int `json:"completion_tokens"`
 	TotalTokens         int `json:"total_tokens"`
@@ -184,11 +184,11 @@ type ResolvedRoute struct {
 	DeploymentRouting bool   `json:"deployment_routing,omitempty"`
 }
 
-// EyrieResponse is the chat response DTO.
-type EyrieResponse struct {
+// FluxResponse is the chat response DTO.
+type FluxResponse struct {
 	Content        string         `json:"content"`
 	Thinking       string         `json:"thinking,omitempty"`
-	Usage          *EyrieUsage    `json:"usage,omitempty"`
+	Usage          *FluxUsage     `json:"usage,omitempty"`
 	ToolCalls      []ToolCall     `json:"tool_calls,omitempty"`
 	FinishReason   string         `json:"finish_reason"`
 	RequestID      string         `json:"request_id,omitempty"`
@@ -196,17 +196,17 @@ type EyrieResponse struct {
 	Route          *ResolvedRoute `json:"route,omitempty"`
 }
 
-// EyrieStreamEvent is a streaming event.
-type EyrieStreamEvent struct {
-	Type       string      `json:"type"`
-	Content    string      `json:"content,omitempty"`
-	ToolCall   *ToolCall   `json:"tool_call,omitempty"`
-	Thinking   string      `json:"thinking,omitempty"`
-	Error      string      `json:"error,omitempty"`
-	Warning    string      `json:"warning,omitempty"`
-	RequestID  string      `json:"request_id,omitempty"`
-	Usage      *EyrieUsage `json:"usage,omitempty"`
-	StopReason string      `json:"stop_reason,omitempty"`
+// FluxStreamEvent is a streaming event.
+type FluxStreamEvent struct {
+	Type       string     `json:"type"`
+	Content    string     `json:"content,omitempty"`
+	ToolCall   *ToolCall  `json:"tool_call,omitempty"`
+	Thinking   string     `json:"thinking,omitempty"`
+	Error      string     `json:"error,omitempty"`
+	Warning    string     `json:"warning,omitempty"`
+	RequestID  string     `json:"request_id,omitempty"`
+	Usage      *FluxUsage `json:"usage,omitempty"`
+	StopReason string     `json:"stop_reason,omitempty"`
 	// TTFT and TTFTms both carry time-to-first-token in milliseconds but ride
 	// different events: the dedicated "ttft" event populates TTFT, while the
 	// terminal "done" event populates TTFTms. The engine normalizes the two
@@ -220,14 +220,14 @@ type EyrieStreamEvent struct {
 // StreamResult wraps a streaming response with cleanup. Callers must call Close()
 // when done reading events, or cancel the context.
 type StreamResult struct {
-	Events    <-chan EyrieStreamEvent
+	Events    <-chan FluxStreamEvent
 	RequestID string
 	cancel    context.CancelFunc
 }
 
 // NewStreamResult constructs a stream result. The cancel function is optional
 // and must be idempotent.
-func NewStreamResult(events <-chan EyrieStreamEvent, requestID string, cancel context.CancelFunc) *StreamResult {
+func NewStreamResult(events <-chan FluxStreamEvent, requestID string, cancel context.CancelFunc) *StreamResult {
 	return &StreamResult{Events: events, RequestID: requestID, cancel: cancel}
 }
 

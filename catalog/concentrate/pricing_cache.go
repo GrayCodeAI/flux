@@ -41,16 +41,16 @@ var (
 )
 
 // cacheDir returns the directory for storing the pricing cache.
-// Uses $XDG_CACHE_HOME/eyrie/ or ~/.cache/eyrie/ as fallback.
+// Uses $XDG_CACHE_HOME/flux/ or ~/.cache/flux/ as fallback.
 func cacheDir() string {
 	if d := os.Getenv("XDG_CACHE_HOME"); d != "" {
-		return filepath.Join(d, "eyrie")
+		return filepath.Join(d, "flux")
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(os.TempDir(), "eyrie-cache")
+		return filepath.Join(os.TempDir(), "flux-cache")
 	}
-	return filepath.Join(home, ".cache", "eyrie")
+	return filepath.Join(home, ".cache", "flux")
 }
 
 // getCache returns the shared pricing cache instance.

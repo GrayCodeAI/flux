@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/flux/client"
 )
 
 // MediaOptions carries the credentials and endpoint for a media backend call.

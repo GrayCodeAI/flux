@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/discover"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/discover"
+	"github.com/GrayCodeAI/flux/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog/xiaomi"
+	"github.com/GrayCodeAI/flux/config"
 )
 
 // Catalog returns the current cached catalog through a stable snapshot.
@@ -42,7 +42,7 @@ func (e *Engine) RefreshCatalog(ctx context.Context, providerID string) (Catalog
 	if providerID = strings.TrimSpace(providerID); providerID != "" {
 		spec, ok := registry.SpecByProviderID(providerID)
 		if !ok {
-			return CatalogSnapshot{}, &Error{Code: ErrorInvalidRequest, Operation: "refresh_catalog", Provider: providerID, Message: "eyrie engine: unknown provider"}
+			return CatalogSnapshot{}, &Error{Code: ErrorInvalidRequest, Operation: "refresh_catalog", Provider: providerID, Message: "flux engine: unknown provider"}
 		}
 		if strings.TrimSpace(spec.LiveFetcherKey) != "" {
 			result, err = discover.RefreshProviderWithOptions(ctx, providerID, discover.ProviderRefreshOptions{
@@ -64,7 +64,7 @@ func (e *Engine) RefreshCatalog(ctx context.Context, providerID string) (Catalog
 		return CatalogSnapshot{}, &Error{Code: ErrorCatalogUnavailable, Operation: "refresh_catalog", Provider: providerID, Message: err.Error(), Cause: err}
 	}
 	if result == nil || result.Compiled == nil {
-		return CatalogSnapshot{}, &Error{Code: ErrorCatalogUnavailable, Operation: "refresh_catalog", Provider: providerID, Message: "eyrie engine: catalog refresh returned no compiled catalog"}
+		return CatalogSnapshot{}, &Error{Code: ErrorCatalogUnavailable, Operation: "refresh_catalog", Provider: providerID, Message: "flux engine: catalog refresh returned no compiled catalog"}
 	}
 	snapshot := snapshotFromCompiled(result.Compiled)
 	snapshot.CachePath = e.catalogPath
@@ -151,10 +151,10 @@ func (e *Engine) ListLiveModels(ctx context.Context, providerID string) ([]Model
 	ctx = nonNilContext(ctx)
 	providerID = NormalizeProviderID(providerID)
 	if providerID == "" {
-		return nil, invalid("list_live_models", "eyrie engine: provider id is required")
+		return nil, invalid("list_live_models", "flux engine: provider id is required")
 	}
 	if _, custom := e.customGateway(providerID); custom {
-		return nil, invalid("list_live_models", "eyrie engine: custom gateway live model listing is not supported")
+		return nil, invalid("list_live_models", "flux engine: custom gateway live model listing is not supported")
 	}
 	compiled, _ := catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{CachePath: e.catalogPath})
 	creds, err := e.discoveryCredentials(ctx, compiled)
@@ -173,7 +173,7 @@ func listPublicModels(ctx context.Context, providerID, catalogURL string) ([]Mod
 	switch gatewayID {
 	case "xiaomi_mimo_payg", "xiaomi_mimo_token_plan":
 	default:
-		return nil, invalid("list_public_models", "eyrie engine: gateway has no public model metadata source")
+		return nil, invalid("list_public_models", "flux engine: gateway has no public model metadata source")
 	}
 	index, err := xiaomi.FetchPlatformModelsIndex(ctx, catalogURL)
 	if err != nil {

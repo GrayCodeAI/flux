@@ -1,6 +1,5 @@
 # Binaries
-/eyrie
-/basic
+/flux
 bin/
 *.exe
 *.test

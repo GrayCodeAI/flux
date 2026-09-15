@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/flux/client/core"
 )
 
 // KimiClient uses the OpenAI-compatible Kimi (Moonshot) endpoint.
@@ -24,11 +24,11 @@ func NewKimiClient(apiKey, openAIBase string, compat *OpenAICompatConfig, opts .
 
 func (c *KimiClient) Name() string { return "kimi" }
 
-func (c *KimiClient) Chat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.EyrieResponse, error) {
+func (c *KimiClient) Chat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.FluxResponse, error) {
 	return c.openAI.Chat(ctx, messages, opts)
 }
 
-func (c *KimiClient) StreamChat(ctx context.Context, messages []core.EyrieMessage, opts core.ChatOptions) (*core.StreamResult, error) {
+func (c *KimiClient) StreamChat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	return c.openAI.StreamChat(ctx, messages, opts)
 }
 

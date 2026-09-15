@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/xiaomi"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 // DiscoveryCredentials loads API keys from the OS secret store (not process env or .env files),

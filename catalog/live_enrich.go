@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog/live"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog/live"
+	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
 // FetchLiveProviderCatalog discovers models from all registered live provider APIs

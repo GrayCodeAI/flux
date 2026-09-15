@@ -1,10 +1,10 @@
 # Canonical hawk-eco Makefile for Go LIBRARY repos.
-# eyrie is a versioned Go library consumed by Hawk (no standalone binary).
+# flux is a versioned Go library consumed by Hawk (no standalone binary).
 
 # ---------------------------------------------------------------------------
 # Project metadata
 # ---------------------------------------------------------------------------
-NAME      := eyrie
+NAME      := flux
 
 # ---------------------------------------------------------------------------
 # Versioning — sourced from VERSION file; falls back to git describe.
@@ -14,10 +14,8 @@ VERSION ?= $(shell cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]' || git
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE    := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 
-LDFLAGS := -s -w \
-	-X main.Version=$(VERSION) \
-	-X main.Commit=$(COMMIT) \
-	-X main.BuildDate=$(DATE)
+# No LDFLAGS — flux is a library; the version comes from the VERSION file
+# via go:embed (version.go), not from linker-injected package-main vars.
 
 # ---------------------------------------------------------------------------
 # Tooling — pinned, install if missing.
@@ -51,7 +49,7 @@ all: lint test build ## Default — lint, test, build.
 # ---------------------------------------------------------------------------
 # Build / install / release.
 # ---------------------------------------------------------------------------
-build: ## Build all library packages (eyrie is a library consumed by hawk; no standalone binary).
+build: ## Build all library packages (flux is a library consumed by hawk; no standalone binary).
 	go build ./...
 
 # ---------------------------------------------------------------------------
@@ -130,6 +128,6 @@ hooks: ## Install git hooks via lefthook (format, lint, conventional commits, co
 	git config --unset core.hooksPath 2>/dev/null || true
 	lefthook install
 
-sync-clone: ## Hard-reset eyrie to origin/main (post history rewrite).
+sync-clone: ## Hard-reset flux to origin/main (post history rewrite).
 	@chmod +x scripts/sync-clone.sh scripts/commit-clean.sh
 	@./scripts/sync-clone.sh

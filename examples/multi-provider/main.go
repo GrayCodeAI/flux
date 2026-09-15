@@ -12,18 +12,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/flux/client"
 )
 
 func main() {
-	primary := client.Client(&client.EyrieConfig{
+	primary := client.Client(&client.FluxConfig{
 		Provider: "anthropic",
 	})
-	secondary := client.Client(&client.EyrieConfig{
+	secondary := client.Client(&client.FluxConfig{
 		Provider: "openai",
 	})
 
-	messages := []client.EyrieMessage{
+	messages := []client.FluxMessage{
 		{Role: "user", Content: "Explain what a fallback chain is in one sentence."},
 	}
 

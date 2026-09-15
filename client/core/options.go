@@ -24,18 +24,18 @@ type Configurable interface {
 	SetMimoAuth()
 }
 
-// EyrieConfigurable is the setter surface the top-level EyrieClient exposes
+// FluxConfigurable is the setter surface the top-level FluxClient exposes
 // for options that configure the universal client rather than an adapter.
-type EyrieConfigurable interface {
+type FluxConfigurable interface {
 	SetCoalescingTTL(ttl time.Duration)
 }
 
 // ClientOption configures clients. Options built with the constructors below
-// apply to any Configurable adapter; options built with NewEyrieOption apply
-// to the top-level EyrieClient.
+// apply to any Configurable adapter; options built with NewFluxOption apply
+// to the top-level FluxClient.
 type ClientOption struct {
 	applyConfigurable func(Configurable)
-	applyEyrie        func(EyrieConfigurable)
+	applyFlux         func(FluxConfigurable)
 }
 
 // NewOption builds a ClientOption from an adapter-level apply function.
@@ -43,23 +43,23 @@ func NewOption(fn func(Configurable)) ClientOption {
 	return ClientOption{applyConfigurable: fn}
 }
 
-// NewEyrieOption builds a ClientOption from an EyrieClient-level apply function.
-func NewEyrieOption(fn func(EyrieConfigurable)) ClientOption {
-	return ClientOption{applyEyrie: fn}
+// NewFluxOption builds a ClientOption from an FluxClient-level apply function.
+func NewFluxOption(fn func(FluxConfigurable)) ClientOption {
+	return ClientOption{applyFlux: fn}
 }
 
-// Apply runs the option against an adapter. No-op for EyrieClient-level options.
+// Apply runs the option against an adapter. No-op for FluxClient-level options.
 func (o ClientOption) Apply(c Configurable) {
 	if o.applyConfigurable != nil {
 		o.applyConfigurable(c)
 	}
 }
 
-// ApplyEyrie runs the option against the top-level client. No-op for
+// ApplyFlux runs the option against the top-level client. No-op for
 // adapter-level options.
-func (o ClientOption) ApplyEyrie(e EyrieConfigurable) {
-	if o.applyEyrie != nil {
-		o.applyEyrie(e)
+func (o ClientOption) ApplyFlux(e FluxConfigurable) {
+	if o.applyFlux != nil {
+		o.applyFlux(e)
 	}
 }
 

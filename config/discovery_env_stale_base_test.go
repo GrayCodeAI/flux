@@ -7,7 +7,7 @@ import (
 
 func TestDiscoveryCredentials_StaleBaseURLUsesRegion(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("FLUX_CONFIG_DIR", dir)
 	cfg := &ProviderConfig{
 		Version:                    "1",
 		XiaomiMimoTokenPlanRegion:  "sgp",

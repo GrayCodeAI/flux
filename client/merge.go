@@ -5,12 +5,12 @@ package client
 //
 // Messages with ToolUse or ToolResult are never merged, since those have
 // special provider semantics and must remain separate.
-func MergeConsecutiveRoles(messages []EyrieMessage) []EyrieMessage {
+func MergeConsecutiveRoles(messages []FluxMessage) []FluxMessage {
 	if len(messages) == 0 {
 		return messages
 	}
 
-	var result []EyrieMessage
+	var result []FluxMessage
 	for _, msg := range messages {
 		if len(result) == 0 {
 			result = append(result, msg)
@@ -45,6 +45,6 @@ func MergeConsecutiveRoles(messages []EyrieMessage) []EyrieMessage {
 }
 
 // hasToolData returns true if the message contains tool use or tool result data.
-func hasToolData(msg EyrieMessage) bool {
+func hasToolData(msg FluxMessage) bool {
 	return len(msg.ToolUse) > 0 || len(msg.ToolResults) > 0
 }

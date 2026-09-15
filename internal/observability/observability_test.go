@@ -1,4 +1,4 @@
-package eyrie
+package flux
 
 import (
 	"encoding/json"
@@ -336,13 +336,13 @@ func TestExportPrometheus(t *testing.T) {
 
 	// Check that it contains expected metric names.
 	expectedMetrics := []string{
-		"eyrie_requests_total",
-		"eyrie_input_tokens_total",
-		"eyrie_output_tokens_total",
-		"eyrie_request_duration_ms",
-		"eyrie_error_rate",
-		"eyrie_cost_usd_total",
-		"eyrie_cache_hit_rate",
+		"flux_requests_total",
+		"flux_input_tokens_total",
+		"flux_output_tokens_total",
+		"flux_request_duration_ms",
+		"flux_error_rate",
+		"flux_cost_usd_total",
+		"flux_cache_hit_rate",
 	}
 	for _, m := range expectedMetrics {
 		if !strings.Contains(prom, m) {

@@ -31,8 +31,8 @@ func TestParseCustomHeaders_OutputNeverContainsCRLF(t *testing.T) {
 
 	for _, tt := range attackPayloads {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = os.Setenv("HAWK_CUSTOM_HEADERS", tt.input)
-			defer os.Unsetenv("HAWK_CUSTOM_HEADERS")
+			_ = os.Setenv("FLUX_CUSTOM_HEADERS", tt.input)
+			defer os.Unsetenv("FLUX_CUSTOM_HEADERS")
 
 			headers := ParseCustomHeaders()
 
@@ -51,8 +51,8 @@ func TestParseCustomHeaders_OutputNeverContainsCRLF(t *testing.T) {
 func TestParseCustomHeaders_StandaloneCRRejected(t *testing.T) {
 	// When \r appears without \n (not split by the \n splitter), the
 	// ContainsAny check must catch it.
-	_ = os.Setenv("HAWK_CUSTOM_HEADERS", "X-Evil\rInjected: bad")
-	defer os.Unsetenv("HAWK_CUSTOM_HEADERS")
+	_ = os.Setenv("FLUX_CUSTOM_HEADERS", "X-Evil\rInjected: bad")
+	defer os.Unsetenv("FLUX_CUSTOM_HEADERS")
 
 	headers := ParseCustomHeaders()
 	if len(headers) != 0 {
@@ -66,8 +66,8 @@ func TestParseCustomHeaders_CRLFNameSplitIntoTwoLines(t *testing.T) {
 	// becomes "X-Evil" (no colon found, so it's skipped). "Injected: bad" is
 	// a valid header. The key security property is that no CRLF leaks into
 	// the output keys or values.
-	_ = os.Setenv("HAWK_CUSTOM_HEADERS", "X-Evil\r\nInjected: bad")
-	defer os.Unsetenv("HAWK_CUSTOM_HEADERS")
+	_ = os.Setenv("FLUX_CUSTOM_HEADERS", "X-Evil\r\nInjected: bad")
+	defer os.Unsetenv("FLUX_CUSTOM_HEADERS")
 
 	headers := ParseCustomHeaders()
 
@@ -116,8 +116,8 @@ func TestParseCustomHeaders_ValidHeadersAccepted(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = os.Setenv("HAWK_CUSTOM_HEADERS", tt.input)
-			defer os.Unsetenv("HAWK_CUSTOM_HEADERS")
+			_ = os.Setenv("FLUX_CUSTOM_HEADERS", tt.input)
+			defer os.Unsetenv("FLUX_CUSTOM_HEADERS")
 
 			headers := ParseCustomHeaders()
 			if headers[tt.wantKey] != tt.wantVal {
@@ -138,8 +138,8 @@ func TestParseCustomHeaders_EmptyAndWhitespace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = os.Setenv("HAWK_CUSTOM_HEADERS", tt.input)
-			defer os.Unsetenv("HAWK_CUSTOM_HEADERS")
+			_ = os.Setenv("FLUX_CUSTOM_HEADERS", tt.input)
+			defer os.Unsetenv("FLUX_CUSTOM_HEADERS")
 
 			headers := ParseCustomHeaders()
 			if len(headers) != 0 {
@@ -158,10 +158,10 @@ func TestParseCustomHeaders_ControlCharactersDoNotPanic(t *testing.T) {
 	}
 
 	for _, payload := range payloads {
-		_ = os.Setenv("HAWK_CUSTOM_HEADERS", payload)
+		_ = os.Setenv("FLUX_CUSTOM_HEADERS", payload)
 		// Should not panic.
 		headers := ParseCustomHeaders()
-		os.Unsetenv("HAWK_CUSTOM_HEADERS")
+		os.Unsetenv("FLUX_CUSTOM_HEADERS")
 		_ = headers
 	}
 }
@@ -170,8 +170,8 @@ func TestParseCustomHeaders_ControlCharactersDoNotPanic(t *testing.T) {
 // 2. API key serialization: json:"-" tag prevents leaking keys in JSON output
 // ---------------------------------------------------------------------------
 
-func TestEyrieConfig_APIKeyNotSerialized(t *testing.T) {
-	cfg := EyrieConfig{
+func TestFluxConfig_APIKeyNotSerialized(t *testing.T) {
+	cfg := FluxConfig{
 		Provider:   "anthropic",
 		APIKey:     "sk-ant-super-secret-key-12345",
 		BaseURL:    "https://api.anthropic.com",
@@ -188,13 +188,13 @@ func TestEyrieConfig_APIKeyNotSerialized(t *testing.T) {
 
 	// The API key must NOT appear in the JSON output.
 	if strings.Contains(jsonStr, "sk-ant-super-secret-key-12345") {
-		t.Errorf("EyrieConfig.APIKey leaked into JSON: %s", jsonStr)
+		t.Errorf("FluxConfig.APIKey leaked into JSON: %s", jsonStr)
 	}
 	if strings.Contains(jsonStr, "APIKey") {
-		t.Errorf("EyrieConfig.APIKey field name leaked into JSON: %s", jsonStr)
+		t.Errorf("FluxConfig.APIKey field name leaked into JSON: %s", jsonStr)
 	}
 	if strings.Contains(jsonStr, "api_key") {
-		t.Errorf("EyrieConfig api_key leaked into JSON: %s", jsonStr)
+		t.Errorf("FluxConfig api_key leaked into JSON: %s", jsonStr)
 	}
 
 	// Other fields should still be present.
@@ -231,9 +231,9 @@ func TestAnthropicClientConfig_APIKeyNotSerialized(t *testing.T) {
 	}
 }
 
-func TestEyrieConfig_APIKeyRoundtripOmitted(t *testing.T) {
+func TestFluxConfig_APIKeyRoundtripOmitted(t *testing.T) {
 	// Serialize then deserialize: the APIKey should not survive the roundtrip.
-	original := EyrieConfig{
+	original := FluxConfig{
 		Provider: "openai",
 		APIKey:   "sk-secret-roundtrip-key",
 		Model:    "gpt-4o",
@@ -244,7 +244,7 @@ func TestEyrieConfig_APIKeyRoundtripOmitted(t *testing.T) {
 		t.Fatalf("json.Marshal failed: %v", err)
 	}
 
-	var decoded EyrieConfig
+	var decoded FluxConfig
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("json.Unmarshal failed: %v", err)
 	}
@@ -263,12 +263,12 @@ func TestEyrieConfig_APIKeyRoundtripOmitted(t *testing.T) {
 
 func TestErrorMessagesDoNotContainAPIKey(t *testing.T) {
 	// The getOrCreateProvider error path says:
-	//   "eyrie: no API key for %s; set %s or call SetAPIKey()"
+	//   "flux: no API key for %s; set %s or call SetAPIKey()"
 	// This should reference the env var name, NOT the actual key value.
 	//
 	// We verify by checking the error format string in the source does not
 	// interpolate the key value. This is a structural test.
-	c := Client(&EyrieConfig{Provider: "anthropic", APIKey: ""})
+	c := Client(&FluxConfig{Provider: "anthropic", APIKey: ""})
 
 	// Clear the env so no key can be resolved.
 	t.Setenv("ANTHROPIC_API_KEY", "")
@@ -279,7 +279,7 @@ func TestErrorMessagesDoNotContainAPIKey(t *testing.T) {
 
 	// We can't easily call getOrCreateProvider without a real store,
 	// but we can verify the error format from the source code doesn't
-	// include the key. Instead, verify the EyrieConfig JSON safety above.
+	// include the key. Instead, verify the FluxConfig JSON safety above.
 	_ = c
 	_ = store
 }
@@ -294,8 +294,8 @@ type testEmptyStore struct{}
 func TestParseCustomHeaders_HeadersNotInErrorContext(t *testing.T) {
 	// Ensure that the parsed headers themselves are not logged or included
 	// in any error. We test that the function is pure: it just returns a map.
-	_ = os.Setenv("HAWK_CUSTOM_HEADERS", "Authorization: Bearer secret-token-xyz\nX-Custom: value")
-	defer os.Unsetenv("HAWK_CUSTOM_HEADERS")
+	_ = os.Setenv("FLUX_CUSTOM_HEADERS", "Authorization: Bearer secret-token-xyz\nX-Custom: value")
+	defer os.Unsetenv("FLUX_CUSTOM_HEADERS")
 
 	headers := ParseCustomHeaders()
 

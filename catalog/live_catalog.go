@@ -3,7 +3,7 @@ package catalog
 import (
 	"sort"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/flux/catalog/registry"
 )
 
 // DeploymentIDForLiveCatalogKey maps a live fetch catalog key to a deployment ID.

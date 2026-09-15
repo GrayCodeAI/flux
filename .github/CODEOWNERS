@@ -1,4 +1,4 @@
-# CODEOWNERS for eyrie (code-generation engine)
+# CODEOWNERS for flux (universal LLM provider runtime)
 * @GrayCodeAI/maintainers
 
 # Engine core

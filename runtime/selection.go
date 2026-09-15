@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/catalog/registry"
+	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/setup"
 )
 
 type selectionRuntimeState struct {
@@ -113,13 +113,13 @@ func ActiveProvider(ctx context.Context) string {
 }
 
 // NormalizeProviderID resolves catalog aliases and host-facing variants to the
-// runtime provider identifier used by Eyrie adapters and setup gateways.
+// runtime provider identifier used by Flux adapters and setup gateways.
 func NormalizeProviderID(provider string) string {
 	return normalizeRuntimeProviderID(provider)
 }
 
 // ActiveProviderID canonicalizes a host-facing provider/gateway id through the
-// runtime provider-id rules used by Eyrie.
+// runtime provider-id rules used by Flux.
 func ActiveProviderID(provider string) string {
 	return NormalizeProviderID(provider)
 }

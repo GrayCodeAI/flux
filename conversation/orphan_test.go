@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/storage"
 )
 
 type orphanMockProvider struct{}
@@ -17,14 +17,14 @@ func (orphanMockProvider) Ping(_ context.Context) error {
 	return nil
 }
 
-func (orphanMockProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
-	return &client.EyrieResponse{Content: "ok", FinishReason: "end_turn"}, nil
+func (orphanMockProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+	return &client.FluxResponse{Content: "ok", FinishReason: "end_turn"}, nil
 }
 
-func (orphanMockProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 2)
-	ch <- client.EyrieStreamEvent{Type: "content", Content: "ok"}
-	ch <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn"}
+func (orphanMockProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.FluxStreamEvent, 2)
+	ch <- client.FluxStreamEvent{Type: "content", Content: "ok"}
+	ch <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn"}
 	close(ch)
 	return &client.StreamResult{Events: ch}, nil
 }

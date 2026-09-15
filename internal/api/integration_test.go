@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/storage"
 )
 
 // Node, alias, prompt-from, rate-limit, error-simulation, content-type,
@@ -29,11 +29,11 @@ type errorProvider struct {
 
 func (e *errorProvider) Name() string                 { return "error-provider" }
 func (e *errorProvider) Ping(_ context.Context) error { return nil }
-func (e *errorProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (e *errorProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
 	return nil, e.err
 }
 
-func (e *errorProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (e *errorProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
 	return nil, e.err
 }
 
@@ -42,18 +42,18 @@ type streamingProvider struct{}
 
 func (s *streamingProvider) Name() string                 { return "streaming-provider" }
 func (s *streamingProvider) Ping(_ context.Context) error { return nil }
-func (s *streamingProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
-	return &client.EyrieResponse{Content: "hello world", FinishReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 2}}, nil
+func (s *streamingProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+	return &client.FluxResponse{Content: "hello world", FinishReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 2}}, nil
 }
 
-func (s *streamingProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 5)
+func (s *streamingProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.FluxStreamEvent, 5)
 	go func() {
 		chunks := []string{"hello", " ", "world"}
 		for _, c := range chunks {
-			ch <- client.EyrieStreamEvent{Type: "content", Content: c}
+			ch <- client.FluxStreamEvent{Type: "content", Content: c}
 		}
-		ch <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.EyrieUsage{CompletionTokens: 3}}
+		ch <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 3}}
 		close(ch)
 	}()
 	return &client.StreamResult{Events: ch}, nil
@@ -64,15 +64,15 @@ type errorStreamProvider struct{}
 
 func (e *errorStreamProvider) Name() string                 { return "error-stream" }
 func (e *errorStreamProvider) Ping(_ context.Context) error { return nil }
-func (e *errorStreamProvider) Chat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (e *errorStreamProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
 	return nil, fmt.Errorf("provider error")
 }
 
-func (e *errorStreamProvider) StreamChat(_ context.Context, _ []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.EyrieStreamEvent, 3)
+func (e *errorStreamProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+	ch := make(chan client.FluxStreamEvent, 3)
 	go func() {
-		ch <- client.EyrieStreamEvent{Type: "content", Content: "partial"}
-		ch <- client.EyrieStreamEvent{Type: "error", Error: "rate limit exceeded"}
+		ch <- client.FluxStreamEvent{Type: "content", Content: "partial"}
+		ch <- client.FluxStreamEvent{Type: "error", Error: "rate limit exceeded"}
 		close(ch)
 	}()
 	return &client.StreamResult{Events: ch}, nil

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client/core"
+	"github.com/GrayCodeAI/flux/client/core"
 )
 
 func TestPoolsideClientReasoningOnlyStreamFallsBackToChat(t *testing.T) {
@@ -43,9 +43,9 @@ func TestPoolsideClientReasoningOnlyStreamFallsBackToChat(t *testing.T) {
 
 	client := NewPoolsideClient("poolside-test-key", "https://poolside.example/v1")
 	client.openAI.httpClient = &http.Client{Transport: transport}
-	result, err := client.StreamChat(context.Background(), []core.EyrieMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
+	result, err := client.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{
 		Model: "poolside/laguna-m.1", MaxTokens: 512,
-		Tools: []core.EyrieTool{{Name: "read_file", Parameters: map[string]any{"type": "object"}}},
+		Tools: []core.FluxTool{{Name: "read_file", Parameters: map[string]any{"type": "object"}}},
 	})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)

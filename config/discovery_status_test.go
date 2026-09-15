@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 func TestHasAnyConfiguredDeployment_FromStore(t *testing.T) {
@@ -25,7 +25,7 @@ func (emptyCredentialStore) Get(context.Context, string) (string, error) { retur
 func (emptyCredentialStore) Delete(context.Context, string) error        { return nil }
 
 func TestHasAnyConfiguredDeployment_RejectsPlaceholder(t *testing.T) {
-	t.Setenv("EYRIE_CONFIG_DIR", t.TempDir())
+	t.Setenv("FLUX_CONFIG_DIR", t.TempDir())
 	credentials.SetDefaultStore(emptyCredentialStore{})
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 

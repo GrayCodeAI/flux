@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/config"
 )
 
 func TestDefaultModelProviderFilter_FromProviderConfig(t *testing.T) {
@@ -50,6 +50,6 @@ func TestDefaultModelProviderFilter_LoadDoesNotPanic(t *testing.T) {
 
 func TestDefaultModelProviderFilter_WithEmptyDir(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("EYRIE_CONFIG_DIR", dir)
+	t.Setenv("FLUX_CONFIG_DIR", dir)
 	_ = DefaultModelProviderFilter(context.Background())
 }

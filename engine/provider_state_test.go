@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 func TestProviderStateMutationsSerializeAcrossEngineInstances(t *testing.T) {

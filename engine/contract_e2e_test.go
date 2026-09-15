@@ -5,36 +5,36 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 type contractProvider struct {
-	chatMessages   []client.EyrieMessage
+	chatMessages   []client.FluxMessage
 	chatOptions    client.ChatOptions
-	streamMessages []client.EyrieMessage
+	streamMessages []client.FluxMessage
 	streamOptions  client.ChatOptions
 }
 
 func (p *contractProvider) Name() string               { return "contract" }
 func (p *contractProvider) Ping(context.Context) error { return nil }
 
-func (p *contractProvider) Chat(_ context.Context, messages []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error) {
+func (p *contractProvider) Chat(_ context.Context, messages []client.FluxMessage, opts client.ChatOptions) (*client.FluxResponse, error) {
 	p.chatMessages, p.chatOptions = messages, opts
-	return &client.EyrieResponse{
+	return &client.FluxResponse{
 		Content: "complete", FinishReason: "end_turn", RequestID: "req-blocking",
-		Usage: &client.EyrieUsage{PromptTokens: 4, CompletionTokens: 2, TotalTokens: 6},
+		Usage: &client.FluxUsage{PromptTokens: 4, CompletionTokens: 2, TotalTokens: 6},
 	}, nil
 }
 
-func (p *contractProvider) StreamChat(_ context.Context, messages []client.EyrieMessage, opts client.ChatOptions) (*client.StreamResult, error) {
+func (p *contractProvider) StreamChat(_ context.Context, messages []client.FluxMessage, opts client.ChatOptions) (*client.StreamResult, error) {
 	p.streamMessages, p.streamOptions = messages, opts
-	events := make(chan client.EyrieStreamEvent, 4)
-	events <- client.EyrieStreamEvent{Type: "content", Content: "checking"}
-	events <- client.EyrieStreamEvent{Type: "tool_call", ToolCall: &client.ToolCall{ID: "call-1", Name: "read_file", Arguments: map[string]interface{}{"path": "main.go"}}}
-	events <- client.EyrieStreamEvent{Type: "usage", Usage: &client.EyrieUsage{PromptTokens: 5, CompletionTokens: 3, TotalTokens: 8}}
-	events <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "req-stream"}
+	events := make(chan client.FluxStreamEvent, 4)
+	events <- client.FluxStreamEvent{Type: "content", Content: "checking"}
+	events <- client.FluxStreamEvent{Type: "tool_call", ToolCall: &client.ToolCall{ID: "call-1", Name: "read_file", Arguments: map[string]interface{}{"path": "main.go"}}}
+	events <- client.FluxStreamEvent{Type: "usage", Usage: &client.FluxUsage{PromptTokens: 5, CompletionTokens: 3, TotalTokens: 8}}
+	events <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "req-stream"}
 	close(events)
 	return client.NewStreamResultWithRequestID(events, "req-stream", nil), nil
 }
@@ -113,27 +113,27 @@ func TestEngineContractEndToEnd(t *testing.T) {
 
 type continuationProvider struct {
 	calls    int
-	requests [][]client.EyrieMessage
+	requests [][]client.FluxMessage
 }
 
 func (p *continuationProvider) Name() string               { return "continuation" }
 func (p *continuationProvider) Ping(context.Context) error { return nil }
-func (p *continuationProvider) Chat(context.Context, []client.EyrieMessage, client.ChatOptions) (*client.EyrieResponse, error) {
+func (p *continuationProvider) Chat(context.Context, []client.FluxMessage, client.ChatOptions) (*client.FluxResponse, error) {
 	return nil, nil
 }
 
-func (p *continuationProvider) StreamChat(_ context.Context, messages []client.EyrieMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (p *continuationProvider) StreamChat(_ context.Context, messages []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
 	p.calls++
-	p.requests = append(p.requests, append([]client.EyrieMessage(nil), messages...))
-	events := make(chan client.EyrieStreamEvent, 3)
+	p.requests = append(p.requests, append([]client.FluxMessage(nil), messages...))
+	events := make(chan client.FluxStreamEvent, 3)
 	if p.calls == 1 {
-		events <- client.EyrieStreamEvent{Type: "content", Content: "part one"}
-		events <- client.EyrieStreamEvent{Type: "usage", Usage: &client.EyrieUsage{CompletionTokens: 2, TotalTokens: 4}}
-		events <- client.EyrieStreamEvent{Type: "done", StopReason: "max_tokens", RequestID: "request-1"}
+		events <- client.FluxStreamEvent{Type: "content", Content: "part one"}
+		events <- client.FluxStreamEvent{Type: "usage", Usage: &client.FluxUsage{CompletionTokens: 2, TotalTokens: 4}}
+		events <- client.FluxStreamEvent{Type: "done", StopReason: "max_tokens", RequestID: "request-1"}
 	} else {
-		events <- client.EyrieStreamEvent{Type: "content", Content: "part two"}
-		events <- client.EyrieStreamEvent{Type: "usage", Usage: &client.EyrieUsage{CompletionTokens: 2, TotalTokens: 5}}
-		events <- client.EyrieStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "request-2"}
+		events <- client.FluxStreamEvent{Type: "content", Content: "part two"}
+		events <- client.FluxStreamEvent{Type: "usage", Usage: &client.FluxUsage{CompletionTokens: 2, TotalTokens: 5}}
+		events <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "request-2"}
 	}
 	close(events)
 	return client.NewStreamResultWithRequestID(events, "request-id", nil), nil
@@ -143,7 +143,7 @@ func TestEngineContinuationPreservesEventsAndConversationShape(t *testing.T) {
 	provider := &continuationProvider{}
 	source, err := streamWithContinuation(
 		context.Background(), provider,
-		[]client.EyrieMessage{{Role: "user", Content: "write a long answer"}},
+		[]client.FluxMessage{{Role: "user", Content: "write a long answer"}},
 		client.ChatOptions{Model: "model"},
 		Limits{MaxContinuations: 1, MaxTotalOutputTokens: 100},
 	)
@@ -151,7 +151,7 @@ func TestEngineContinuationPreservesEventsAndConversationShape(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer source.Close()
-	var events []client.EyrieStreamEvent
+	var events []client.FluxStreamEvent
 	for event := range source.Events {
 		events = append(events, event)
 	}

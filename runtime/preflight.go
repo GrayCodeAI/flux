@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/flux/catalog"
+	fluxcfg "github.com/GrayCodeAI/flux/config"
+	"github.com/GrayCodeAI/flux/credentials"
 )
 
 // PreflightStatus is ok, warn, or fail.
@@ -87,7 +87,7 @@ func Preflight(ctx context.Context) PreflightReport {
 	}
 
 	// Provider credentials configured
-	hasCreds := eyriecfg.HasAnyConfiguredDeployment(ctx)
+	hasCreds := fluxcfg.HasAnyConfiguredDeployment(ctx)
 	if !hasCreds {
 		checks = append(checks, PreflightCheck{
 			Name: "credentials", Status: PreflightFail,
