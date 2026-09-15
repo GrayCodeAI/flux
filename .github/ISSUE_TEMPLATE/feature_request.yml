@@ -8,7 +8,7 @@ body:
     attributes:
       value: |
         Thanks for proposing a feature. flux is the LLM client + skill router
-        that backs the rho-eco ecosystem. Every feature is evaluated against
+        that backs the graycode-eco ecosystem. Every feature is evaluated against
         whether it serves **a single developer** running an AI agent locally.
 
         Before submitting:
@@ -65,6 +65,6 @@ body:
       description: flux avoids enterprise scope. Confirm this feature respects that.
       options:
         - label: Works with zero configuration (sensible defaults).
-        - label: Does not require a network call to a rho-eco service.
+        - label: Does not require a network call to a graycode-eco service.
         - label: Stores any state locally by default.
         - label: Has an escape hatch (override via flag, env, or config).

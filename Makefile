@@ -1,4 +1,4 @@
-# Canonical rho-eco Makefile for Go LIBRARY repos.
+# Canonical graycode-eco Makefile for Go LIBRARY repos.
 # flux is a versioned Go library consumed by Rho (no standalone binary).
 
 # ---------------------------------------------------------------------------

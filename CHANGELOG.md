@@ -114,7 +114,7 @@ v0.0.1 of `github.com/GrayCodeAI/flux`.
   5. Whitespace collapse
   Reports aggregate `BytesSaved` and `PercentOff` across all tools
   in the slice. Safe to call concurrently.
-  Aligns flux with the rest of the rho-eco ecosystem.
+  Aligns flux with the rest of the graycode-eco ecosystem.
 
 ### Added
 - Output guardrails framework (PII, secrets, injection, harmful content)
