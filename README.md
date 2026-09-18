@@ -73,15 +73,12 @@ go get github.com/GrayCodeAI/flux
 Requires Go 1.26+. Minimal dependencies (UUID, OpenTelemetry, SQLite, keyring).
 
 ```go
-import "github.com/GrayCodeAI/flux/client"
+import "github.com/GrayCodeAI/flux/engine"
 
-// Create a client — provider auto-detected from environment
-c := client.NewFluxClient(&client.FluxConfig{
-    Provider: client.DetectProvider(),
-})
+// Hosts (like rho) must use the stable engine facade
+eng := engine.New(engine.Config{Provider: engine.DetectProvider()})
 
-// Stream a response
-sr, err := c.StreamChat(ctx, messages, client.ChatOptions{
+sr, err := eng.StreamChat(ctx, messages, engine.ChatOptions{
     Model: "claude-sonnet-4-6",
 })
 defer sr.Close()
@@ -94,6 +91,8 @@ for evt := range sr.Events {
     }
 }
 ```
+
+Legacy `client.NewFluxClient` still works but is not the host contract — see `docs/architecture/HOST-ENGINE-BOUNDARY.md`.
 
 ## Features
 
@@ -185,7 +184,7 @@ ANTHROPIC_API_KEY=sk-... go run ./examples/basic/
 
 ## Supported Providers
 
-22 provider gateways in `catalog/registry/providers.go` (rho `/config` uses the same list), listed in registry `SortOrder`:
+28 provider gateways in `catalog/registry/providers.go` (rho `/config` uses the same list), listed in registry `SortOrder`:
 
 | Provider | ID | Env variable |
 |---|---|---|
@@ -209,6 +208,12 @@ ANTHROPIC_API_KEY=sk-... go run ./examples/basic/
 | **Poolside** | `poolside` | `POOLSIDE_API_KEY` |
 | **Groq** | `groq` | `GROQ_API_KEY` |
 | **ClinePass** | `clinepass` | `CLINE_API_KEY` |
+| **Concentrate** | `concentrate` | `CONCENTRATE_API_KEY` |
+| **OpenGateway** | `opengateway` | `OPENGATEWAY_API_KEY` |
+| **StepFun** | `stepfun` | `STEPFUN_API_KEY` |
+| **Agnes** | `agnes` | `AGNES_API_KEY` |
+| **LongCat** | `longcat` | `LONGCAT_API_KEY` |
+| **Fireworks AI** | `fireworks` | `FIREWORKS_API_KEY` |
 | **OpenCode Go** | `opencodego` | `OPENCODEGO_API_KEY` |
 | **Ollama** | `ollama` | `OLLAMA_BASE_URL` (local; no API key) |
 

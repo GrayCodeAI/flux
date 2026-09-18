@@ -150,3 +150,12 @@ const (
 	CheckFail = llm.CheckFail
 	CheckWarn = llm.CheckWarn
 )
+
+// Six llm symbols previously without engine alias — now re-exported so hosts
+// need not import llm directly for these common DTOs.
+type ChatOptions = llm.ChatOptions
+type ContinuationConfig = llm.ContinuationConfig
+type StreamResult = llm.StreamResult
+type ResponseFormat = llm.ResponseFormat
+type ImageURLPart = llm.ImageURLPart
+type InputAudioPart = llm.InputAudioPart
