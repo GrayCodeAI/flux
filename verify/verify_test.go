@@ -6,22 +6,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
-// fakeProvider is a scripted client.Provider for testing the harness without a
+// fakeProvider is a scripted core.Provider for testing the harness without a
 // live endpoint. It returns a canned response (or error) per case, keyed by the
 // first user message's content.
 type fakeProvider struct {
 	name      string
-	responses map[string]*client.FluxResponse
+	responses map[string]*core.FluxResponse
 	errs      map[string]error
 }
 
 func (f *fakeProvider) Name() string                 { return f.name }
 func (f *fakeProvider) Ping(_ context.Context) error { return nil }
 
-func (f *fakeProvider) Chat(_ context.Context, msgs []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+func (f *fakeProvider) Chat(_ context.Context, msgs []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	key := ""
 	if len(msgs) > 0 {
 		key = msgs[0].Content
@@ -34,17 +34,17 @@ func (f *fakeProvider) Chat(_ context.Context, msgs []client.FluxMessage, _ clie
 	return f.responses[key], nil
 }
 
-func (f *fakeProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (f *fakeProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
 	return nil, errors.New("not implemented")
 }
 
 func TestRun_AllPass(t *testing.T) {
 	t.Parallel()
 	cases := CanonicalCases()
-	resp := map[string]*client.FluxResponse{
+	resp := map[string]*core.FluxResponse{
 		"Reply with a short greeting.":                            {Content: "Hello!"},
 		"What is 2 + 2? Reply with just the number.":              {Content: "4"},
-		"What is the weather in Paris? Use the get_weather tool.": {ToolCalls: []client.ToolCall{{Name: "get_weather", Arguments: map[string]any{"city": "Paris"}}}},
+		"What is the weather in Paris? Use the get_weather tool.": {ToolCalls: []core.ToolCall{{Name: "get_weather", Arguments: map[string]any{"city": "Paris"}}}},
 	}
 	p := &fakeProvider{name: "fake", responses: resp}
 
@@ -60,11 +60,11 @@ func TestRun_AllPass(t *testing.T) {
 func TestRun_DetectsFailures(t *testing.T) {
 	t.Parallel()
 	cases := CanonicalCases()
-	resp := map[string]*client.FluxResponse{
+	resp := map[string]*core.FluxResponse{
 		"Reply with a short greeting.":               {Content: ""},     // empty → fail
 		"What is 2 + 2? Reply with just the number.": {Content: "five"}, // missing "4" → fail
 		// tool case: wrong tool + missing arg → fail
-		"What is the weather in Paris? Use the get_weather tool.": {ToolCalls: []client.ToolCall{{Name: "search", Arguments: map[string]any{}}}},
+		"What is the weather in Paris? Use the get_weather tool.": {ToolCalls: []core.ToolCall{{Name: "search", Arguments: map[string]any{}}}},
 	}
 	p := &fakeProvider{name: "fake", responses: resp}
 
@@ -83,12 +83,12 @@ func TestRun_ToolMissingRequiredArg(t *testing.T) {
 	t.Parallel()
 	cases := []Case{{
 		ID:       "tool",
-		Messages: []client.FluxMessage{{Role: "user", Content: "go"}},
+		Messages: []core.FluxMessage{{Role: "user", Content: "go"}},
 		Expect:   Expectation{ToolName: "get_weather", RequiredArgs: []string{"city"}},
 	}}
 	// Right tool, but missing the "city" arg.
-	p := &fakeProvider{name: "fake", responses: map[string]*client.FluxResponse{
-		"go": {ToolCalls: []client.ToolCall{{Name: "get_weather", Arguments: map[string]any{}}}},
+	p := &fakeProvider{name: "fake", responses: map[string]*core.FluxResponse{
+		"go": {ToolCalls: []core.ToolCall{{Name: "get_weather", Arguments: map[string]any{}}}},
 	}}
 	rep := Run(context.Background(), p, cases)
 	if rep.Passed != 0 {
@@ -103,7 +103,7 @@ func TestRun_ProviderError(t *testing.T) {
 	t.Parallel()
 	cases := []Case{{
 		ID:       "boom",
-		Messages: []client.FluxMessage{{Role: "user", Content: "x"}},
+		Messages: []core.FluxMessage{{Role: "user", Content: "x"}},
 		Expect:   Expectation{NonEmptyContent: true},
 	}}
 	p := &fakeProvider{name: "fake", errs: map[string]error{"x": errors.New("503 unavailable")}}

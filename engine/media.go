@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/flux/client"
+	providermedia "github.com/GrayCodeAI/flux/provider/media"
 )
 
 // MediaOptions carries the credentials and endpoint for a media backend call.
@@ -30,14 +30,14 @@ type GenerateImageResult struct {
 }
 
 // GenerateImage generates images through the OpenAI-compatible endpoint
-// configured in req. It is a stateless facade over client.ImageClient,
+// configured in req. It is a stateless facade over provider.ImageClient,
 // returning decoded image bytes (plus any provider URL). The engine keeps no
 // media state; the host owns conversation and persistence.
 func (e *Engine) GenerateImage(ctx context.Context, req GenerateImageRequest) ([]GenerateImageResult, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	c := client.NewImageClient(req.APIKey, req.BaseURL)
+	c := providermedia.NewImageClient(req.APIKey, req.BaseURL)
 	imgs, urls, err := c.Generate(ctx, req.Prompt, req.Model, req.Size, req.N)
 	if err != nil {
 		return nil, err
@@ -65,13 +65,13 @@ type TranscribeRequest struct {
 
 // Transcribe transcribes audio through the OpenAI-compatible endpoint
 // configured in req, returning the transcript text. It is a stateless facade
-// over client.AudioClient.
+// over provider.AudioClient.
 func (e *Engine) Transcribe(ctx context.Context, req TranscribeRequest) (string, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	c := client.NewAudioClient(req.APIKey, req.BaseURL)
-	return c.Transcribe(ctx, client.TranscriptionRequest{
+	c := providermedia.NewAudioClient(req.APIKey, req.BaseURL)
+	return c.Transcribe(ctx, providermedia.TranscriptionRequest{
 		Model:    req.Model,
 		File:     req.Audio,
 		FileName: req.FileName,

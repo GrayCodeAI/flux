@@ -10,7 +10,7 @@ import (
 )
 
 // ApplyCredentialsResult is the full flux response after API keys are applied:
-// refreshed catalog, provider.json (deployments + routing), and paths.
+// refreshed catalog, adapters.json (deployments + routing), and paths.
 type ApplyCredentialsResult struct {
 	Catalog            *catalog.RefreshResult
 	ProviderConfig     *config.ProviderConfig
@@ -56,7 +56,7 @@ func ApplyCredentialsForProvider(ctx context.Context, providerID string, creds c
 }
 
 // ApplyCredentials discovers the model catalog from env API keys, then writes
-// ~/.rho/provider.json deployments and routing derived from the catalog.
+// ~/.rho/adapters.json deployments and routing derived from the catalog.
 func ApplyCredentials(ctx context.Context, creds catalog.Credentials) (*ApplyCredentialsResult, error) {
 	catResult, err := DiscoverModelCatalog(ctx, creds)
 	if err != nil {

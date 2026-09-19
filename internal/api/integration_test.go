@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/storage"
 )
 
@@ -29,11 +29,11 @@ type errorProvider struct {
 
 func (e *errorProvider) Name() string                 { return "error-provider" }
 func (e *errorProvider) Ping(_ context.Context) error { return nil }
-func (e *errorProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+func (e *errorProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	return nil, e.err
 }
 
-func (e *errorProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (e *errorProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
 	return nil, e.err
 }
 
@@ -42,21 +42,21 @@ type streamingProvider struct{}
 
 func (s *streamingProvider) Name() string                 { return "streaming-provider" }
 func (s *streamingProvider) Ping(_ context.Context) error { return nil }
-func (s *streamingProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
-	return &client.FluxResponse{Content: "hello world", FinishReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 2}}, nil
+func (s *streamingProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
+	return &core.FluxResponse{Content: "hello world", FinishReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 2}}, nil
 }
 
-func (s *streamingProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.FluxStreamEvent, 5)
+func (s *streamingProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
+	ch := make(chan core.FluxStreamEvent, 5)
 	go func() {
 		chunks := []string{"hello", " ", "world"}
 		for _, c := range chunks {
-			ch <- client.FluxStreamEvent{Type: "content", Content: c}
+			ch <- core.FluxStreamEvent{Type: "content", Content: c}
 		}
-		ch <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 3}}
+		ch <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 3}}
 		close(ch)
 	}()
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 
 // errorStreamProvider streams a content chunk then emits an error.
@@ -64,23 +64,23 @@ type errorStreamProvider struct{}
 
 func (e *errorStreamProvider) Name() string                 { return "error-stream" }
 func (e *errorStreamProvider) Ping(_ context.Context) error { return nil }
-func (e *errorStreamProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+func (e *errorStreamProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	return nil, fmt.Errorf("provider error")
 }
 
-func (e *errorStreamProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.FluxStreamEvent, 3)
+func (e *errorStreamProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
+	ch := make(chan core.FluxStreamEvent, 3)
 	go func() {
-		ch <- client.FluxStreamEvent{Type: "content", Content: "partial"}
-		ch <- client.FluxStreamEvent{Type: "error", Error: "rate limit exceeded"}
+		ch <- core.FluxStreamEvent{Type: "content", Content: "partial"}
+		ch <- core.FluxStreamEvent{Type: "error", Error: "rate limit exceeded"}
 		close(ch)
 	}()
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 
 // --- Helper functions ---
 
-func testServerWithProvider(t *testing.T, prov client.Provider) *httptest.Server {
+func testServerWithProvider(t *testing.T, prov core.Provider) *httptest.Server {
 	t.Helper()
 	store, err := storage.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
@@ -91,7 +91,7 @@ func testServerWithProvider(t *testing.T, prov client.Provider) *httptest.Server
 	return httptest.NewServer(srv)
 }
 
-func testServerWithAPIKey(t *testing.T, prov client.Provider, apiKey string) *httptest.Server {
+func testServerWithAPIKey(t *testing.T, prov core.Provider, apiKey string) *httptest.Server {
 	t.Helper()
 	store, err := storage.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {

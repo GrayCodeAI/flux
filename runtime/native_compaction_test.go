@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 func TestSupportsAnthropicCompactionSelection(t *testing.T) {
@@ -25,10 +25,10 @@ func TestSupportsAnthropicCompactionSelection(t *testing.T) {
 }
 
 func TestAnthropicCompactionMessagesPreservesTools(t *testing.T) {
-	messages, system := anthropicCompactionMessages([]client.FluxMessage{
+	messages, system := anthropicCompactionMessages([]core.FluxMessage{
 		{Role: "system", Content: "system prompt"},
-		{Role: "assistant", Content: "calling", ToolUse: []client.ToolCall{{ID: "tool-1", Name: "read"}}},
-		{Role: "user", ToolResults: []client.ToolResult{{ToolUseID: "tool-1", Content: "result", IsError: true}}},
+		{Role: "assistant", Content: "calling", ToolUse: []core.ToolCall{{ID: "tool-1", Name: "read"}}},
+		{Role: "user", ToolResults: []core.ToolResult{{ToolUseID: "tool-1", Content: "result", IsError: true}}},
 	})
 	if system != "system prompt" {
 		t.Fatalf("system = %q", system)

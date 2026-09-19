@@ -1,6 +1,8 @@
 package router
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -25,6 +27,43 @@ func TestCircuitBreaker_OpenToHalfOpen(t *testing.T) {
 
 	if cb.State() != CircuitHalfOpen {
 		t.Fatal("expected half-open after cooldown-probe Allow()")
+	}
+}
+
+func TestCircuitBreakerHalfOpenAdmitsOneConcurrentProbe(t *testing.T) {
+	cb := NewCircuitBreaker(1, time.Hour)
+	cb.Failure()
+	cb.mu.Lock()
+	cb.lastFailureTime = time.Now().Add(-2 * time.Hour)
+	cb.mu.Unlock()
+	if !cb.Ready() || cb.State() != CircuitOpen {
+		t.Fatal("readiness must not reserve or transition the circuit")
+	}
+	const callers = 64
+	start := make(chan struct{})
+	var admitted atomic.Int32
+	var wg sync.WaitGroup
+	for range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			if cb.Allow() {
+				admitted.Add(1)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	if got := admitted.Load(); got != 1 {
+		t.Fatalf("half-open admitted %d probes, want one", got)
+	}
+	if cb.Ready() {
+		t.Fatal("half-open circuit must deny while probe is in flight")
+	}
+	cb.Success()
+	if !cb.Ready() || !cb.Allow() {
+		t.Fatal("successful probe must restore normal admission")
 	}
 }
 

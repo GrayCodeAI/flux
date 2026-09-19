@@ -3,8 +3,8 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
 	llm "github.com/GrayCodeAI/flux/llm"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 func TestToClientMessages_ReturnsMessagesUnchanged(t *testing.T) {
@@ -246,7 +246,7 @@ func TestToClientOptions_ClonesSlicesAndMaps(t *testing.T) {
 }
 
 func TestFromClientResponse_AttachesRoute(t *testing.T) {
-	resp := &client.FluxResponse{Content: "hello"}
+	resp := &core.FluxResponse{Content: "hello"}
 	route := Route{Provider: "anthropic", Model: "claude-sonnet-4-20250514"}
 	out := fromClientResponse(resp, route)
 
@@ -277,7 +277,7 @@ func TestFromClientResponse_NilResponse(t *testing.T) {
 }
 
 func TestFromClientUsage_ReturnsUnchanged(t *testing.T) {
-	usage := &client.FluxUsage{PromptTokens: 10, CompletionTokens: 20, TotalTokens: 30}
+	usage := &core.FluxUsage{PromptTokens: 10, CompletionTokens: 20, TotalTokens: 30}
 	out := fromClientUsage(usage)
 	if out != usage {
 		t.Error("fromClientUsage should return the same pointer")

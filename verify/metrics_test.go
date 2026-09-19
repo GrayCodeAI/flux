@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 func approxEqual(a, b, eps float64) bool {
@@ -105,19 +105,19 @@ func TestRun_F1ScorePopulated(t *testing.T) {
 	cases := []Case{
 		{
 			ID:       "tool-case",
-			Messages: []client.FluxMessage{{Role: "user", Content: "call it"}},
+			Messages: []core.FluxMessage{{Role: "user", Content: "call it"}},
 			Expect:   Expectation{ToolName: "my_tool"},
 		},
 		{
 			ID:       "no-tool-case",
-			Messages: []client.FluxMessage{{Role: "user", Content: "no call"}},
+			Messages: []core.FluxMessage{{Role: "user", Content: "no call"}},
 			Expect:   Expectation{NonEmptyContent: true},
 		},
 	}
 
 	// All-correct: tool case calls the right tool; no-tool case has content.
-	p := &fakeProvider{name: "fake", responses: map[string]*client.FluxResponse{
-		"call it": {ToolCalls: []client.ToolCall{{Name: "my_tool", Arguments: map[string]any{}}}},
+	p := &fakeProvider{name: "fake", responses: map[string]*core.FluxResponse{
+		"call it": {ToolCalls: []core.ToolCall{{Name: "my_tool", Arguments: map[string]any{}}}},
 		"no call": {Content: "done"},
 	}}
 

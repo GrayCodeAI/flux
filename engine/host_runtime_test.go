@@ -14,7 +14,7 @@ import (
 	"github.com/GrayCodeAI/flux/credentials"
 )
 
-func TestRegisterCustomGatewayValidatesHostMetadata(t *testing.T) {
+func TestCustomGatewayOptionsValidateHostMetadata(t *testing.T) {
 	for _, test := range []struct {
 		name    string
 		gateway CustomGateway
@@ -28,20 +28,26 @@ func TestRegisterCustomGatewayValidatesHostMetadata(t *testing.T) {
 		{name: "built-in collision", gateway: CustomGateway{ID: "openai", BaseURL: "https://example.test/v1"}, want: "collides with built-in gateway"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			err := RegisterCustomGateway(test.gateway)
+			_, err := New(Options{StateDir: t.TempDir(), SecretStore: &credentials.MapStore{}, CustomGateways: []CustomGateway{test.gateway}})
 			if err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("RegisterCustomGateway() error = %v, want containing %q", err, test.want)
+				t.Fatalf("New() error = %v, want containing %q", err, test.want)
 			}
 		})
 	}
 }
 
-func TestRegisterCustomGatewayAcceptsSafeMetadata(t *testing.T) {
-	registerCustomGatewayForTest(t, CustomGateway{
+func TestCustomGatewayOptionsAcceptSafeMetadata(t *testing.T) {
+	eng, err := New(Options{StateDir: t.TempDir(), SecretStore: &credentials.MapStore{}, CustomGateways: []CustomGateway{{
 		ID:            "engine-contract-test",
 		BaseURL:       "https://example.test/v1",
 		CredentialEnv: "ENGINE_CONTRACT_TEST_API_KEY",
-	})
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := eng.customGateway("engine-contract-test"); !ok {
+		t.Fatal("custom gateway missing from Engine")
+	}
 }
 
 func TestParseInlineToolCallsNormalizesHermesCall(t *testing.T) {
@@ -116,14 +122,13 @@ func TestCustomGatewayUnknownToolModelUsesInjectedStoreForGenerateAndStream(t *t
 	}))
 	defer server.Close()
 
-	registerCustomGatewayForTest(t, CustomGateway{
-		ID: gatewayID, BaseURL: server.URL, CredentialEnv: envKey, DefaultModel: modelID,
-	})
 	store := &credentials.MapStore{}
 	if err := store.Set(context.Background(), credentials.AccountForEnv(envKey), "injected-secret"); err != nil {
 		t.Fatal(err)
 	}
-	eng, err := New(Options{StateDir: t.TempDir(), SecretStore: store, UseRegisteredCustomGateways: true})
+	eng, err := New(Options{StateDir: t.TempDir(), SecretStore: store, CustomGateways: []CustomGateway{{
+		ID: gatewayID, BaseURL: server.URL, CredentialEnv: envKey, DefaultModel: modelID,
+	}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,11 +191,10 @@ func TestCustomGatewayUnknownToolModelUsesInjectedStoreForGenerateAndStream(t *t
 
 func TestCustomGatewayDeclaredCapabilitiesAreEnforced(t *testing.T) {
 	const gatewayID = "custom-capability-contract"
-	registerCustomGatewayForTest(t, CustomGateway{
+	eng, err := New(Options{StateDir: t.TempDir(), SecretStore: &credentials.MapStore{}, CustomGateways: []CustomGateway{{
 		ID: gatewayID, BaseURL: "https://example.test/v1", DefaultModel: "custom/model",
 		Capabilities: &CustomGatewayCapabilities{Streaming: true, Tools: false},
-	})
-	eng, err := New(Options{StateDir: t.TempDir(), SecretStore: &credentials.MapStore{}, UseRegisteredCustomGateways: true})
+	}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,14 +212,13 @@ func TestCustomGatewayRejectsPlaceholderFromInjectedStore(t *testing.T) {
 		gatewayID = "custom-placeholder-contract"
 		envKey    = "CUSTOM_PLACEHOLDER_API_KEY"
 	)
-	registerCustomGatewayForTest(t, CustomGateway{
-		ID: gatewayID, BaseURL: "https://example.test/v1", CredentialEnv: envKey, DefaultModel: "custom/model",
-	})
 	store := &credentials.MapStore{}
 	if err := store.Set(context.Background(), credentials.AccountForEnv(envKey), "your-api-key-here"); err != nil {
 		t.Fatal(err)
 	}
-	eng, err := New(Options{StateDir: t.TempDir(), SecretStore: store, UseRegisteredCustomGateways: true})
+	eng, err := New(Options{StateDir: t.TempDir(), SecretStore: store, CustomGateways: []CustomGateway{{
+		ID: gatewayID, BaseURL: "https://example.test/v1", CredentialEnv: envKey, DefaultModel: "custom/model",
+	}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,24 +280,4 @@ type engineRoundTripFunc func(*http.Request) (*http.Response, error)
 
 func (fn engineRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return fn(req)
-}
-
-func registerCustomGatewayForTest(t *testing.T, gateway CustomGateway) {
-	t.Helper()
-	id := NormalizeProviderID(gateway.ID)
-	customGatewayRegistry.RLock()
-	previous, existed := customGatewayRegistry.gateways[id]
-	customGatewayRegistry.RUnlock()
-	if err := RegisterCustomGateway(gateway); err != nil {
-		t.Fatalf("RegisterCustomGateway() error = %v", err)
-	}
-	t.Cleanup(func() {
-		customGatewayRegistry.Lock()
-		defer customGatewayRegistry.Unlock()
-		if existed {
-			customGatewayRegistry.gateways[id] = previous
-			return
-		}
-		delete(customGatewayRegistry.gateways, id)
-	})
 }

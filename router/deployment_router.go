@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/flux/catalog"
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/llm"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 type DeploymentChoice struct {
@@ -32,7 +33,7 @@ type RoutingPolicy struct {
 
 type DeploymentAdapter struct {
 	DeploymentID  string
-	Provider      client.Provider
+	Provider      core.Provider
 	ModelMappings map[string]string
 }
 
@@ -68,7 +69,7 @@ type DeploymentRouter struct {
 	breakers    map[string]*CircuitBreaker
 }
 
-var _ client.Provider = (*DeploymentRouter)(nil)
+var _ core.Provider = (*DeploymentRouter)(nil)
 
 func NewDeploymentRouter(opts DeploymentRouterOptions) (*DeploymentRouter, error) {
 	if opts.Catalog == nil {
@@ -130,7 +131,7 @@ func (r *DeploymentRouter) Ping(ctx context.Context) error {
 	return fmt.Errorf("deployment router: no deployments configured")
 }
 
-func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.FluxMessage, opts client.ChatOptions) (*client.FluxResponse, error) {
+func (r *DeploymentRouter) Chat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.FluxResponse, error) {
 	target, err := r.resolveTarget(opts.Model)
 	if err != nil {
 		return nil, err
@@ -151,7 +152,11 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.FluxMessa
 		// re-selecting the same dead endpoint up to stage.Retries times.
 		recentlyFailed := ""
 		for attempt := 0; attempt < attempts; attempt++ {
-			choice := selectDeploymentChoice(choices, recentlyFailed)
+			choice, admitted := r.acquireDeploymentChoice(choices, recentlyFailed)
+			if !admitted {
+				lastErr = fmt.Errorf("stage %d has no available deployments", stageIndex)
+				break
+			}
 			resp, err := r.chatWithDeployment(ctx, messages, opts, target, choice.DeploymentID)
 			if err == nil {
 				r.recordSuccess(choice.DeploymentID)
@@ -174,13 +179,13 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []client.FluxMessa
 	return nil, fmt.Errorf("deployment router: all deployments failed for %q: %w", target.canonicalModelID, lastErr)
 }
 
-func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.FluxMessage, opts client.ChatOptions) (*client.StreamResult, error) {
+func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	target, err := r.resolveTarget(opts.Model)
 	if err != nil {
 		return nil, err
 	}
 	streamCtx, cancel := context.WithCancel(ctx)
-	out := make(chan client.FluxStreamEvent, 64)
+	out := make(chan core.FluxStreamEvent, 64)
 	go func() {
 		defer close(out)
 		var lastErr error
@@ -199,7 +204,11 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Flu
 			// up to stage.Retries times.
 			recentlyFailed := ""
 			for attempt := 0; attempt < attempts; attempt++ {
-				choice := selectDeploymentChoice(choices, recentlyFailed)
+				choice, admitted := r.acquireDeploymentChoice(choices, recentlyFailed)
+				if !admitted {
+					lastErr = fmt.Errorf("stage %d has no available deployments", stageIndex)
+					break
+				}
 				fallback, err := r.streamWithDeployment(streamCtx, out, messages, opts, target, choice.DeploymentID)
 				if err == nil {
 					r.recordSuccess(choice.DeploymentID)
@@ -209,7 +218,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Flu
 				r.recordFailure(choice.DeploymentID)
 				if !fallback {
 					select {
-					case out <- client.FluxStreamEvent{Type: "error", Error: err.Error()}:
+					case out <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
 					case <-streamCtx.Done():
 					}
 					return
@@ -219,7 +228,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Flu
 						break
 					}
 					select {
-					case out <- client.FluxStreamEvent{Type: "error", Error: err.Error()}:
+					case out <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
 					case <-streamCtx.Done():
 					}
 					return
@@ -231,11 +240,11 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []client.Flu
 			lastErr = fmt.Errorf("no route configured")
 		}
 		select {
-		case out <- client.FluxStreamEvent{Type: "error", Error: fmt.Sprintf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr)}:
+		case out <- core.FluxStreamEvent{Type: "error", Error: fmt.Sprintf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr)}:
 		case <-streamCtx.Done():
 		}
 	}()
-	return client.NewStreamResult(out, cancel), nil
+	return llm.NewStreamResult(out, "", cancel), nil
 }
 
 func (r *DeploymentRouter) Stats() map[string]int64 {
@@ -353,7 +362,7 @@ func (r *DeploymentRouter) automaticStages(canonicalModelID string) []RoutingSta
 	return []RoutingStage{{Deployments: choices}}
 }
 
-func (r *DeploymentRouter) eligibleChoices(target deploymentTarget, stage RoutingStage, opts client.ChatOptions) []DeploymentChoice {
+func (r *DeploymentRouter) eligibleChoices(target deploymentTarget, stage RoutingStage, opts core.ChatOptions) []DeploymentChoice {
 	var choices []DeploymentChoice
 	var toolCapable []DeploymentChoice
 	requiredTools := requestedServerTools(opts.Tools)
@@ -361,8 +370,8 @@ func (r *DeploymentRouter) eligibleChoices(target deploymentTarget, stage Routin
 		if choice.DeploymentID == "" || choice.Weight <= 0 {
 			continue
 		}
-		// Skip deployments with open circuit breakers.
-		if cb := r.getCircuitBreaker(choice.DeploymentID); !cb.Allow() {
+		// Filtering must not reserve the single half-open probe.
+		if cb := r.getCircuitBreaker(choice.DeploymentID); !cb.Ready() {
 			continue
 		}
 		offering, _, err := r.resolveOffering(target, choice.DeploymentID)
@@ -378,6 +387,26 @@ func (r *DeploymentRouter) eligibleChoices(target deploymentTarget, stage Routin
 		return toolCapable
 	}
 	return choices
+}
+
+// acquireDeploymentChoice selects and reserves an available deployment. A
+// different request may claim a half-open probe after filtering, so selection
+// retries the remaining candidates before giving up.
+func (r *DeploymentRouter) acquireDeploymentChoice(choices []DeploymentChoice, exclude string) (DeploymentChoice, bool) {
+	remaining := append([]DeploymentChoice(nil), choices...)
+	for len(remaining) > 0 {
+		choice := selectDeploymentChoice(remaining, exclude)
+		if r.getCircuitBreaker(choice.DeploymentID).Allow() {
+			return choice, true
+		}
+		for i, candidate := range remaining {
+			if candidate.DeploymentID == choice.DeploymentID {
+				remaining = append(remaining[:i], remaining[i+1:]...)
+				break
+			}
+		}
+	}
+	return DeploymentChoice{}, false
 }
 
 // getCircuitBreaker returns or lazily creates a circuit breaker for a deployment.
@@ -400,7 +429,7 @@ func (r *DeploymentRouter) getCircuitBreaker(deploymentID string) *CircuitBreake
 	return cb
 }
 
-func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []client.FluxMessage, opts client.ChatOptions, target deploymentTarget, deploymentID string) (*client.FluxResponse, error) {
+func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string) (*core.FluxResponse, error) {
 	offering, adapter, err := r.resolveOffering(target, deploymentID)
 	if err != nil {
 		return nil, err
@@ -409,7 +438,7 @@ func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []cl
 	return adapter.Provider.Chat(ctx, messages, nativeOpts)
 }
 
-func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- client.FluxStreamEvent, messages []client.FluxMessage, opts client.ChatOptions, target deploymentTarget, deploymentID string) (fallback bool, err error) {
+func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- core.FluxStreamEvent, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string) (fallback bool, err error) {
 	offering, adapter, err := r.resolveOffering(target, deploymentID)
 	if err != nil {
 		return true, err
@@ -421,7 +450,7 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 	}
 	defer stream.Close()
 	emitted := false
-	var buffered []client.FluxStreamEvent
+	var buffered []core.FluxStreamEvent
 	flush := func() {
 		for _, event := range buffered {
 			select {
@@ -522,7 +551,7 @@ func materializeTemplate(tmpl catalog.ModelOfferingTemplate, nativeID string) ca
 	}
 }
 
-func optsForOffering(opts client.ChatOptions, offering catalog.ModelOffering) client.ChatOptions {
+func optsForOffering(opts core.ChatOptions, offering catalog.ModelOffering) core.ChatOptions {
 	copied := opts
 	copied.Model = offering.NativeModelID
 	copied.Provider = offering.DeploymentID
@@ -532,11 +561,11 @@ func optsForOffering(opts client.ChatOptions, offering catalog.ModelOffering) cl
 	return copied
 }
 
-func filterTools(tools []client.FluxTool, offering catalog.ModelOffering) []client.FluxTool {
+func filterTools(tools []core.FluxTool, offering catalog.ModelOffering) []core.FluxTool {
 	if len(offering.Capabilities.ServerTools) == 0 {
 		return tools
 	}
-	filtered := make([]client.FluxTool, 0, len(tools))
+	filtered := make([]core.FluxTool, 0, len(tools))
 	for _, tool := range tools {
 		if offering.Capabilities.ServerTools[tool.Name] == catalog.CapabilityUnsupported ||
 			offering.Capabilities.ServerTools[tool.Name] == catalog.CapabilityUnknown {
@@ -547,7 +576,7 @@ func filterTools(tools []client.FluxTool, offering catalog.ModelOffering) []clie
 	return filtered
 }
 
-func requestedServerTools(tools []client.FluxTool) []string {
+func requestedServerTools(tools []core.FluxTool) []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, tool := range tools {
@@ -607,7 +636,7 @@ func selectDeploymentChoice(choices []DeploymentChoice, exclude string) Deployme
 	return alternatives[len(alternatives)-1]
 }
 
-func isOutputEvent(event client.FluxStreamEvent) bool {
+func isOutputEvent(event core.FluxStreamEvent) bool {
 	return event.Content != "" || event.Thinking != "" || event.ToolCall != nil || event.Type == "content" || event.Type == "thinking" || event.Type == "tool_call"
 }
 

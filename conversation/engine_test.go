@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/storage"
 )
 
@@ -16,16 +16,16 @@ type mockStreamProvider struct{}
 
 func (m *mockStreamProvider) Name() string                 { return "mock" }
 func (m *mockStreamProvider) Ping(_ context.Context) error { return nil }
-func (m *mockStreamProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
-	return &client.FluxResponse{Content: "hello", FinishReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 5}}, nil
+func (m *mockStreamProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
+	return &core.FluxResponse{Content: "hello", FinishReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 5}}, nil
 }
 
-func (m *mockStreamProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.FluxStreamEvent, 3)
-	ch <- client.FluxStreamEvent{Type: "content", Content: "hello"}
-	ch <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 5}}
+func (m *mockStreamProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
+	ch := make(chan core.FluxStreamEvent, 3)
+	ch <- core.FluxStreamEvent{Type: "content", Content: "hello"}
+	ch <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 5}}
 	close(ch)
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 
 func testEngine(t *testing.T) *Engine {
@@ -139,17 +139,17 @@ type maxTokensMockProvider struct {
 func (m *maxTokensMockProvider) Name() string                 { return "max-tokens-mock" }
 func (m *maxTokensMockProvider) Ping(_ context.Context) error { return nil }
 
-func (m *maxTokensMockProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+func (m *maxTokensMockProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++
 	if m.callCount == 1 {
-		return &client.FluxResponse{Content: "part 1 ", FinishReason: "max_tokens", Usage: &client.FluxUsage{CompletionTokens: 50}}, nil
+		return &core.FluxResponse{Content: "part 1 ", FinishReason: "max_tokens", Usage: &core.FluxUsage{CompletionTokens: 50}}, nil
 	}
-	return &client.FluxResponse{Content: "part 2", FinishReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 30}}, nil
+	return &core.FluxResponse{Content: "part 2", FinishReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 30}}, nil
 }
 
-func (m *maxTokensMockProvider) StreamChat(_ context.Context, msgs []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (m *maxTokensMockProvider) StreamChat(_ context.Context, msgs []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++
@@ -161,13 +161,13 @@ func (m *maxTokensMockProvider) StreamChat(_ context.Context, msgs []client.Flux
 		content = "part 2"
 		stopReason = "end_turn"
 	}
-	ch := make(chan client.FluxStreamEvent, 4)
-	ch <- client.FluxStreamEvent{Type: "content", Content: content}
-	ch <- client.FluxStreamEvent{Type: "done", StopReason: stopReason, Usage: &client.FluxUsage{CompletionTokens: 30}}
+	ch := make(chan core.FluxStreamEvent, 4)
+	ch <- core.FluxStreamEvent{Type: "content", Content: content}
+	ch <- core.FluxStreamEvent{Type: "done", StopReason: stopReason, Usage: &core.FluxUsage{CompletionTokens: 30}}
 	close(ch)
-	sr := &client.StreamResult{Events: ch}
+	sr := &core.StreamResult{Events: ch}
 	// Wrap Close so we can count invocations.
-	return &client.StreamResult{
+	return &core.StreamResult{
 		Events:    sr.Events,
 		RequestID: sr.RequestID,
 	}, nil
@@ -267,17 +267,17 @@ func (b *blockingMockProvider) Name() string {
 
 func (b *blockingMockProvider) Ping(_ context.Context) error { return nil }
 
-func (b *blockingMockProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
-	return &client.FluxResponse{Content: "done", FinishReason: "end_turn"}, nil
+func (b *blockingMockProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
+	return &core.FluxResponse{Content: "done", FinishReason: "end_turn"}, nil
 }
 
-func (b *blockingMockProvider) StreamChat(ctx context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.FluxStreamEvent)
+func (b *blockingMockProvider) StreamChat(ctx context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
+	ch := make(chan core.FluxStreamEvent)
 	// Close the channel when the context is done — simulating a provider
 	// that respects context cancellation.
 	go func() {
 		<-ctx.Done()
 		close(ch)
 	}()
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }

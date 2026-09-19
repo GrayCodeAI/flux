@@ -37,11 +37,6 @@ func ListCredentialProviders() []CredentialProviderOption {
 	return config.ListCredentialProviders()
 }
 
-// InferCredentialsFromAPIKey is deprecated; use InferenceForProvider after gateway selection.
-func InferCredentialsFromAPIKey(ctx context.Context, secret string) []CredentialInference {
-	return config.InferCredentialsFromAPIKey(ctx, secret)
-}
-
 // ProbeCredential validates a key against the provider HTTP API.
 func ProbeCredential(ctx context.Context, envKey, secret string) error {
 	return config.ProbeCredential(ctx, envKey, secret)

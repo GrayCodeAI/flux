@@ -7,7 +7,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Added
+- Versioned instance-local deployment routing and signed peer-manifest
+  replication. Replicas validate whole snapshots, resolve credentials locally,
+  and continue serving the last valid route during refresh failures.
+- Strict explicit-state replica constructor in `runtime`; no process-global
+  credential lookup is required for the replicated route.
+- Client-owned OpenAI-compatible provider registration through
+  `FluxClient.RegisterCustomProvider`.
+
+### Fixed
+- Circuit breakers now admit at most one concurrent half-open probe and do
+  not reserve probes during route filtering.
+
 ### Changed
+- Removed process-global custom gateway and dynamic provider registration,
+  the ambient `OPENAI_API_BASE` auto-registration path, and no-op API-key
+  prefix inference. Custom gateways and endpoints now require explicit,
+  instance-local configuration.
 - **Renamed host product references to rho.** Host config paths (`~/.rho/`),
   the `rho_build`/`rho_build_concise` tool namespaces, the `rho_response`
   schema name, and the `EXPORT_RHO_FIXTURE` env var now use the rho identity.
@@ -34,7 +51,7 @@ v0.0.1 of `github.com/GrayCodeAI/flux`.
 
 ### Changed — Shared MiMo auth-retry helper (2026-08-16)
 - **Deduplicated `doRequestWithMimoAuthRetry`** between the OpenAI and
-  Anthropic adapters into one `doWithMimoAuthRetry` helper (client/adapters,
+  Anthropic adapters into one `doWithMimoAuthRetry` helper (provider/adapters,
   next to `mimoAuthHeaders`); the two adapters now differ only in the Bearer
   headers they apply to the 401 retry. No behavior change.
 
@@ -47,7 +64,7 @@ v0.0.1 of `github.com/GrayCodeAI/flux`.
 
 ### Fixed — Non-fatal stream diagnostics no longer fail the stream (2026-08-16)
 - **Stream health diagnostics are now warnings, not terminal errors.**
-  `client/core`'s OpenAI stream processor emits end-of-stream diagnostics
+  `provider/core`'s OpenAI stream processor emits end-of-stream diagnostics
   (reasoning-only responses, empty responses) as error-type events followed
   by the terminal `done` — but the engine mapped *every* error event to
   `provider_unavailable`, stopped forwarding, and set `Err()` even though
@@ -100,7 +117,7 @@ v0.0.1 of `github.com/GrayCodeAI/flux`.
 
 ### Changed
 - **Version re-baselined to `0.1.0`** in `flux.go` (`const Version`) and
-  `client/client.go` (`var Version`, used in the `User-Agent` header).
+  `provider/provider.go` (`var Version`, used in the `User-Agent` header).
 
 ### Added — Round 2 ecosystem improvements (2026-06-01)
 - **`internal/shrink`** package: tool-description shrink for LLM tool
@@ -126,9 +143,9 @@ v0.0.1 of `github.com/GrayCodeAI/flux`.
 ### Added — Production Hardening (top-50 OSS parity)
 - Same-style hardening pass already on this branch:
   strict `golangci-lint` v2 config, unchecked-error fixes across
-  `observability.go`, `sdk/go/client.go`, `storage/dag.go`,
+  `observability.go`, `sdk/go/provider.go`, `storage/dag.go`,
   `storage/sqlite.go`, dead-code removal, and gofmt cleanup of the
-  residual blank-line drift in `client/client.go`.
+  residual blank-line drift in `provider/provider.go`.
 - `CONTRIBUTING.md` — development setup, branch flow, conventional
   commits, test/lint requirements.
 - `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1.

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/storage"
 )
 
@@ -19,16 +19,16 @@ type mockProv struct{}
 
 func (m *mockProv) Name() string                 { return "mock" }
 func (m *mockProv) Ping(_ context.Context) error { return nil }
-func (m *mockProv) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
-	return &client.FluxResponse{Content: "hi", FinishReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 2}}, nil
+func (m *mockProv) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
+	return &core.FluxResponse{Content: "hi", FinishReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 2}}, nil
 }
 
-func (m *mockProv) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.FluxStreamEvent, 2)
-	ch <- client.FluxStreamEvent{Type: "content", Content: "hi"}
-	ch <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 2}}
+func (m *mockProv) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
+	ch := make(chan core.FluxStreamEvent, 2)
+	ch <- core.FluxStreamEvent{Type: "content", Content: "hi"}
+	ch <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 2}}
 	close(ch)
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 
 func testServer(t *testing.T) *httptest.Server {

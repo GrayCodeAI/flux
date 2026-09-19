@@ -20,7 +20,7 @@ import (
 // Anthropic-primary:
 //   anthropic, bedrock
 //
-// Rule: if a vendor is OpenAI-compatible only, do not invent an Anthropic client.
+// Rule: if a vendor is OpenAI-compatible only, do not invent an Anthropic provider.
 // If a vendor documents both, rho uses OpenAI only — never both protocols for the
 // same provider request (no OpenAI→Anthropic error fallback).
 

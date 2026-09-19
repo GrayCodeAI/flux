@@ -33,7 +33,7 @@ type VirtualKey struct {
 }
 
 // BudgetStore is a SQLite-backed store for virtual keys, their budgets, and a
-// per-request cost ledger. It satisfies the client.BudgetStore interface
+// per-request cost ledger. It satisfies the provider.BudgetStore interface
 // structurally (CheckBudget + RecordUsage) without importing the client package.
 //
 // It is safe for concurrent use (single underlying connection, like SQLiteStore).
@@ -154,7 +154,7 @@ func (s *BudgetStore) ProviderSecret(ctx context.Context, virtualKey, provider s
 	return key, err
 }
 
-// CheckBudget implements the client.BudgetStore contract: it returns
+// CheckBudget implements the provider.BudgetStore contract: it returns
 // ErrBudgetExceeded if charging estCostUSD would exceed the key's limit,
 // ErrUnknownVirtualKey if the key is unknown, or nil otherwise.
 func (s *BudgetStore) CheckBudget(ctx context.Context, virtualKey string, estCostUSD float64) error {
@@ -178,7 +178,7 @@ func (s *BudgetStore) CheckBudget(ctx context.Context, virtualKey string, estCos
 	return nil
 }
 
-// RecordUsage implements the client.BudgetStore contract: it appends a ledger
+// RecordUsage implements the provider.BudgetStore contract: it appends a ledger
 // row and increments the running totals atomically.
 func (s *BudgetStore) RecordUsage(ctx context.Context, virtualKey string, costUSD float64, tokensIn, tokensOut int) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)

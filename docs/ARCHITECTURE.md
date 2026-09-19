@@ -28,17 +28,24 @@ flux/
 ├── llm/                     Host-facing DTOs + Provider port (engine re-exports)
 ├── graph/                   Portable execution-graph vocabulary
 ├── tools/                   Tool-call/result contracts
-├── client/
-│   ├── core/                Provider-neutral wire, stream, retry, transport
-│   ├── adapters/            Provider adapters + registry (anthropic/openai/gemini/bedrock/vertex/azure + compat)
-│   ├── embeddings/          Embedding clients + cache
-│   ├── client.go/stream.go/retry.go/cache.go/semantic_cache.go/fallback.go/ratelimit.go/errors.go
-├── catalog/                 Model catalog — pricing, context windows, tiers (28 providers)
+├── provider/                Client composition root
+│   ├── core/                Provider-neutral contracts, stream and transport
+│   ├── adapters/            Provider wire-protocol adapters
+│   ├── batch/ cache/        Batch execution and response caches
+│   ├── embeddings/ media/   Embeddings and multimodal features
+│   ├── resilience/          Retry, fallback, rate limits and health
+│   └── observability/       Usage, metrics, tracing and recording
+├── catalog/                 Model catalog and capabilities
 ├── config/ + credentials/   Config + keyring/env credential resolution
-├── router/ + runtime/       Route policy + runtime resolution
+├── router/                  Deployment policy and instance-local circuit breakers
+│   └── controlplane/        Versioned, signed peer manifests and replicas
+├── runtime/                 Host-facing construction
 ├── conversation/ + storage/ Conversation graph (branching DAG) + SQLite store
 └── internal/api|cache|health|observability  HTTP server, cache, health, OTel
 ```
+
+The current distributed-routing foundation and its limits are described in
+[Decentralized Flux routing](architecture/DECENTRALIZED-FLUX.md).
 
 ---
 
@@ -99,7 +106,7 @@ Auto-detects active provider from env vars in priority order:
 All responses are streamed via **SSE**. Blocking responses wrap the stream internally.
 
 ```go
-sr, err := client.StreamChat(ctx, messages, opts)
+sr, err := provider.StreamChat(ctx, messages, opts)
 defer sr.Close()
 for event := range sr.Events() { ... }
 ```

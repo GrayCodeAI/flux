@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/storage"
 )
 
@@ -17,16 +17,16 @@ func (orphanMockProvider) Ping(_ context.Context) error {
 	return nil
 }
 
-func (orphanMockProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
-	return &client.FluxResponse{Content: "ok", FinishReason: "end_turn"}, nil
+func (orphanMockProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
+	return &core.FluxResponse{Content: "ok", FinishReason: "end_turn"}, nil
 }
 
-func (orphanMockProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
-	ch := make(chan client.FluxStreamEvent, 2)
-	ch <- client.FluxStreamEvent{Type: "content", Content: "ok"}
-	ch <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn"}
+func (orphanMockProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
+	ch := make(chan core.FluxStreamEvent, 2)
+	ch <- core.FluxStreamEvent{Type: "content", Content: "ok"}
+	ch <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn"}
 	close(ch)
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 
 func TestInjectSyntheticToolResults_InjectsAfterOrphanNode(t *testing.T) {

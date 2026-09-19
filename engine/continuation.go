@@ -5,20 +5,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/llm"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // streamWithContinuation implements continuation at the stable engine layer.
-// It deliberately does not depend on client.StreamChatWithContinuation, which
-// is a deprecated compatibility helper scheduled for removal in Flux v0.3.
-func streamWithContinuation(ctx context.Context, provider client.Provider, messages []client.FluxMessage, opts client.ChatOptions, limits Limits) (*client.StreamResult, error) {
+// It owns continuation at the engine boundary so provider adapters stay
+// focused on one request/response exchange.
+func streamWithContinuation(ctx context.Context, provider core.Provider, messages []core.FluxMessage, opts core.ChatOptions, limits Limits) (*core.StreamResult, error) {
 	maxContinuations := limits.MaxContinuations
 	if maxContinuations <= 0 {
-		maxContinuations = client.DefaultContinuationConfig().MaxContinuations
+		maxContinuations = core.DefaultContinuationConfig().MaxContinuations
 	}
 	maxTotalTokens := limits.MaxTotalOutputTokens
 	if maxTotalTokens <= 0 {
-		maxTotalTokens = client.DefaultContinuationConfig().MaxTotalTokens
+		maxTotalTokens = core.DefaultContinuationConfig().MaxTotalTokens
 	}
 	streamCtx, cancel := context.WithCancel(ctx)
 	first, err := provider.StreamChat(streamCtx, messages, opts)
@@ -26,19 +27,19 @@ func streamWithContinuation(ctx context.Context, provider client.Provider, messa
 		cancel()
 		return nil, err
 	}
-	out := make(chan client.FluxStreamEvent, 64)
+	out := make(chan core.FluxStreamEvent, 64)
 	go func() {
 		defer close(out)
 		defer cancel()
 		current := first
 		requestID := first.RequestID
-		msgs := append([]client.FluxMessage(nil), messages...)
+		msgs := append([]core.FluxMessage(nil), messages...)
 		totalOutput := 0
 
 		for attempt := 0; ; attempt++ {
 			var segment strings.Builder
 			hadToolCall := false
-			var terminal client.FluxStreamEvent
+			var terminal core.FluxStreamEvent
 			for event := range current.Events {
 				switch event.Type {
 				case "content":
@@ -63,25 +64,25 @@ func streamWithContinuation(ctx context.Context, provider client.Provider, messa
 			needsContinuation := terminal.StopReason == "max_tokens" || terminal.StopReason == "length"
 			if !needsContinuation || hadToolCall || totalOutput >= maxTotalTokens || attempt >= maxContinuations {
 				if terminal.Type == "" {
-					terminal = client.FluxStreamEvent{Type: "done", StopReason: terminal.StopReason, RequestID: requestID}
+					terminal = core.FluxStreamEvent{Type: "done", StopReason: terminal.StopReason, RequestID: requestID}
 				}
 				_ = emitEngineEvent(streamCtx, out, terminal)
 				return
 			}
 
-			if !emitEngineEvent(streamCtx, out, client.FluxStreamEvent{
+			if !emitEngineEvent(streamCtx, out, core.FluxStreamEvent{
 				Type: "continuation", Content: requestID, StopReason: strconv.Itoa(attempt + 1),
 			}) {
 				return
 			}
 			msgs = append(
 				msgs,
-				client.FluxMessage{Role: "assistant", Content: segment.String()},
-				client.FluxMessage{Role: "user", Content: "Continue."},
+				core.FluxMessage{Role: "assistant", Content: segment.String()},
+				core.FluxMessage{Role: "user", Content: "Continue."},
 			)
 			next, err := provider.StreamChat(streamCtx, msgs, opts)
 			if err != nil {
-				_ = emitEngineEvent(streamCtx, out, client.FluxStreamEvent{Type: "error", Error: err.Error(), RequestID: requestID})
+				_ = emitEngineEvent(streamCtx, out, core.FluxStreamEvent{Type: "error", Error: err.Error(), RequestID: requestID})
 				return
 			}
 			current = next
@@ -90,10 +91,10 @@ func streamWithContinuation(ctx context.Context, provider client.Provider, messa
 			}
 		}
 	}()
-	return client.NewStreamResultWithRequestID(out, first.RequestID, cancel), nil
+	return llm.NewStreamResult(out, first.RequestID, cancel), nil
 }
 
-func emitEngineEvent(ctx context.Context, out chan<- client.FluxStreamEvent, event client.FluxStreamEvent) bool {
+func emitEngineEvent(ctx context.Context, out chan<- core.FluxStreamEvent, event core.FluxStreamEvent) bool {
 	select {
 	case out <- event:
 		return true

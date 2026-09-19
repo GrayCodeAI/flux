@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/types"
 )
 
@@ -16,28 +16,28 @@ type mockProvider struct {
 	err  error
 }
 
-func (m *mockProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+func (m *mockProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &client.FluxResponse{Content: "from " + m.name}, nil
+	return &core.FluxResponse{Content: "from " + m.name}, nil
 }
 
-func (m *mockProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (m *mockProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	ch := make(chan client.FluxStreamEvent, 1)
-	ch <- client.FluxStreamEvent{Type: "done"}
+	ch := make(chan core.FluxStreamEvent, 1)
+	ch <- core.FluxStreamEvent{Type: "done"}
 	close(ch)
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 func (m *mockProvider) Ping(_ context.Context) error { return m.err }
 func (m *mockProvider) Name() string                 { return m.name }
 
 func TestRouterImplementsProvider(t *testing.T) {
 	t.Parallel()
-	var _ client.Provider = (*Router)(nil)
+	var _ core.Provider = (*Router)(nil)
 }
 
 func TestWeightedSelection(t *testing.T) {
@@ -48,7 +48,7 @@ func TestWeightedSelection(t *testing.T) {
 
 	counts := map[string]int{}
 	for i := 0; i < 1000; i++ {
-		resp, _ := r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+		resp, _ := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 		counts[resp.Content]++
 	}
 	if counts["from p1"] < 600 {
@@ -63,9 +63,9 @@ func TestFallbackOnError(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1", err: fmt.Errorf("HTTP 500 internal")}
 	p2 := &mockProvider{name: "p2"}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	resp, err := r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	resp, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,9 +78,9 @@ func TestAllProvidersFail(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1", err: fmt.Errorf("HTTP 500")}
 	p2 := &mockProvider{name: "p2", err: fmt.Errorf("HTTP 502")}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -90,9 +90,9 @@ func TestNonTransientNoFallback(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1", err: fmt.Errorf("HTTP 401 unauthorized")}
 	p2 := &mockProvider{name: "p2"}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if err == nil {
 		t.Error("expected error — 401 should not fallback")
 	}
@@ -148,7 +148,7 @@ func TestOnRetryCallback(t *testing.T) {
 	cfg.OnRetry = func(e RetryEvent) { calls++ }
 	r := New([]RouteEntry{{Provider: p, Weight: 100}}, nil, &cfg)
 
-	r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if calls != 2 {
 		t.Errorf("expected 2 OnRetry calls, got %d", calls)
 	}
@@ -159,7 +159,7 @@ func TestToolFilter(t *testing.T) {
 	f := NewToolFilter(map[string][]string{
 		"claude-3": {"web_search"},
 	})
-	tools := []client.FluxTool{
+	tools := []core.FluxTool{
 		{Name: "web_search", Description: "search"},
 		{Name: "code_exec", Description: "exec"},
 		{Name: "my_func", Description: "custom", Parameters: map[string]interface{}{"type": "object"}},
@@ -181,9 +181,9 @@ func TestStreamFallback(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1", err: fmt.Errorf("HTTP 503")}
 	p2 := &mockProvider{name: "p2"}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	sr, err := r.StreamChat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	sr, err := r.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestNewStatsInitialized(t *testing.T) {
 	p1 := &mockProvider{name: "alpha"}
 	p2 := &mockProvider{name: "beta"}
 	fb := &mockProvider{name: "gamma"}
-	r := New([]RouteEntry{{Provider: p1, Weight: 50}, {Provider: p2, Weight: 50}}, []client.Provider{fb}, nil)
+	r := New([]RouteEntry{{Provider: p1, Weight: 50}, {Provider: p2, Weight: 50}}, []core.Provider{fb}, nil)
 
 	stats := r.Stats()
 	for _, name := range []string{"alpha", "beta", "gamma"} {
@@ -292,7 +292,7 @@ func TestPingFirstEntryFails(t *testing.T) {
 func TestPingFallbackOnly(t *testing.T) {
 	t.Parallel()
 	fb := &mockProvider{name: "fallback"}
-	r := New(nil, []client.Provider{fb}, nil)
+	r := New(nil, []core.Provider{fb}, nil)
 
 	if err := r.Ping(context.Background()); err != nil {
 		t.Errorf("Ping() error = %v", err)
@@ -316,10 +316,10 @@ func TestStats(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1"}
 	p2 := &mockProvider{name: "p2"}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
 	for i := 0; i < 5; i++ {
-		r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+		r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	}
 
 	stats := r.Stats()
@@ -332,10 +332,10 @@ func TestStatsAfterFallback(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1", err: fmt.Errorf("HTTP 503")}
 	p2 := &mockProvider{name: "p2"}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
 	for i := 0; i < 3; i++ {
-		r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+		r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	}
 
 	stats := r.Stats()
@@ -368,7 +368,7 @@ func TestContextCancellationDuringRetry(t *testing.T) {
 		cancel()
 	}()
 
-	_, err := r.Chat(ctx, []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.Chat(ctx, []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if err == nil {
 		t.Fatal("expected error from cancelled context")
 	}
@@ -417,9 +417,9 @@ func TestStreamNonTransientNoFallback(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1", err: fmt.Errorf("HTTP 401 unauthorized")}
 	p2 := &mockProvider{name: "p2"}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.StreamChat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if err == nil {
 		t.Error("expected error — 401 should not fallback on stream")
 	}
@@ -429,9 +429,9 @@ func TestStreamAllProvidersFail(t *testing.T) {
 	t.Parallel()
 	p1 := &mockProvider{name: "p1", err: fmt.Errorf("HTTP 500")}
 	p2 := &mockProvider{name: "p2", err: fmt.Errorf("HTTP 502")}
-	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []client.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	r := New([]RouteEntry{{Provider: p1, Weight: 100}}, []core.Provider{p2}, &RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
 
-	_, err := r.StreamChat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{})
+	_, err := r.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{})
 	if err == nil {
 		t.Error("expected error when all providers fail")
 	}
@@ -465,8 +465,7 @@ func TestCircuitBreakerBasicFlow(t *testing.T) {
 	if !cb.Allow() {
 		t.Error("circuit should allow after cooldown")
 	}
-	// Allow() is a pure predicate and no longer transitions state.
-	// A successful probe resets to Closed.
+	// A successful half-open probe resets the circuit to Closed.
 	cb.Success()
 	if cb.State() != CircuitClosed {
 		t.Error("should be closed after successful probe")

@@ -34,7 +34,7 @@ GOVULNCHECK  := $(GOBIN_DIR)/govulncheck
 
 boundaries: ## Enforce support-repo import boundaries.
 	bash ./scripts/check-ecosystem-boundaries.sh
-	bash ./scripts/check-client-layering.sh
+	bash ./scripts/check-provider-layering.sh
 
 .PHONY: check-replace
 check-replace: ## Fail if go.mod has local replace directives (run before tagging)

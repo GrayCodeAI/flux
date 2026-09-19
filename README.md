@@ -56,7 +56,7 @@ Hosts may import exactly four packages:
 | `graph` | the portable execution-graph vocabulary |
 | `tools` | tool-call and tool-result contracts |
 
-Everything else is engine-internal: `client`, `catalog`, `config`,
+Everything else is engine-internal: `provider`, `catalog`, `config`,
 `credentials`, `router`, `runtime`, and their subpackages are not shared
 contracts. Enforced by `rho/scripts/check-flux-engine-boundary.sh`
 and two Go AST tests in `rho/internal/testaudit/`.
@@ -70,29 +70,44 @@ and two Go AST tests in `rho/internal/testaudit/`.
 go get github.com/GrayCodeAI/flux
 ```
 
-Requires Go 1.26+. Minimal dependencies (UUID, OpenTelemetry, SQLite, keyring).
+Requires Go 1.26+ and a configured provider credential. Minimal dependencies
+(UUID, OpenTelemetry, SQLite, keyring).
 
 ```go
-import "github.com/GrayCodeAI/flux/engine"
+import (
+	"context"
+	"fmt"
+
+    "github.com/GrayCodeAI/flux/engine"
+)
 
 // Hosts (like rho) must use the stable engine facade
-eng := engine.New(engine.Config{Provider: engine.DetectProvider()})
+eng, err := engine.New(engine.Options{})
+if err != nil { panic(err) }
 
-sr, err := eng.StreamChat(ctx, messages, engine.ChatOptions{
-    Model: "claude-sonnet-4-6",
+sr, err := eng.Stream(context.Background(), engine.GenerateRequest{
+    Messages: []engine.Message{{Role: "user", Content: "Hello"}},
+    Requirements: engine.Requirements{Streaming: true},
+    Preference: engine.Preference{
+        PreferredProvider: "anthropic",
+        PreferredModelID: "anthropic/claude-sonnet-4-6",
+    },
 })
+if err != nil { panic(err) }
 defer sr.Close()
 
-for evt := range sr.Events {
-    switch evt.Type {
-    case "content":   // stream text
-    case "tool_call": // execute tool
-    case "done":      // response complete
+for sr.Next() {
+    if evt := sr.Event(); evt.Type == engine.EventContentDelta {
+        fmt.Print(evt.Content)
     }
 }
+if err := sr.Err(); err != nil { panic(err) }
 ```
 
-Legacy `client.NewFluxClient` still works but is not the host contract — see `docs/architecture/HOST-ENGINE-BOUNDARY.md`.
+Provider construction lives under [`provider/`](provider/); hosts use the
+stable [`engine`](engine/) contract. See
+[`docs/architecture/HOST-ENGINE-BOUNDARY.md`](docs/architecture/HOST-ENGINE-BOUNDARY.md)
+and the [feature-oriented architecture](docs/architecture/FEATURE-MONOREPO.md).
 
 ## Features
 
@@ -224,7 +239,7 @@ Runtime auto-detection uses a separate priority order for chat when no deploymen
 ### Basic Chat
 
 ```go
-resp, err := c.Chat(ctx, messages, client.ChatOptions{
+resp, err := c.Chat(ctx, messages, llm.ChatOptions{
     Model: "gpt-4o",
 })
 ```
@@ -233,16 +248,16 @@ resp, err := c.Chat(ctx, messages, client.ChatOptions{
 
 ```go
 // Auto-continues when max_tokens is hit
-resp, err := client.ChatWithContinuation(ctx, provider, messages,
-    client.ChatOptions{Model: model},
-    client.DefaultContinuationConfig(),
+resp, err := provider.ChatWithContinuation(ctx, provider, messages,
+    llm.ChatOptions{Model: model},
+    core.DefaultContinuationConfig(),
 )
 ```
 
 ### Mock Provider for Testing
 
 ```go
-mock := client.NewMockProvider(client.MockModeFixed)
+mock := provider.NewMockProvider(provider.MockModeFixed)
 mock.Response = "Here is the code you asked for..."
 
 resp, _ := mock.Chat(ctx, messages, opts)
@@ -275,7 +290,7 @@ config.SaveProviderConfig(cfg, "")               // save changes
 ```
 flux/
 ├── engine/                 # Stable host-facing facade and provider-neutral DTOs
-├── client/                 # Backwards-compatible public client facade
+├── provider/               # Provider runtime and feature packages
 │   ├── core/               # Provider-neutral wire, stream, retry, and transport primitives
 │   ├── adapters/           # Provider protocol adapters and construction registry
 │   └── embeddings/         # Embedding clients, cache, and defaults
