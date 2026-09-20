@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/conversation"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/google/uuid"
 )
 
@@ -332,13 +332,13 @@ func splitOpenAIMessages(messages []openAIChatMessage) (system, prompt string) {
 }
 
 // openAIToolsToFlux converts OpenAI function/tool declarations to flux tools.
-func openAIToolsToFlux(tools []openAITool) []client.FluxTool {
+func openAIToolsToFlux(tools []openAITool) []core.FluxTool {
 	if len(tools) == 0 {
 		return nil
 	}
-	out := make([]client.FluxTool, 0, len(tools))
+	out := make([]core.FluxTool, 0, len(tools))
 	for _, t := range tools {
-		out = append(out, client.FluxTool{
+		out = append(out, core.FluxTool{
 			Name:        t.Function.Name,
 			Description: t.Function.Description,
 			Parameters:  t.Function.Parameters,

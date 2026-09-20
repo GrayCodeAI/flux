@@ -3,7 +3,8 @@ package runtime
 import (
 	"context"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // ChatTransportOpts supplies host-side overrides while transport ownership
@@ -16,7 +17,7 @@ type ChatTransportOpts struct {
 // into their local session/client abstractions.
 type ChatTransport struct {
 	Selection SelectionState
-	Provider  client.Provider
+	Provider  core.Provider
 }
 
 // ResolveChatTransport resolves the effective selection and constructs the
@@ -58,10 +59,10 @@ func resolveChatTransportSelection(ctx context.Context, selection SelectionState
 	return transport, nil
 }
 
-func directChatProvider(_ context.Context, primary string) client.Provider {
+func directChatProvider(_ context.Context, primary string) core.Provider {
 	primary = NormalizeProviderID(primary)
 	if primary == "" {
 		return nil
 	}
-	return client.NewLazyProvider(&client.FluxConfig{Provider: primary})
+	return provider.NewLazyProvider(&core.FluxConfig{Provider: primary})
 }

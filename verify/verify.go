@@ -1,11 +1,11 @@
 // Package verify provides a data-driven conformance harness that certifies a
 // provider behaves correctly before it is relied on in the catalog.
 //
-// It feeds a set of canonical chat/tool requests to any client.Provider, scores
+// It feeds a set of canonical chat/tool requests to any core.Provider, scores
 // each response against declared expectations (non-empty content, expected tool
 // call, valid JSON arguments, …), and produces a report. Because it takes the
 // Provider interface, the same suite can be run against a live endpoint or
-// against a client.RecorderProvider replaying a recorded baseline cassette —
+// against a provider.RecorderProvider replaying a recorded baseline cassette —
 // the latter giving a cheap, deterministic regression check without burning
 // tokens.
 //
@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // Expectation declares what a correct response to a Case looks like.
@@ -39,8 +39,8 @@ type Expectation struct {
 // Case is a single canonical request plus its expectation.
 type Case struct {
 	ID       string
-	Messages []client.FluxMessage
-	Tools    []client.FluxTool
+	Messages []core.FluxMessage
+	Tools    []core.FluxTool
 	Expect   Expectation
 }
 
@@ -75,7 +75,7 @@ func (r Report) Score() float64 {
 }
 
 // Run executes every case against p and scores the responses.
-func Run(ctx context.Context, p client.Provider, cases []Case) Report {
+func Run(ctx context.Context, p core.Provider, cases []Case) Report {
 	rep := Report{Provider: p.Name(), Total: len(cases), Results: make([]CaseResult, 0, len(cases))}
 	for _, c := range cases {
 		res := runCase(ctx, p, c)
@@ -88,10 +88,10 @@ func Run(ctx context.Context, p client.Provider, cases []Case) Report {
 	return rep
 }
 
-func runCase(ctx context.Context, p client.Provider, c Case) CaseResult {
+func runCase(ctx context.Context, p core.Provider, c Case) CaseResult {
 	res := CaseResult{ID: c.ID}
 	start := time.Now()
-	resp, err := p.Chat(ctx, c.Messages, client.ChatOptions{Tools: c.Tools})
+	resp, err := p.Chat(ctx, c.Messages, core.ChatOptions{Tools: c.Tools})
 	res.Latency = time.Since(start)
 	if err != nil {
 		res.Err = err.Error()
@@ -123,7 +123,7 @@ func runCase(ctx context.Context, p client.Provider, c Case) CaseResult {
 
 // scoreResponse checks a response against an expectation, returning the list of
 // unmet expectations (empty == passed).
-func scoreResponse(resp *client.FluxResponse, exp Expectation) []string {
+func scoreResponse(resp *core.FluxResponse, exp Expectation) []string {
 	var fail []string
 
 	if exp.NonEmptyContent && strings.TrimSpace(resp.Content) == "" {
@@ -137,7 +137,7 @@ func scoreResponse(resp *client.FluxResponse, exp Expectation) []string {
 	}
 
 	if exp.ToolName != "" {
-		var call *client.ToolCall
+		var call *core.ToolCall
 		for i := range resp.ToolCalls {
 			if resp.ToolCalls[i].Name == exp.ToolName {
 				call = &resp.ToolCalls[i]
@@ -158,7 +158,7 @@ func scoreResponse(resp *client.FluxResponse, exp Expectation) []string {
 	return fail
 }
 
-func toolNames(calls []client.ToolCall) string {
+func toolNames(calls []core.ToolCall) string {
 	if len(calls) == 0 {
 		return "no tool calls"
 	}

@@ -12,6 +12,7 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/GrayCodeAI/flux/tools"
 )
@@ -54,6 +55,54 @@ type FluxMessage struct {
 	Images       []string      `json:"images,omitempty"`
 	ToolUse      []ToolCall    `json:"tool_use,omitempty"`
 	ToolResults  []ToolResult  `json:"tool_results,omitempty"`
+	// ProviderBlocks carries opaque provider state that the provider requires
+	// to be replayed verbatim on later turns: Anthropic thinking blocks with
+	// their signatures and redacted_thinking blocks, OpenAI reasoning items.
+	// A host stores the blocks from a response's ProviderBlocks on the
+	// assistant message it appends to history and never edits them.
+	ProviderBlocks []ProviderBlock `json:"provider_blocks,omitempty"`
+}
+
+// ProviderBlock is an opaque, provider-owned content block. Provider names the
+// wire protocol that produced it ("anthropic", "gemini", "openai"); Type is the
+// protocol's own block type ("thinking", "redacted_thinking", "reasoning");
+// Data is the block exactly as the provider sent it. Adapters replay only the
+// blocks whose Provider matches their own protocol and skip the rest.
+type ProviderBlock struct {
+	Provider string          `json:"provider"`
+	Type     string          `json:"type"`
+	Data     json.RawMessage `json:"data"`
+}
+
+// Stream error kinds carried by StreamErrorInfo.Kind.
+const (
+	ErrKindAuth            = "auth"
+	ErrKindRateLimited     = "rate_limited"
+	ErrKindContextExceeded = "context_exceeded"
+	ErrKindContentFiltered = "content_filtered"
+	ErrKindTimeout         = "timeout"
+	ErrKindUnavailable     = "unavailable"
+	ErrKindInvalidRequest  = "invalid_request"
+	ErrKindCanceled        = "canceled"
+	ErrKindInternal        = "internal"
+)
+
+// StreamErrorInfo classifies a stream error so a host can react (re-auth, back
+// off, compact and retry) without parsing message text. Adapters and the router
+// populate it on "error" events; Error still carries the human-readable text.
+type StreamErrorInfo struct {
+	Kind         string `json:"kind"`
+	StatusCode   int    `json:"status_code,omitempty"`
+	Retryable    bool   `json:"retryable,omitempty"`
+	RetryAfterMs int    `json:"retry_after_ms,omitempty"`
+}
+
+// CallWarning reports a request setting that the selected provider or model
+// ignored or rewrote, so a host can tell that an option had no effect.
+type CallWarning struct {
+	Type    string `json:"type"` // "unsupported-setting", "adjusted-setting"
+	Setting string `json:"setting,omitempty"`
+	Details string `json:"details,omitempty"`
 }
 
 // ToolCall is a tool invocation. Aliased to tools.ToolCall so the ecosystem
@@ -168,6 +217,12 @@ type ContinuationConfig struct {
 }
 
 // FluxUsage tracks token usage.
+//
+// Semantics are identical for every provider: PromptTokens is the TOTAL input
+// token count and already includes CacheReadTokens and CacheCreationTokens;
+// CompletionTokens is the total output count and includes ThinkingTokens where
+// the provider bills reasoning as output. Adapters whose wire format reports
+// cached tokens separately (Anthropic) must add them into PromptTokens.
 type FluxUsage struct {
 	PromptTokens        int `json:"prompt_tokens"`
 	CompletionTokens    int `json:"completion_tokens"`
@@ -182,6 +237,12 @@ type ResolvedRoute struct {
 	Provider          string `json:"provider"`
 	Model             string `json:"model"`
 	DeploymentRouting bool   `json:"deployment_routing,omitempty"`
+	// DeploymentID is the deployment that actually served the request. After a
+	// failover it differs from the deployment first selected; hosts use it to
+	// attribute usage and price to the right backend.
+	DeploymentID string `json:"deployment_id,omitempty"`
+	// Attempts is the number of deployment attempts made (1 = first try).
+	Attempts int `json:"attempts,omitempty"`
 }
 
 // FluxResponse is the chat response DTO.
@@ -194,19 +255,27 @@ type FluxResponse struct {
 	RequestID      string         `json:"request_id,omitempty"`
 	OrganizationID string         `json:"organization_id,omitempty"`
 	Route          *ResolvedRoute `json:"route,omitempty"`
+	// ProviderBlocks is opaque provider state to replay on the next turn; see
+	// FluxMessage.ProviderBlocks.
+	ProviderBlocks []ProviderBlock `json:"provider_blocks,omitempty"`
+	// Warnings lists request settings the provider ignored or adjusted.
+	Warnings []CallWarning `json:"warnings,omitempty"`
 }
 
 // FluxStreamEvent is a streaming event.
 type FluxStreamEvent struct {
-	Type       string     `json:"type"`
-	Content    string     `json:"content,omitempty"`
-	ToolCall   *ToolCall  `json:"tool_call,omitempty"`
-	Thinking   string     `json:"thinking,omitempty"`
-	Error      string     `json:"error,omitempty"`
-	Warning    string     `json:"warning,omitempty"`
-	RequestID  string     `json:"request_id,omitempty"`
-	Usage      *FluxUsage `json:"usage,omitempty"`
-	StopReason string     `json:"stop_reason,omitempty"`
+	Type     string    `json:"type"`
+	Content  string    `json:"content,omitempty"`
+	ToolCall *ToolCall `json:"tool_call,omitempty"`
+	Thinking string    `json:"thinking,omitempty"`
+	Error    string    `json:"error,omitempty"`
+	Warning  string    `json:"warning,omitempty"`
+	// ProviderBlock is set on "provider_block" events: one completed opaque
+	// block (for example a signed thinking block) to replay next turn.
+	ProviderBlock *ProviderBlock `json:"provider_block,omitempty"`
+	RequestID     string         `json:"request_id,omitempty"`
+	Usage         *FluxUsage     `json:"usage,omitempty"`
+	StopReason    string         `json:"stop_reason,omitempty"`
 	// TTFT and TTFTms both carry time-to-first-token in milliseconds but ride
 	// different events: the dedicated "ttft" event populates TTFT, while the
 	// terminal "done" event populates TTFTms. The engine normalizes the two

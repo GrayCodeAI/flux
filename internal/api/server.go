@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/conversation"
 	flux "github.com/GrayCodeAI/flux/internal/health"
 	"github.com/GrayCodeAI/flux/internal/httputil"
+	"github.com/GrayCodeAI/flux/provider/core"
+	"github.com/GrayCodeAI/flux/provider/observability"
 	"github.com/GrayCodeAI/flux/storage"
 )
 
@@ -34,7 +35,7 @@ type Server struct {
 type Config struct {
 	Store         storage.Store
 	Analytics     storage.AnalyticsStore // optional: enables /api/usage, /api/costs
-	Provider      client.Provider
+	Provider      core.Provider
 	HealthChecker *flux.HealthChecker // optional: enables /api/health/providers
 	Reranker      Reranker            // optional: provider-backed /rerank; nil => lexical fallback
 	APIKey        string
@@ -134,7 +135,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 		// enforcement, if a resolver is configured.
 		if s.virtualKeyFor != nil {
 			if vk := s.virtualKeyFor(token); vk != "" {
-				r = r.WithContext(client.WithVirtualKey(r.Context(), vk))
+				r = r.WithContext(observability.WithVirtualKey(r.Context(), vk))
 			}
 		}
 
@@ -160,12 +161,12 @@ func (s *Server) handleReady(w http.ResponseWriter, _ *http.Request) {
 }
 
 type promptRequest struct {
-	Message      string            `json:"message"`
-	Model        string            `json:"model,omitempty"`
-	SystemPrompt string            `json:"system_prompt,omitempty"`
-	MaxTokens    int               `json:"max_tokens,omitempty"`
-	Stream       bool              `json:"stream,omitempty"`
-	Tools        []client.FluxTool `json:"tools,omitempty"`
+	Message      string          `json:"message"`
+	Model        string          `json:"model,omitempty"`
+	SystemPrompt string          `json:"system_prompt,omitempty"`
+	MaxTokens    int             `json:"max_tokens,omitempty"`
+	Stream       bool            `json:"stream,omitempty"`
+	Tools        []core.FluxTool `json:"tools,omitempty"`
 }
 
 func (s *Server) handlePrompt(w http.ResponseWriter, r *http.Request) {

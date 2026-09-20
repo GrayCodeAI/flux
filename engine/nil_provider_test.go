@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/flux/catalog"
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // newNilTransportEngine builds an Engine with a valid selection but a transport
@@ -33,7 +33,7 @@ func newNilTransportEngine(t *testing.T) (*Engine, GenerateRequest) {
 	if err := eng.SetSelection(ctx, "", modelID); err != nil {
 		t.Fatal(err)
 	}
-	eng.resolveTransport = func(context.Context, Route) (client.Provider, error) { return nil, nil }
+	eng.resolveTransport = func(context.Context, Route) (core.Provider, error) { return nil, nil }
 
 	req := GenerateRequest{
 		Messages:   []Message{{Role: "user", Content: "hi"}},

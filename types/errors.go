@@ -74,7 +74,7 @@ var httpStatusRe = regexp.MustCompile(`(?i)(?:HTTP[/:]?\s*|status[:\s]+|code[:\s
 // nor non-retriable patterns) are treated as NOT retriable. This avoids
 // unnecessary retries for unexpected error types (e.g., malformed responses,
 // serialization failures). Callers like FallbackProvider that want optimistic
-// fallback on unknown errors implement their own wrapper — see client.isRetriableError.
+// fallback on unknown errors implement their own wrapper — see provider.isRetriableError.
 func IsTransient(err error) bool {
 	if err == nil {
 		return false

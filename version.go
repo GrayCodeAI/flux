@@ -8,7 +8,7 @@ import (
 	_ "embed"
 	"strings"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider"
 )
 
 //go:embed VERSION
@@ -18,5 +18,5 @@ var versionFile string
 var Version = strings.TrimSpace(versionFile)
 
 func init() {
-	client.SetVersion(Version)
+	provider.SetVersion(Version)
 }

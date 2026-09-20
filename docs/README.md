@@ -7,8 +7,11 @@ Welcome to the Flux documentation. This directory contains detailed guides and r
 ### Core Documentation
 
 - **[Architecture](ARCHITECTURE.md)** — System architecture, data flow, and design decisions
+- **[Host-Engine Boundary](architecture/HOST-ENGINE-BOUNDARY.md)** — Stable `engine/llm/graph/tools` contract
+- **[Flux Enterprise](design/FLUX-ENTERPRISE.md)** — Enterprise surfaces
 - **[Provider Setup Guide](guides/CREDENTIAL-SETUP-FLOW.md)** — How to configure credentials and providers
 - **[Dynamic Model Discovery](guides/DYNAMIC-MODEL-DISCOVERY.md)** — Architecture and implementation details for live model discovery
+- **[OpenAPI](../api/openapi.yaml)** — HTTP surface (`/v1/chat/completions`, `/rerank`, `/ready`, `/health`)
 
 ### Quick Links
 
@@ -31,9 +34,15 @@ The [`examples/`](../examples/) directory contains runnable code samples:
 docs/
 ├── README.md                          # This file
 ├── ARCHITECTURE.md                    # System architecture
+├── architecture/HOST-ENGINE-BOUNDARY.md
+├── design/FLUX-ENTERPRISE.md
+├── api/openapi.yaml                   # POST /v1/chat/completions, POST /rerank, GET /ready
 └── guides/
-    ├── CREDENTIAL-SETUP-FLOW.md       # Credential configuration
-    └── DYNAMIC-MODEL-DISCOVERY.md     # Model discovery architecture
+    ├── CREDENTIAL-SETUP-FLOW.md
+    ├── DYNAMIC-MODEL-DISCOVERY.md
+    ├── RETRY-FALLBACK.md              # (planned) backoff, fallback chains, circuit breaker
+    ├── CACHING-AUDIT.md               # (planned) cache backends, audit sinks
+    └── ROUTING-STRATEGIES.md          # weighted, latency, cost-based
 ```
 
 ## For Developers

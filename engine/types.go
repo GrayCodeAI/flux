@@ -74,6 +74,7 @@ const (
 	EventRetry         = "retry"
 	EventContinuation  = "continuation"
 	EventWarning       = "warning"
+	EventProviderBlock = "provider_block"
 	EventTTFT          = "ttft"
 	EventDone          = "done"
 )
@@ -149,4 +150,15 @@ const (
 	CheckOK   = llm.CheckOK
 	CheckFail = llm.CheckFail
 	CheckWarn = llm.CheckWarn
+)
+
+// Six llm symbols previously without engine alias — now re-exported so hosts
+// need not import llm directly for these common DTOs.
+type (
+	ChatOptions        = llm.ChatOptions
+	ContinuationConfig = llm.ContinuationConfig
+	StreamResult       = llm.StreamResult
+	ResponseFormat     = llm.ResponseFormat
+	ImageURLPart       = llm.ImageURLPart
+	InputAudioPart     = llm.InputAudioPart
 )

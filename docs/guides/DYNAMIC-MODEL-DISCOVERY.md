@@ -79,8 +79,8 @@ e, err := engine.New(engine.Options{
 - An empty `RemoteCatalogURL` selects Flux's compiled-in HTTPS seed and does
   not consult a process-environment override.
 - Custom gateways are normalized, validated, and snapshotted per Engine.
-- `UseRegisteredCustomGateways` exists only for callers that deliberately opt
-  into the deprecated process-global compatibility registry.
+- Custom gateways must be supplied through `Options.CustomGateways`; there is
+  no process-global registration path.
 - The Engine uses the injected secret store for setup, discovery, transport,
   status, removal, compaction, and preflight.
 

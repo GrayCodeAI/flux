@@ -121,7 +121,7 @@ func FormatStatus(report StatusReport) string {
 	if len(report.Configured) > 0 {
 		b.WriteString("Configured deployments: " + strings.Join(report.Configured, ", ") + "\n")
 	} else {
-		b.WriteString("Configured deployments: none (set API keys or deployments in provider.json)\n")
+		b.WriteString("Configured deployments: none (set API keys or deployments in adapters.json)\n")
 	}
 	fmt.Fprintf(&b, "Catalog cache: %s\n", report.CatalogCache)
 	if report.CatalogExists {

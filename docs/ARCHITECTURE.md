@@ -24,38 +24,28 @@ flux is the LLM provider runtime for the rho ecosystem. It sits between the appl
 
 ```
 flux/
-├── api/openapi.yaml         <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/file-text.svg" width="16" height="16" alt="file-text" /> REST API contract (OpenAPI 3.1) — embedded HTTP server surface
-├── client/
-│   ├── client.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/plug.svg" width="16" height="16" alt="plug" /> Provider interface + FluxClient factory
-│   ├── anthropic.go         <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> Anthropic Claude provider
-│   ├── openai.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> OpenAI / OpenAI-compat provider
-│   ├── gemini.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> Google Gemini provider
-│   ├── bedrock.go           <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> AWS Bedrock provider
-│   ├── vertex.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/circle.svg" width="16" height="16" alt="circle" /> Google Vertex AI provider
-│   ├── azure.go             <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/diamond.svg" width="16" height="16" alt="diamond" /> Azure OpenAI provider
-│   ├── provider_registry.go <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/search.svg" width="16" height="16" alt="search" /> Auto-detection + registration
-│   ├── compat.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/wrench.svg" width="16" height="16" alt="wrench" /> Compatibility configs (Grok, OpenRouter, etc.)
-│   ├── stream.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/radio.svg" width="16" height="16" alt="radio" /> SSE stream parsing
-│   ├── retry.go             <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/refresh-cw.svg" width="16" height="16" alt="refresh-cw" /> Exponential backoff + Retry-After
-│   ├── ratelimit.go         <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bucket.svg" width="16" height="16" alt="bucket" /> Token-bucket rate limiting per provider
-│   ├── cache.go             <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/database.svg" width="16" height="16" alt="database" /> Response caching
-│   ├── semantic_cache.go    <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/brain.svg" width="16" height="16" alt="brain" /> Similarity-based cache lookup
-│   ├── fallback.go          <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/shuffle.svg" width="16" height="16" alt="shuffle" /> Provider fallback chains
-│   └── errors.go            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/x-circle.svg" width="16" height="16" alt="x-circle" /> FluxError type
-├── catalog/                 <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/list.svg" width="16" height="16" alt="list" /> Model catalog — pricing, context windows, tiers
-├── config/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/settings.svg" width="16" height="16" alt="settings" /> Configuration and credential resolution
-├── conversation/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/git-branch.svg" width="16" height="16" alt="git-branch" /> Conversation graph engine (branching DAG)
-├── credentials/             <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/key.svg" width="16" height="16" alt="key" /> API key management and env detection
-├── router/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/traffic-cone.svg" width="16" height="16" alt="traffic-cone" /> Weighted provider routing
-├── storage/                 <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/archive.svg" width="16" height="16" alt="archive" /> Conversation store (SQLite DAG)
-└── internal/
-    ├── api/                 <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/globe.svg" width="16" height="16" alt="globe" /> HTTP server, route handlers, auth middleware
-    ├── cache/               <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/database.svg" width="16" height="16" alt="database" /> Cache infrastructure
-    ├── health/              <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/heart.svg" width="16" height="16" alt="heart" /> Provider health checker
-    ├── observability/       <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bar-chart.svg" width="16" height="16" alt="bar-chart" /> OpenTelemetry spans and metrics
-    ├── shrink/              <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/package.svg" width="16" height="16" alt="package" /> Response compression
-    └── version/             <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/tag.svg" width="16" height="16" alt="tag" /> Version constants
+├── engine/                  Stable host-facing facade (rho imports only this + llm/graph/tools)
+├── llm/                     Host-facing DTOs + Provider port (engine re-exports)
+├── graph/                   Portable execution-graph vocabulary
+├── tools/                   Tool-call/result contracts
+├── provider/                Client composition root
+│   ├── core/                Provider-neutral contracts, stream and transport
+│   ├── adapters/            Provider wire-protocol adapters
+│   ├── batch/ cache/        Batch execution and response caches
+│   ├── embeddings/ media/   Embeddings and multimodal features
+│   ├── resilience/          Retry, fallback, rate limits and health
+│   └── observability/       Usage, metrics, tracing and recording
+├── catalog/                 Model catalog and capabilities
+├── config/ + credentials/   Config + keyring/env credential resolution
+├── router/                  Deployment policy and instance-local circuit breakers
+│   └── controlplane/        Versioned, signed peer manifests and replicas
+├── runtime/                 Host-facing construction
+├── conversation/ + storage/ Conversation graph (branching DAG) + SQLite store
+└── internal/api|cache|health|observability  HTTP server, cache, health, OTel
 ```
+
+The current distributed-routing foundation and its limits are described in
+[Decentralized Flux routing](architecture/DECENTRALIZED-FLUX.md).
 
 ---
 
@@ -84,6 +74,9 @@ flux/
 | `GET` | `/api/usage` | analytics | Token usage analytics |
 | `GET` | `/api/costs` | analytics | Cost breakdown |
 | `GET` | `/api/health/providers` | providers | Provider health |
+| `POST` | `/v1/chat/completions` | chat | OpenAI-compatible proxy |
+| `POST` | `/rerank` | rerank | Provider rerank + lexical fallback |
+| `GET` | `/ready` | health | Readiness probe (vs `/health` liveness) |
 
 </details>
 
@@ -104,7 +97,7 @@ Auto-detects active provider from env vars in priority order:
 | 7 | `ZAI_API_KEY` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bot.svg" width="16" height="16" alt="bot" /> ZAI |
 | 8 | — | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/server.svg" width="16" height="16" alt="server" /> Ollama (localhost socket) |
 
-*Top 8 by priority; 7 more (`azure`, `bedrock`, `vertex`, `deepseek`, `opencodego`, `kimi`, `xiaomi_mimo_payg`, `xiaomi_mimo_token_plan`, `minimax_token_plan`, `minimax_payg`) — see [`CREDENTIAL-SETUP-FLOW.md`](./guides/CREDENTIAL-SETUP-FLOW.md).*
+*Top 8 shown; full 28 in `catalog/registry/providers.go` — see [`CREDENTIAL-SETUP-FLOW.md`](./guides/CREDENTIAL-SETUP-FLOW.md) and `config` ChatPreference order.*
 
 ---
 
@@ -113,7 +106,7 @@ Auto-detects active provider from env vars in priority order:
 All responses are streamed via **SSE**. Blocking responses wrap the stream internally.
 
 ```go
-sr, err := client.StreamChat(ctx, messages, opts)
+sr, err := provider.StreamChat(ctx, messages, opts)
 defer sr.Close()
 for event := range sr.Events() { ... }
 ```
