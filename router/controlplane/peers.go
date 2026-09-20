@@ -87,7 +87,7 @@ func NewPeerSource(endpoints []string, trustedKeys map[string]ed25519.PublicKey)
 		host := u.Hostname()
 		ip := net.ParseIP(host)
 		local := strings.EqualFold(host, "localhost") || ip != nil && ip.IsLoopback()
-		if u.Scheme != "https" && !(u.Scheme == "http" && local) {
+		if u.Scheme != "https" && (u.Scheme != "http" || !local) {
 			return nil, fmt.Errorf("controlplane: peer %q requires HTTPS", endpoint)
 		}
 		if !local && len(trustedKeys) == 0 {

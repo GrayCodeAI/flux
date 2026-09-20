@@ -38,8 +38,6 @@ const (
 	GuardrailWarn            = core.GuardrailWarn
 )
 
-var applyGuardrails = core.ApplyGuardrails
-
 func NewGuardrails(rules ...GuardrailRule) *Guardrails { return core.NewGuardrails(rules...) }
 
 func NewStreamResult(events <-chan FluxStreamEvent, requestID string, cancel context.CancelFunc) *StreamResult {

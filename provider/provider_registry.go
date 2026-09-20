@@ -100,7 +100,7 @@ func (c *FluxClient) getOrCreateProvider(providerName string) (core.Provider, er
 	_, builtInCore := adapters.CoreProviders[providerName]
 	_, builtInCompat := adapters.OpenAICompatibleProviders[providerName]
 	custom := registeredCustom || !builtInCore && !builtInCompat
-	if apiKey == "" && providerName != "ollama" && !(custom && info.EnvKey == "") {
+	if apiKey == "" && providerName != "ollama" && (!custom || info.EnvKey != "") {
 		return nil, fmt.Errorf("flux: no API key for %s; set %s or call SetAPIKey()", providerName, info.EnvKey)
 	}
 

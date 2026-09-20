@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/flux/catalog"
 	"github.com/GrayCodeAI/flux/catalog/capabilities"
 	"github.com/GrayCodeAI/flux/llm"
 	"github.com/GrayCodeAI/flux/provider/adapters"
@@ -38,9 +37,6 @@ func NewProviderFeatures() *ProviderFeatures {
 	return capabilities.NewProviderFeatures(cachedCatalog)
 }
 func NewDeprecationChecker() *DeprecationChecker { return capabilities.NewDeprecationChecker() }
-func featureSetFromCapabilities(caps catalog.CapabilitySet) *FeatureSet {
-	return capabilities.FeatureSetFromCapabilities(caps)
-}
 
 const (
 	MockModeEcho      = testkit.MockModeEcho
@@ -275,9 +271,6 @@ const (
 	ResponseMalformedStream    = core.ResponseMalformedStream
 )
 
-// streamChannelBuffer bridges the buffer-size constant that moved to core.
-const streamChannelBuffer = core.StreamChannelBuffer
-
 // DetectResponseHealth classifies a response from stream/response signals.
 func DetectResponseHealth(sig ResponseSignals) ResponseHealth {
 	return core.DetectResponseHealth(sig)
@@ -353,8 +346,6 @@ func NewEmbeddingCachedProvider(inner Provider, embedder Embedder, cfg SemanticC
 }
 
 var (
-	copyResponse     = core.CopyResponse
-	emit             = core.Emit
 	parseImageString = core.ParseImageString
 	applyGuardrails  = core.ApplyGuardrails
 )
