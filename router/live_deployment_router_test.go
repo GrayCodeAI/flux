@@ -27,6 +27,7 @@ func (p *liveReplyProvider) Chat(ctx context.Context, _ []core.FluxMessage, _ co
 	}
 	return &core.FluxResponse{Content: p.reply}, nil
 }
+
 func (p *liveReplyProvider) StreamChat(context.Context, []core.FluxMessage, core.ChatOptions) (*core.StreamResult, error) {
 	return nil, nil
 }

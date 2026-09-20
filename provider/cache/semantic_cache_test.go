@@ -26,11 +26,13 @@ func (m *cacheMock) CallCount() int {
 	defer m.mu.Unlock()
 	return m.calls
 }
+
 func (m *cacheMock) Reset() {
 	m.mu.Lock()
 	m.calls = 0
 	m.mu.Unlock()
 }
+
 func (m *cacheMock) Chat(_ context.Context, messages []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	m.mu.Lock()
 	m.calls++
@@ -46,6 +48,7 @@ func (m *cacheMock) Chat(_ context.Context, messages []core.FluxMessage, _ core.
 	}
 	return &core.FluxResponse{Content: content, FinishReason: "stop"}, nil
 }
+
 func (m *cacheMock) StreamChat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	resp, err := m.Chat(ctx, messages, opts)
 	if err != nil {

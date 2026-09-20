@@ -74,6 +74,7 @@ const (
 	EventRetry         = "retry"
 	EventContinuation  = "continuation"
 	EventWarning       = "warning"
+	EventProviderBlock = "provider_block"
 	EventTTFT          = "ttft"
 	EventDone          = "done"
 )
@@ -153,9 +154,11 @@ const (
 
 // Six llm symbols previously without engine alias — now re-exported so hosts
 // need not import llm directly for these common DTOs.
-type ChatOptions = llm.ChatOptions
-type ContinuationConfig = llm.ContinuationConfig
-type StreamResult = llm.StreamResult
-type ResponseFormat = llm.ResponseFormat
-type ImageURLPart = llm.ImageURLPart
-type InputAudioPart = llm.InputAudioPart
+type (
+	ChatOptions        = llm.ChatOptions
+	ContinuationConfig = llm.ContinuationConfig
+	StreamResult       = llm.StreamResult
+	ResponseFormat     = llm.ResponseFormat
+	ImageURLPart       = llm.ImageURLPart
+	InputAudioPart     = llm.InputAudioPart
+)

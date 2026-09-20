@@ -25,6 +25,7 @@ func (p replyProvider) Ping(context.Context) error { return nil }
 func (p replyProvider) Chat(context.Context, []core.FluxMessage, core.ChatOptions) (*core.FluxResponse, error) {
 	return &core.FluxResponse{Content: string(p)}, nil
 }
+
 func (p replyProvider) StreamChat(context.Context, []core.FluxMessage, core.ChatOptions) (*core.StreamResult, error) {
 	return nil, nil
 }
