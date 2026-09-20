@@ -75,8 +75,8 @@ Requires Go 1.26+ and a configured provider credential. Minimal dependencies
 
 ```go
 import (
-	"context"
-	"fmt"
+    "context"
+    "fmt"
 
     "github.com/GrayCodeAI/flux/engine"
 )
