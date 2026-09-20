@@ -103,7 +103,7 @@ it is treated here as a multi-month effort.
                          │       │      ┌───────▼──────┐       │        │
                          │  ┌────▼──────▼──┐  ┌────────▼───┐   │        │
                          │  │BudgetProvider│  │ Telemetry/ │   │        │
-                         │  │(client/)     │  │ Audit/Metrics│ │        │
+                         │  │(provider/)     │  │ Audit/Metrics│ │        │
                          │  └──────┬───────┘  └──────┬─────┘   │        │
                          └─────────┼─────────────────┼─────────┼────────┘
                                    │                 │         │
@@ -121,10 +121,10 @@ New components (green-field):
   Code + PKCE), distinct from the *outbound* CI credential exchange that file does today.
 - **Prompt library store + API** (`storage/prompts.go`, `internal/api/prompts.go`, new).
 - **Canary router** (`router/canary.go`, new) wrapping existing strategies.
-- **A2A adapter** (`client/a2a/`, new) implementing the `client.Provider` interface so A2A
+- **A2A adapter** (`provider/a2a/`, new) implementing the `provider.Provider` interface so A2A
   targets route through the same pipeline as native providers.
-- **Fine-tuning client** (`client/finetune/`, new).
-- **Priority queue** (`router/priority.go` or `client/priority.go`, new) at the rate-limit layer.
+- **Fine-tuning client** (`provider/finetune/`, new).
+- **Priority queue** (`router/priority.go` or `provider/priority.go`, new) at the rate-limit layer.
 - **Embedded UI** (`internal/ui/`, `go:embed` single bundle) served from the existing HTTP server.
 
 ### 3.2 Data Model
@@ -278,9 +278,9 @@ layer + UI, not a rewrite.
 
 | Enterprise feature | Existing primitive (reuse) | What's missing |
 |---|---|---|
-| Virtual-key budgets | `client.BudgetProvider` wraps any `Provider`, enforces per-key USD caps (`client/budget_provider.go:53-107`); SQLite `BudgetStore` with `virtual_keys`/`key_budgets`/`request_costs` (`storage/budgets.go`) | Org/team ownership columns; admin UI; budget alerts |
-| Per-key attribution into requests | `WithVirtualKey`/`VirtualKeyFromContext` (`client/budget_provider.go:23-33`), wired through `auth()` via `VirtualKeyResolver` (`internal/api/server.go:42-46, 132-135`) | Map key→user→role instead of key→key |
-| Realized cost accounting | `ActualCostUSD` (`client/budget_provider.go:127`), `RecordCost` + `cost_records` (`storage/analytics.go:106`) | session_id/user_id/tags for segmentation |
+| Virtual-key budgets | `observability.BudgetProvider` wraps any `Provider`, enforces per-key USD caps (`provider/observability/budget_provider.go:53-107`); SQLite `BudgetStore` with `virtual_keys`/`key_budgets`/`request_costs` (`storage/budgets.go`) | Org/team ownership columns; admin UI; budget alerts |
+| Per-key attribution into requests | `WithVirtualKey`/`VirtualKeyFromContext` (`provider/observability/budget_provider.go:23-33`), wired through `auth()` via `VirtualKeyResolver` (`internal/api/server.go:42-46, 132-135`) | Map key→user→role instead of key→key |
+| Realized cost accounting | `ActualCostUSD` (`provider/observability/budget_provider.go:127`), `RecordCost` + `cost_records` (`storage/analytics.go:106`) | session_id/user_id/tags for segmentation |
 | 21+ analytics metrics | `MetricsCollector`: request counts, in/out tokens, P50/P95/P99 latency, error rates, cost, cache hit rate; `ExportJSON`/`ExportPrometheus` (`internal/observability/observability.go:247-569`) | Persisted time-series + UI + HQL query layer |
 | Usage/cost/health SQL aggregations | `GetUsageStats`, `GetCostSummary`, `GetProviderHealth` (`storage/analytics.go:125-252`) exposed at `/api/usage`, `/api/costs`, `/api/health/providers` (`internal/api/analytics.go`) | HQL free-form query; session drill-down; dashboard front-end |
 | Routing strategies (LB) | 6 named strategies — weighted, simple-shuffle, least-busy, latency-based, cost-based, usage-based — with EWMA latency + in-flight + usage telemetry (`router/strategy.go:15-168`); `WithStrategy` option (`router/router.go:49`) | Canary/blue-green as a named, reportable flow |
@@ -290,7 +290,7 @@ layer + UI, not a rewrite.
 | Privacy-preserving audit | `AuditEvent` (hashes only), `AuditSink`, `JSONLFileSink`, `HashContent` (`internal/observability/audit.go`) | Per-org audit views; OTLP export wiring |
 | OpenAI-compatible ingress | `POST /v1/chat/completions` with `user` field already parsed (`internal/api/openai_proxy.go:41`) | Map `user` field → session/user analytics |
 | Conversation/session DAG | `conversation.Engine`, `nodes` table powering analytics (`conversation/engine.go`, `storage/analytics.go:125-215`) | Stable `session_id` propagation to ledger |
-| ChatOptions extensibility | `ReasoningEffort`, `ThinkingBudgetTokens`, `ResponseFormat`, `VirtualKeyID` already on `ChatOptions` (`client/options.go:18-40`) | Add `PromptID/Version`, `Priority`, `SessionID`, `Tags` |
+| ChatOptions extensibility | `ReasoningEffort`, `ThinkingBudgetTokens`, `ResponseFormat`, `VirtualKeyID` already on `ChatOptions` (`provider/options.go:18-40`) | Add `PromptID/Version`, `Priority`, `SessionID`, `Tags` |
 | gRPC contract | `ChatService` interface + build-tag-guarded server skeleton (`internal/grpc/grpc.go`, `server_grpc.go`, `README.md`) | Generate stubs only if/when adopted (kept opt-in) |
 | SDKs | Go/Python/TS SDK stubs (`internal/sdk/{go,python,typescript}`) | Add org/prompt/analytics methods |
 
@@ -334,7 +334,7 @@ per-key/per-session spend and latency in a browser.
 8. **Canary router** (`router/canary.go`): wrap two entry sets; tag spans; report endpoint diffs
    metrics from `MetricsCollector`. Build on `WithStrategy` (`router/router.go:49`) and
    `selectDeploymentChoice` (`router/deployment_router.go:563`).
-9. **A2A adapter** (`client/a2a/`): implement `client.Provider` so A2A targets route through
+9. **A2A adapter** (`provider/a2a/`): implement `provider.Provider` so A2A targets route through
    `BudgetProvider`/`Router`/audit unchanged; expose `POST /v1/a2a/{agent}/invoke`. Agent cards
    discovered via A2A spec; map `message/send` to `Chat`.
 
@@ -343,7 +343,7 @@ quantified report, and call external agents through the same metered pipeline.
 
 ### P2 — Enterprise polish (fine-tuning, SLA priority queue)
 
-10. **Fine-tuning client** (`client/finetune/`): submit/poll for OpenAI, Vertex, Together; on
+10. **Fine-tuning client** (`provider/finetune/`): submit/poll for OpenAI, Vertex, Together; on
     completion register the fine-tuned model in the catalog (`catalog/registry`).
 11. **Priority queue / SLA tiers** (`router/priority.go`): a bounded priority queue at the
     rate-limit layer; `ChatOptions.Priority` (new) or per-team tier; interactive preempts batch.

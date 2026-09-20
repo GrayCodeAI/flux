@@ -22,6 +22,7 @@ type CircuitBreaker struct {
 	lastFailureTime time.Time
 	cooldown        time.Duration
 	threshold       int
+	probeInFlight   bool
 }
 
 // NewCircuitBreaker creates a circuit breaker that opens after `threshold` consecutive failures
@@ -40,7 +41,24 @@ func NewCircuitBreaker(threshold int, cooldown time.Duration) *CircuitBreaker {
 	}
 }
 
-// Allow returns true if the request should be attempted.
+// Ready reports whether a request could be admitted. It does not reserve the
+// half-open probe, so route filtering cannot consume that probe before an
+// endpoint is selected.
+func (cb *CircuitBreaker) Ready() bool {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	switch cb.state {
+	case CircuitOpen:
+		return time.Since(cb.lastFailureTime) >= cb.cooldown
+	case CircuitHalfOpen:
+		return !cb.probeInFlight
+	default:
+		return true
+	}
+}
+
+// Allow atomically admits a request. At most one request is admitted while
+// the circuit is half-open; its Success or Failure completes the probe.
 func (cb *CircuitBreaker) Allow() bool {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -51,10 +69,15 @@ func (cb *CircuitBreaker) Allow() bool {
 	case CircuitOpen:
 		if time.Since(cb.lastFailureTime) >= cb.cooldown {
 			cb.state = CircuitHalfOpen
+			cb.probeInFlight = true
 			return true
 		}
 		return false
 	case CircuitHalfOpen:
+		if cb.probeInFlight {
+			return false
+		}
+		cb.probeInFlight = true
 		return true
 	default:
 		return true
@@ -68,6 +91,7 @@ func (cb *CircuitBreaker) Success() {
 
 	cb.failureCount = 0
 	cb.state = CircuitClosed
+	cb.probeInFlight = false
 }
 
 // Failure records a failed call. If the threshold is reached, the circuit opens.
@@ -79,6 +103,7 @@ func (cb *CircuitBreaker) Failure() {
 
 	cb.failureCount++
 	cb.lastFailureTime = time.Now()
+	cb.probeInFlight = false
 	if cb.state == CircuitHalfOpen {
 		cb.state = CircuitOpen
 		return
@@ -101,4 +126,5 @@ func (cb *CircuitBreaker) Reset() {
 	defer cb.mu.Unlock()
 	cb.failureCount = 0
 	cb.state = CircuitClosed
+	cb.probeInFlight = false
 }

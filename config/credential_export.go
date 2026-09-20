@@ -53,11 +53,6 @@ func LocalCredentialInference(providerID string) (CredentialInference, error) {
 	return credential.LocalCredentialInference(providerID)
 }
 
-// InferCredentialsFromAPIKey is deprecated; use InferenceForProvider after gateway selection.
-func InferCredentialsFromAPIKey(ctx context.Context, secret string) []CredentialInference {
-	return credential.InferCredentialsFromAPIKey(ctx, secret)
-}
-
 // ValidateCredentialBeforeSave checks format without a live API probe.
 func ValidateCredentialBeforeSave(inference CredentialInference, secret string) error {
 	return credential.ValidateCredentialBeforeSave(inference, secret)

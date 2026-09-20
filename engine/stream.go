@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // Stream is a normalized, pull-based event stream. Next must not be called
@@ -12,7 +12,7 @@ import (
 type Stream struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	source *client.StreamResult
+	source *core.StreamResult
 	route  Route
 	events chan Event
 
@@ -22,7 +22,7 @@ type Stream struct {
 	once    sync.Once
 }
 
-func newStream(ctx context.Context, cancel context.CancelFunc, source *client.StreamResult, route Route) *Stream {
+func newStream(ctx context.Context, cancel context.CancelFunc, source *core.StreamResult, route Route) *Stream {
 	s := &Stream{ctx: ctx, cancel: cancel, source: source, route: route, events: make(chan Event, 32)}
 	go s.forward()
 	return s
@@ -121,7 +121,7 @@ func (s *Stream) setError(err error) {
 	s.mu.Unlock()
 }
 
-func normalizeEvent(event client.FluxStreamEvent) (Event, error) {
+func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 	out := Event{
 		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
 		Usage: fromClientUsage(event.Usage), StopReason: event.StopReason,

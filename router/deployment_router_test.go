@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/flux/catalog"
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 type deploymentMockProvider struct {
@@ -14,36 +14,36 @@ type deploymentMockProvider struct {
 	err        error
 	streamErr  error
 	lastModel  string
-	lastTools  []client.FluxTool
+	lastTools  []core.FluxTool
 	streamDone bool
 	callCount  int
 }
 
-func (m *deploymentMockProvider) Chat(_ context.Context, _ []client.FluxMessage, opts client.ChatOptions) (*client.FluxResponse, error) {
+func (m *deploymentMockProvider) Chat(_ context.Context, _ []core.FluxMessage, opts core.ChatOptions) (*core.FluxResponse, error) {
 	m.lastModel = opts.Model
 	m.lastTools = opts.Tools
 	m.callCount++
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &client.FluxResponse{Content: "from " + m.name}, nil
+	return &core.FluxResponse{Content: "from " + m.name}, nil
 }
 
-func (m *deploymentMockProvider) StreamChat(_ context.Context, _ []client.FluxMessage, opts client.ChatOptions) (*client.StreamResult, error) {
+func (m *deploymentMockProvider) StreamChat(_ context.Context, _ []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	m.lastModel = opts.Model
 	if m.err != nil {
 		return nil, m.err
 	}
-	ch := make(chan client.FluxStreamEvent, 2)
+	ch := make(chan core.FluxStreamEvent, 2)
 	if m.streamErr != nil {
-		ch <- client.FluxStreamEvent{Type: "error", Error: m.streamErr.Error()}
+		ch <- core.FluxStreamEvent{Type: "error", Error: m.streamErr.Error()}
 	} else {
-		ch <- client.FluxStreamEvent{Type: "content", Content: "from " + m.name}
-		ch <- client.FluxStreamEvent{Type: "done"}
+		ch <- core.FluxStreamEvent{Type: "content", Content: "from " + m.name}
+		ch <- core.FluxStreamEvent{Type: "done"}
 		m.streamDone = true
 	}
 	close(ch)
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 
 func (m *deploymentMockProvider) Ping(_ context.Context) error { return m.err }
@@ -73,7 +73,7 @@ func TestDeploymentRouterRewritesCanonicalModelToNativeModel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	resp, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestDeploymentRouterFallsBackAcrossStages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	resp, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestDeploymentRouterFallsBackOnInsufficientCredits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "moonshotai/kimi-k2.6"})
+	resp, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "moonshotai/kimi-k2.6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestDeploymentRouterNonTransientDoesNotFallback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	_, err = r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err == nil {
 		t.Fatal("expected auth error")
 	}
@@ -235,7 +235,7 @@ func TestDeploymentRouterMaterializesAzureModelMapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "openai/gpt-4o"})
+	_, err = r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "openai/gpt-4o"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestDeploymentRouterModelMappingOverridesCatalogOffering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	_, err = r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +291,7 @@ func TestDeploymentRouterStreamFallbackBeforeOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stream, err := r.StreamChat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	stream, err := r.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestDeploymentRouterNativeMimoUsesConfiguredXiaomiDeployment(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.Chat(context.Background(), []client.FluxMessage{{Role: "user", Content: "hi"}}, client.ChatOptions{Model: "mimo-v2.5-pro"})
+	_, err = r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "mimo-v2.5-pro"})
 	if err != nil {
 		t.Fatalf("chat: %v", err)
 	}
@@ -391,8 +391,8 @@ func TestDeploymentRouterRetriesPreferDifferentEndpoint(t *testing.T) {
 	}
 
 	resp, err := r.Chat(context.Background(),
-		[]client.FluxMessage{{Role: "user", Content: "hi"}},
-		client.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+		[]core.FluxMessage{{Role: "user", Content: "hi"}},
+		core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
 	if err != nil {
 		t.Fatalf("Chat: %v", err)
 	}

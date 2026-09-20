@@ -6,10 +6,9 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/flux/catalog"
-	"github.com/GrayCodeAI/flux/client"
-	"github.com/GrayCodeAI/flux/client/adapters"
 	"github.com/GrayCodeAI/flux/config"
 	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/provider/adapters"
 )
 
 func TestProviderForDeploymentAnthropicBedrockFromConfig(t *testing.T) {
@@ -95,14 +94,14 @@ func TestDeploymentProviderFromStateAcceptsExplicitHydratedDeployment(t *testing
 }
 
 func TestProviderForDeploymentPoolsideUsesReasoningRecoveryClient(t *testing.T) {
-	provider, ok := ProviderForDeployment("poolside", config.DeploymentConfig{
+	deploymentProvider, ok := ProviderForDeployment("poolside", config.DeploymentConfig{
 		APIKey: "poolside-test-key-1234567890",
 	})
 	if !ok {
 		t.Fatal("expected Poolside deployment provider")
 	}
-	if _, ok := provider.(*client.PoolsideClient); !ok {
-		t.Fatalf("provider type = %T, want *client.PoolsideClient", provider)
+	if _, ok := deploymentProvider.(*adapters.PoolsideClient); !ok {
+		t.Fatalf("provider type = %T, want *adapters.PoolsideClient", deploymentProvider)
 	}
 }
 
@@ -527,8 +526,8 @@ func TestProviderForDeployment_GeminiDirect(t *testing.T) {
 	if !ok {
 		t.Fatal("expected gemini-direct to be configured")
 	}
-	if _, ok := p.(*client.GeminiOpenAIClient); !ok {
-		t.Fatalf("provider type = %T, want *client.GeminiOpenAIClient", p)
+	if _, ok := p.(*adapters.GeminiOpenAIClient); !ok {
+		t.Fatalf("provider type = %T, want *adapters.GeminiOpenAIClient", p)
 	}
 	if p.Name() != "gemini" {
 		t.Fatalf("provider name = %q, want gemini", p.Name())
@@ -709,9 +708,9 @@ func TestProviderForDeployment_AgnesLongCatStepFunDirect(t *testing.T) {
 		wantName     string
 		wantType     any
 	}{
-		{"agnes-direct", "agnes-key", "agnes", (*client.AgnesClient)(nil)},
-		{"longcat-direct", "longcat-key", "longcat", (*client.LongCatClient)(nil)},
-		{"stepfun-direct", "stepfun-key", "stepfun", (*client.StepFunClient)(nil)},
+		{"agnes-direct", "agnes-key", "agnes", (*adapters.AgnesClient)(nil)},
+		{"longcat-direct", "longcat-key", "longcat", (*adapters.LongCatClient)(nil)},
+		{"stepfun-direct", "stepfun-key", "stepfun", (*adapters.StepFunClient)(nil)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.deploymentID, func(t *testing.T) {
@@ -780,7 +779,7 @@ func TestProviderForDeployment_OpenCodeGo(t *testing.T) {
 	if p.Name() != "opencodego" {
 		t.Fatalf("provider name = %q, want opencodego", p.Name())
 	}
-	if _, ok := p.(*client.OpenCodeGoClient); !ok {
-		t.Fatalf("provider type = %T, want *client.OpenCodeGoClient", p)
+	if _, ok := p.(*adapters.OpenCodeGoClient); !ok {
+		t.Fatalf("provider type = %T, want *adapters.OpenCodeGoClient", p)
 	}
 }

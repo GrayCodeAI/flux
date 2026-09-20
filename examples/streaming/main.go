@@ -10,19 +10,20 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 func main() {
-	c := client.Client(&client.FluxConfig{
-		Provider: client.DetectProvider(),
+	c := provider.Client(&core.FluxConfig{
+		Provider: provider.DetectProvider(),
 	})
 
-	messages := []client.FluxMessage{
+	messages := []core.FluxMessage{
 		{Role: "user", Content: "Write a short poem about programming."},
 	}
 
-	sr, err := c.StreamChat(context.Background(), messages, client.ChatOptions{
+	sr, err := c.StreamChat(context.Background(), messages, core.ChatOptions{
 		Model: "claude-sonnet-4-6",
 	})
 	if err != nil {

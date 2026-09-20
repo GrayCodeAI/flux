@@ -12,28 +12,29 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 func main() {
-	primary := client.Client(&client.FluxConfig{
+	primary := provider.Client(&core.FluxConfig{
 		Provider: "anthropic",
 	})
-	secondary := client.Client(&client.FluxConfig{
+	secondary := provider.Client(&core.FluxConfig{
 		Provider: "openai",
 	})
 
-	messages := []client.FluxMessage{
+	messages := []core.FluxMessage{
 		{Role: "user", Content: "Explain what a fallback chain is in one sentence."},
 	}
 
 	// Try primary first, fall back to secondary on failure.
-	resp, err := primary.Chat(context.Background(), messages, client.ChatOptions{
+	resp, err := primary.Chat(context.Background(), messages, core.ChatOptions{
 		Model: "claude-sonnet-4-6",
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "primary failed, trying secondary: %v\n", err)
-		resp, err = secondary.Chat(context.Background(), messages, client.ChatOptions{
+		resp, err = secondary.Chat(context.Background(), messages, core.ChatOptions{
 			Model: "gpt-4o",
 		})
 		if err != nil {

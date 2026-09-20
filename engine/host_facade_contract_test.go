@@ -45,32 +45,34 @@ func TestGatewayDefinitionsArePureMetadataWithSeparateRanks(t *testing.T) {
 	}
 }
 
-func TestCustomGatewayOptionsOverrideProcessGlobalRegistry(t *testing.T) {
-	registerCustomGatewayForTest(t, CustomGateway{
-		ID: "global-only-contract", BaseURL: "https://global.example.test/v1", DefaultModel: "global/model",
-	})
+func TestCustomGatewayOptionsAreInstanceIsolated(t *testing.T) {
 	store := &credentials.MapStore{}
-	explicit, err := New(Options{
+	first, err := New(Options{
 		SecretStore: store, StateDir: t.TempDir(),
 		CustomGateways: []CustomGateway{{
-			ID: "instance-only-contract", BaseURL: "https://instance.example.test/v1", DefaultModel: "instance/model",
+			ID: "first-contract", BaseURL: "https://first.example.test/v1", DefaultModel: "first/model",
 		}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := explicit.customGateway("instance-only-contract"); !ok {
-		t.Fatal("per-engine custom gateway missing")
-	}
-	if _, ok := explicit.customGateway("global-only-contract"); ok {
-		t.Fatal("per-engine options leaked process-global compatibility gateway")
-	}
-	compat, err := New(Options{SecretStore: store, StateDir: t.TempDir(), UseRegisteredCustomGateways: true})
+	second, err := New(Options{SecretStore: store, StateDir: t.TempDir(), CustomGateways: []CustomGateway{{
+		ID: "second-contract", BaseURL: "https://second.example.test/v1", DefaultModel: "second/model",
+	}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := compat.customGateway("global-only-contract"); !ok {
-		t.Fatal("nil custom options did not preserve compatibility registration")
+	if _, ok := first.customGateway("first-contract"); !ok {
+		t.Fatal("first Engine lost its gateway")
+	}
+	if _, ok := first.customGateway("second-contract"); ok {
+		t.Fatal("second Engine's gateway leaked into first")
+	}
+	if _, ok := second.customGateway("first-contract"); ok {
+		t.Fatal("first Engine's gateway leaked into second")
+	}
+	if _, ok := second.customGateway("second-contract"); !ok {
+		t.Fatal("second Engine lost its gateway")
 	}
 }
 

@@ -1,6 +1,6 @@
 // Package runtime is the **recommended entry point** for host applications
 // (e.g. rho). Start by calling runtime.Load to get a *Runtime, then
-// rt.ChatProvider to obtain a client.Provider that you can hand to your
+// rt.ChatProvider to obtain a core.Provider that you can hand to your
 // agent loop.
 //
 // Note: the "stable" surface of flux is actually a set of cooperating
@@ -8,7 +8,7 @@
 // applications) actually import is:
 //
 //	github.com/GrayCodeAI/flux/runtime          (this package — bootstrap facade)
-//	github.com/GrayCodeAI/flux/client           (Provider interface, message/response types)
+//	github.com/GrayCodeAI/flux/provider           (Provider interface, message/response types)
 //	github.com/GrayCodeAI/flux/catalog         (model catalog: pricing, capabilities, registry)
 //	github.com/GrayCodeAI/flux/catalog/registry (ProviderSpec catalog: 16 registered providers)
 //	github.com/GrayCodeAI/flux/catalog/xiaomi  (Xiaomi-specific catalog helpers)
@@ -32,9 +32,9 @@ import (
 
 	"github.com/GrayCodeAI/flux/catalog"
 	"github.com/GrayCodeAI/flux/catalog/registry"
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/config"
 	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/setup"
 )
 
@@ -107,7 +107,7 @@ func Discover(ctx context.Context) (*ApplyResult, error) {
 }
 
 // ChatProvider builds the LLM client (deployment router when configured).
-func (r *Runtime) ChatProvider(ctx context.Context) (client.Provider, error) {
+func (r *Runtime) ChatProvider(ctx context.Context) (core.Provider, error) {
 	cfg := r.Provider
 	if cfg == nil {
 		cfg = config.LoadProviderConfig("")
@@ -122,27 +122,18 @@ func (r *Runtime) ChatProvider(ctx context.Context) (client.Provider, error) {
 // ChatProvider builds the configured chat provider without requiring callers to
 // load runtime state first. Host applications should prefer this over reaching
 // into lower-level setup/config packages.
-func ChatProvider(ctx context.Context) (client.Provider, error) {
+func ChatProvider(ctx context.Context) (core.Provider, error) {
 	cfg := config.LoadProviderConfig("")
 	return setup.DeploymentProvider(ctx, cfg)
 }
 
-// AvailableProviders lists engine-owned provider IDs. Built-ins come from the
-// canonical catalog registry; client-only entries are dynamically registered
-// providers and are included for backwards compatibility.
+// AvailableProviders lists built-in provider IDs from the canonical catalog
+// registry. Instance-local custom providers belong to their owning client or
+// Engine and are deliberately not exposed as process-global providers.
 func AvailableProviders() []string {
-	seen := make(map[string]struct{})
 	providers := make([]string, 0, len(registry.All()))
 	for _, spec := range registry.All() {
-		seen[spec.ProviderID] = struct{}{}
 		providers = append(providers, spec.ProviderID)
-	}
-	for _, provider := range client.Client(nil).GetProviders() {
-		if _, ok := seen[provider]; ok {
-			continue
-		}
-		seen[provider] = struct{}{}
-		providers = append(providers, provider)
 	}
 	sort.Strings(providers)
 	return providers

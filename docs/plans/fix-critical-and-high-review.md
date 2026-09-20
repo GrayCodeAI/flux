@@ -34,13 +34,13 @@ The rho-side companion plan lives at `../rho/docs/plans/fix-critical-and-high-re
 | ID | Severity | Title | File(s) | Effort |
 |----|----------|-------|---------|--------|
 | C1 | critical | Pin `go.mod` to a real Go version | `go.mod:3` | XS (1 line) |
-| C2 | critical | Fix Vertex misrouting bug | `client/provider_registry.go:167-177`, `client/vertex.go` | S |
+| C2 | critical | Fix Vertex misrouting bug | `provider/provider_registry.go:167-177`, `provider/vertex.go` | S |
 | C6 | critical | Fix keyring goroutine leak | `credentials/keyring_platform.go:22-32` | S |
-| C7 | critical | Remove ghost dynamic-provider auto-register | `client/dynamic.go:62-70`, `client/provider_registry.go:107-110` | S |
-| H1 | high | Unify Gemini SSE parser | `client/gemini.go:496-535` | M |
-| H2 | high | Extract shared `providerRequest` builder | `client/anthropic.go`, `client/openai.go` | L |
-| H3 | high | Unify Anthropic response parsing (3 → 1) | `client/{anthropic,bedrock,vertex}.go` | M |
-| H4 | high | Wire `FluxError` into provider error paths | `client/errors.go`, all `client/*.go` | M |
+| C7 | critical | Remove ghost dynamic-provider auto-register | `provider/dynamic.go:62-70`, `provider/provider_registry.go:107-110` | S |
+| H1 | high | Unify Gemini SSE parser | `provider/gemini.go:496-535` | M |
+| H2 | high | Extract shared `providerRequest` builder | `provider/anthropic.go`, `provider/openai.go` | L |
+| H3 | high | Unify Anthropic response parsing (3 → 1) | `provider/{anthropic,bedrock,vertex}.go` | M |
+| H4 | high | Wire `FluxError` into provider error paths | `provider/errors.go`, all `provider/*.go` | M |
 
 ## Out of scope (deferred to next plan)
 
@@ -93,8 +93,8 @@ re-pinnable.
 
 ## PR 2 — Fix Vertex misrouting (C2)
 
-**Bug**: `client/provider_registry.go:167-177` instantiates Vertex as a
-`GeminiClient` (Gemini wire format + URL), even though `client/vertex.go:42`
+**Bug**: `provider/provider_registry.go:167-177` instantiates Vertex as a
+`GeminiClient` (Gemini wire format + URL), even though `provider/vertex.go:42`
 defines `c.baseURL()` returning `publishers/anthropic/models` (Anthropic-on-Vertex).
 Vertex users are silently sent to Gemini's endpoint with an Anthropic-shaped
 URL — guaranteed 4xx.
@@ -108,12 +108,12 @@ URL — guaranteed 4xx.
    and its `BaseURL()` matches the Anthropic-on-Vertex template.
 
 **Files**:
-- `client/provider_registry.go` (replace 1 switch case)
-- `client/vertex.go` (likely no change; review for testability)
-- `client/provider_registry_test.go` (NEW — was the biggest test gap)
+- `provider/provider_registry.go` (replace 1 switch case)
+- `provider/vertex.go` (likely no change; review for testability)
+- `provider/provider_registry_test.go` (NEW — was the biggest test gap)
 
 **Test plan**:
-- `TestGetOrCreateProvider_Vertex` asserts `*client.VertexClient`.
+- `TestGetOrCreateProvider_Vertex` asserts `*provider.VertexClient`.
 - Existing `vertex_test.go` (cloud_providers_test.go) covers HTTP roundtrip;
   ensure it still passes against the corrected URL.
 - Run the `verify/` conformance harness against a live Vertex endpoint
@@ -160,46 +160,20 @@ keyring), the goroutine leaks indefinitely.
 
 ---
 
-## PR 4 — Remove ghost dynamic-provider auto-register (C7)
+## PR 4 — Ghost dynamic-provider auto-register (C7)
 
-**Bug**: `client/dynamic.go:62-70` reads `OPENAI_API_BASE` / `OPENAI_BASE_URL`
-at request time and `client/provider_registry.go:107-110` auto-registers an
-unknown provider as an OpenAI-compatible client pointed at that URL. A
-poisoned `OPENAI_API_BASE` (e.g., from a leaked `.envrc`) exfiltrates the
-user's `OPENAI_API_KEY` header to the attacker's server.
-
-**Fix** (two-step, opt-in safe):
-1. Remove the auto-registration. `getOrCreateProvider` returns
-   `ErrUnknownProvider` for unknown provider names.
-2. Add a documented opt-in: `FLUX_ALLOW_DYNAMIC_PROVIDERS=1` env var. When
-   set, the existing auto-registration is allowed (for users who run
-   local proxies like LiteLLM, Ollama, etc.). Default: off.
-3. Log a `WARN` line the first time a dynamic provider is registered.
-
-**Files**:
-- `client/dynamic.go` (gate the registration on the env var)
-- `client/provider_registry.go` (default-error branch; no auto-register)
-- `docs/guides/CREDENTIAL-SETUP-FLOW.md` (document the env var)
-
-**Test plan**:
-- `TestDynamicProvider_DefaultDeny` — unknown provider returns
-  `ErrUnknownProvider`.
-- `TestDynamicProvider_OptIn` — with `FLUX_ALLOW_DYNAMIC_PROVIDERS=1`,
-  the existing behavior is preserved.
-- `TestDynamicProvider_LogsWarning` — assert the `WARN` log line.
-
-**Risk**: low. The new opt-in is backward-compatible for users who set
-`FLUX_ALLOW_DYNAMIC_PROVIDERS=1`. The default is safer.
-
-**Rollback**: revert. The opt-in can be enabled in the env at any time.
+Superseded: the ambient auto-registration path and its opt-in environment
+variable were removed entirely. Unknown provider names fail closed unless the
+client receives an explicit base URL or calls
+`FluxClient.RegisterCustomProvider`. Custom registration is instance-owned.
 
 ---
 
 ## PR 5 — Unify Gemini SSE parser (H1)
 
-**Bug**: `client/gemini.go:496-535` has its own bespoke SSE parser
+**Bug**: `provider/gemini.go:496-535` has its own bespoke SSE parser
 (`streamLoop`) using a 4 KB read buffer. Every other provider uses
-`client/stream.go:32-88` `parseSSEStream` with a 2 MB buffer. Bug fixes to
+`provider/stream.go:32-88` `parseSSEStream` with a 2 MB buffer. Bug fixes to
 SSE parsing don't reach Gemini; the Gemini parser doesn't respect `ctx.Done()`
 between reads.
 
@@ -208,13 +182,13 @@ between reads.
    `processOpenAIStream`.
 2. Replace `streamLoop` with a call to `parseSSEStream` + `processGeminiStream`.
 3. Map Gemini finish reasons consistently with other providers (consider
-   centralizing in `client/finish_reasons.go`).
+   centralizing in `provider/finish_reasons.go`).
 
 **Files**:
-- `client/gemini.go` (replace `streamLoop`; add `processGeminiStream`)
-- `client/stream.go` (no change to `parseSSEStream`; ensure it handles
+- `provider/gemini.go` (replace `streamLoop`; add `processGeminiStream`)
+- `provider/stream.go` (no change to `parseSSEStream`; ensure it handles
   Gemini's `data:` lines — verify it does)
-- `client/gemini_test.go` (add streaming test with multiple events)
+- `provider/gemini_test.go` (add streaming test with multiple events)
 
 **Test plan**:
 - `TestGemini_Streaming_ToolCall` — mock SSE server emits tool-call deltas;
@@ -236,7 +210,7 @@ the old path), keep both code paths for one release, then remove.
 
 ## PR 6 — Extract shared `providerRequest` builder (H2)
 
-**Refactor**: `client/anthropic.go:375-578` and `client/openai.go:408-507`
+**Refactor**: `provider/anthropic.go:375-578` and `provider/openai.go:408-507`
 each have ~120 / ~70 lines of near-duplicate setup between `Chat` and
 `StreamChat`. Every field — `opts.System`, `opts.Temperature`, `opts.TopP`,
 `opts.TopK`, `opts.StopSequences`, `opts.EnableCaching`, `tools`, `thinking`,
@@ -250,9 +224,9 @@ each have ~120 / ~70 lines of near-duplicate setup between `Chat` and
 4. Reduce duplication of the 32 MB body-size check (3 sites in anthropic.go).
 
 **Files**:
-- `client/anthropic.go` (extract builder, reduce ~120 LOC)
-- `client/openai.go` (extract builder, reduce ~70 LOC)
-- `client/transport.go` (add a `requestSizeLimit` const)
+- `provider/anthropic.go` (extract builder, reduce ~120 LOC)
+- `provider/openai.go` (extract builder, reduce ~70 LOC)
+- `provider/transport.go` (add a `requestSizeLimit` const)
 
 **Test plan**:
 - All existing tests pass unchanged.
@@ -271,22 +245,22 @@ in CI but default-on.
 
 ## PR 7 — Unify Anthropic response parsing (H3)
 
-**Refactor**: `client/anthropic.go:457-486`, `client/bedrock.go:432-460`,
-`client/vertex.go:85-100` each implement a near-duplicate `responseFromAnthropic`.
+**Refactor**: `provider/anthropic.go:457-486`, `provider/bedrock.go:432-460`,
+`provider/vertex.go:85-100` each implement a near-duplicate `responseFromAnthropic`.
 A wire-format change needs 3 edits.
 
 **Fix**:
-1. Move the parser to `client/anthropic_response.go` (or
-   `client/response.go`) as `parseAnthropicResponse(raw []byte, requestID, orgID string) (*FluxResponse, error)`.
+1. Move the parser to `provider/anthropic_response.go` (or
+   `provider/response.go`) as `parseAnthropicResponse(raw []byte, requestID, orgID string) (*FluxResponse, error)`.
 2. All three call sites import it. They differ only in how `requestID` /
    `orgID` are extracted from the response (HTTP headers), so pass those in.
 3. `buildAnthropicMessages` is already shared; mirror the same pattern.
 
 **Files**:
-- `client/anthropic.go` (delete local copy)
-- `client/bedrock.go` (delete local copy; extract headers)
-- `client/vertex.go` (delete local copy; extract headers)
-- `client/anthropic_response.go` (NEW)
+- `provider/anthropic.go` (delete local copy)
+- `provider/bedrock.go` (delete local copy; extract headers)
+- `provider/vertex.go` (delete local copy; extract headers)
+- `provider/anthropic_response.go` (NEW)
 
 **Test plan**:
 - `TestParseAnthropicResponse_*` — table-driven test covering tool calls,
@@ -302,7 +276,7 @@ its own test; the shared parser is unit-tested independently.
 
 ## PR 8 — Wire `FluxError` into provider error paths (H4)
 
-**Refactor**: `client/errors.go:7` defines `FluxError` with
+**Refactor**: `provider/errors.go:7` defines `FluxError` with
 `IsRetriable()`, `IsAuthError()`, `IsRateLimited()` methods, but **no
 provider returns `*FluxError`**. All error paths use
 `fmt.Errorf("flux: …")`. `doWithRetry` does its own string classification
@@ -317,13 +291,13 @@ instead of using the structured type.
 4. Public API consumers (rho) can now use `errors.As` for typed errors.
 
 **Files**:
-- `client/errors.go` (extend `FluxError` with `Unwrap()`, helpers)
-- `client/anthropic.go`, `client/openai.go`, `client/gemini.go`,
-  `client/bedrock.go`, `client/vertex.go`, `client/azure.go` (use the
+- `provider/errors.go` (extend `FluxError` with `Unwrap()`, helpers)
+- `provider/anthropic.go`, `provider/openai.go`, `provider/gemini.go`,
+  `provider/bedrock.go`, `provider/vertex.go`, `provider/azure.go` (use the
   shared `formatAPIError`)
-- `client/retry.go` (use `errors.As` instead of string match)
-- `client/errors_test.go` (extend coverage)
-- `client/fallback.go` (use `IsRetriable()` instead of
+- `provider/retry.go` (use `errors.As` instead of string match)
+- `provider/errors_test.go` (extend coverage)
+- `provider/fallback.go` (use `IsRetriable()` instead of
   `isRetriableError` heuristic)
 
 **Test plan**:
@@ -372,7 +346,7 @@ Coverage target: maintained at 60%+ (CI gate).
    `FLUX_GEMINI_SHARED_PARSER` env var for one release.
 3. **H2 / H3 sequencing** — H2 first (bigger, but independent) or H3
    first (smaller, lower risk)?
-4. **H4 scope** — should `client/recorder.go` and `client/coalesce.go`
+4. **H4 scope** — should `provider/recorder.go` and `provider/coalesce.go`
    also adopt `FluxError`, or is that M-tier?
 5. **Branch lifetime** — keep the branch as a long-lived namespace, or
    squash each PR to a single commit on merge?

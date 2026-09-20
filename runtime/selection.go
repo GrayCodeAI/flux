@@ -7,8 +7,8 @@ import (
 
 	"github.com/GrayCodeAI/flux/catalog"
 	"github.com/GrayCodeAI/flux/catalog/registry"
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/config"
+	client "github.com/GrayCodeAI/flux/provider"
 	"github.com/GrayCodeAI/flux/setup"
 )
 

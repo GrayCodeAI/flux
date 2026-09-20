@@ -10,10 +10,12 @@ import (
 
 	"github.com/GrayCodeAI/flux/catalog"
 	"github.com/GrayCodeAI/flux/catalog/registry"
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/config"
 	"github.com/GrayCodeAI/flux/credentials"
 	"github.com/GrayCodeAI/flux/llm"
+	providercache "github.com/GrayCodeAI/flux/provider/cache"
+	"github.com/GrayCodeAI/flux/provider/core"
+	"github.com/GrayCodeAI/flux/provider/resilience"
 	"github.com/GrayCodeAI/flux/setup"
 )
 
@@ -34,22 +36,19 @@ type Options struct {
 	// CustomGateways is snapshotted per Engine. A non-nil empty slice
 	// explicitly declares that the host has no custom gateways.
 	CustomGateways []CustomGateway
-	// UseRegisteredCustomGateways opts into the deprecated process-global
-	// RegisterCustomGateway registry when CustomGateways is nil.
-	UseRegisteredCustomGateways bool
 	// EnableRateLimiting wraps resolved transports with an adaptive rate
 	// limiter that backs off when approaching provider limits. Off by default.
 	EnableRateLimiting bool
 	// RateLimitConfig configures the adaptive rate limiter. Zero value uses
 	// sensible defaults (10% threshold, 10s max delay).
-	RateLimitConfig client.AdaptiveRateLimitConfig
+	RateLimitConfig resilience.AdaptiveRateLimitConfig
 	// EnableCaching wraps resolved transports with a semantic response cache.
 	// Only caches deterministic requests (temperature <= threshold). Off by
 	// default.
 	EnableCaching bool
 	// CacheConfig configures the response cache. Zero value uses sensible
 	// defaults (5min TTL, 100 entries, 0.5 temperature threshold).
-	CacheConfig client.CacheConfig
+	CacheConfig providercache.CacheConfig
 }
 
 // Engine is Flux's narrow host facade. It is safe for concurrent use when
@@ -61,11 +60,11 @@ type Engine struct {
 	providerConfigPath string
 	remoteCatalogURL   string
 	customGateways     map[string]CustomGateway
-	resolveTransport   func(context.Context, Route) (client.Provider, error)
+	resolveTransport   func(context.Context, Route) (core.Provider, error)
 	enableRateLimiting bool
-	rateLimitConfig    client.AdaptiveRateLimitConfig
+	rateLimitConfig    resilience.AdaptiveRateLimitConfig
 	enableCaching      bool
-	cacheConfig        client.CacheConfig
+	cacheConfig        providercache.CacheConfig
 }
 
 // New constructs a host-facing Flux engine.
@@ -101,7 +100,7 @@ func New(opts Options) (*Engine, error) {
 	if remoteCatalogURL == "" {
 		remoteCatalogURL = catalog.SeedCatalogURL
 	}
-	customGateways, err := customGatewaysForOptions(opts.CustomGateways, opts.UseRegisteredCustomGateways)
+	customGateways, err := customGatewaysForOptions(opts.CustomGateways)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +280,7 @@ func offeringForProvider(compiled *catalog.CompiledCatalog, providerID, canonica
 	return firstOffering(compiled.OfferingsByCanonicalModel[canonicalID])
 }
 
-func (e *Engine) resolveProvider(ctx context.Context, req GenerateRequest) (Route, client.Provider, error) {
+func (e *Engine) resolveProvider(ctx context.Context, req GenerateRequest) (Route, core.Provider, error) {
 	route, err := e.resolveSelection(ctx, SelectionRequest{Requirements: req.Requirements, Preference: req.Preference})
 	if err != nil {
 		return Route{}, nil, err
@@ -301,30 +300,30 @@ func (e *Engine) resolveProvider(ctx context.Context, req GenerateRequest) (Rout
 	return route, provider, nil
 }
 
-func (e *Engine) defaultTransport(ctx context.Context, route Route) (client.Provider, error) {
-	if provider, ok, err := e.customGatewayTransport(ctx, route); ok {
-		return provider, err
+func (e *Engine) defaultTransport(ctx context.Context, route Route) (core.Provider, error) {
+	if transportProvider, ok, err := e.customGatewayTransport(ctx, route); ok {
+		return transportProvider, err
 	}
 	compiled, cfg, err := e.loadRuntimeState(ctx)
 	if err != nil {
 		return nil, err
 	}
-	provider, err := setup.DeploymentProviderFromState(cfg, compiled)
+	transportProvider, err := setup.DeploymentProviderFromState(cfg, compiled)
 	if err != nil {
 		return nil, err
 	}
 	// Wrap with opt-in middleware: rate limiting first (outermost), then cache.
 	if e.enableRateLimiting {
-		rlProvider, rlErr := client.NewAdaptiveRateLimitProvider(provider, e.rateLimitConfig)
+		rlProvider, rlErr := resilience.NewAdaptiveRateLimitProvider(transportProvider, e.rateLimitConfig)
 		if rlErr == nil {
-			provider = rlProvider
+			transportProvider = rlProvider
 		}
 		// On error, proceed without rate limiting rather than failing the request.
 	}
 	if e.enableCaching {
-		provider = client.NewCachedProvider(provider, e.cacheConfig)
+		transportProvider = providercache.NewCachedProvider(transportProvider, e.cacheConfig)
 	}
-	return provider, nil
+	return transportProvider, nil
 }
 
 func (e *Engine) resolveSelection(ctx context.Context, req SelectionRequest) (Route, error) {

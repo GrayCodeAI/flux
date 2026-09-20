@@ -1,17 +1,8 @@
 package credential
 
 import (
-	"context"
 	"testing"
 )
-
-func TestInferCredentialsFromAPIKey_ReturnsNil(t *testing.T) {
-	t.Parallel()
-	got := InferCredentialsFromAPIKey(context.Background(), "sk-ant-api03-test-key-1234567890")
-	if len(got) != 0 {
-		t.Fatalf("expected no prefix inference, got %d", len(got))
-	}
-}
 
 func TestInferenceForProvider_Anthropic(t *testing.T) {
 	t.Parallel()

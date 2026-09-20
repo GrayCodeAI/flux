@@ -50,7 +50,7 @@ Flux stores Anthropic **base** as `…/anthropic` (no `/v1`); `AnthropicClient` 
 
 **Legacy:** `xiaomi_mimo` / `XIAOMI_MIMO_API_KEY` / keychain account `xiaomi_mimo_api_key` migrate to pay-as-you-go (`XIAOMI_MIMO_PAYG_API_KEY` / `xiaomi_mimo_payg_api_key`) on load and startup.
 
-**Code:** `flux/catalog/xiaomi/` (URLs), `flux/client/mimo.go` (dual-protocol client), `rho/cmd/chat_config_region.go` (region UI).
+**Code:** `flux/catalog/xiaomi/` (URLs), `flux/provider/mimo.go` (dual-protocol client), `rho/cmd/chat_config_region.go` (region UI).
 
 **Not implemented (out of scope):** ASR/TTS ([Speech Recognition](https://platform.xiaomimimo.com/docs/en-US/api/audio/Speech-Recognition), speech synthesis guides), web-search billing plugins, user toggle for Anthropic-primary routing.
 

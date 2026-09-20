@@ -7,18 +7,18 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/flux/catalog/registry"
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/config"
 	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/provider/adapters"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // CustomGatewayCapabilities declares capabilities known to be supported by a
-// custom OpenAI-compatible gateway. A nil declaration is permissive for
-// backward compatibility: the remote gateway remains the source of truth.
+// custom OpenAI-compatible gateway. A nil declaration is permissive: the
+// remote gateway remains the source of truth.
 type CustomGatewayCapabilities struct {
 	Streaming      bool `json:"streaming,omitempty"`
 	Tools          bool `json:"tools,omitempty"`
@@ -41,27 +41,6 @@ type CustomGateway struct {
 	SortOrder      int                        `json:"sort_order,omitempty"`
 	ChatPreference int                        `json:"chat_preference,omitempty"`
 	Capabilities   *CustomGatewayCapabilities `json:"capabilities,omitempty"`
-}
-
-var customGatewayRegistry = struct {
-	sync.RWMutex
-	gateways map[string]CustomGateway
-}{gateways: make(map[string]CustomGateway)}
-
-// RegisterCustomGateway registers safe OpenAI-compatible routing metadata for
-// compatibility callers. New embedders should pass Options.CustomGateways so
-// instances stay isolated. Registration must happen before Engine creation;
-// each Engine snapshots the metadata and always resolves credentials through
-// its own injected SecretStore.
-func RegisterCustomGateway(gateway CustomGateway) error {
-	gateway, err := normalizeCustomGateway(gateway)
-	if err != nil {
-		return err
-	}
-	customGatewayRegistry.Lock()
-	customGatewayRegistry.gateways[gateway.ID] = cloneCustomGateway(gateway)
-	customGatewayRegistry.Unlock()
-	return nil
 }
 
 func normalizeCustomGateway(gateway CustomGateway) (CustomGateway, error) {
@@ -111,10 +90,7 @@ func normalizeCustomGateway(gateway CustomGateway) (CustomGateway, error) {
 	return gateway, nil
 }
 
-func customGatewaysForOptions(gateways []CustomGateway, useRegistered bool) (map[string]CustomGateway, error) {
-	if gateways == nil && useRegistered {
-		return snapshotCustomGateways(), nil
-	}
+func customGatewaysForOptions(gateways []CustomGateway) (map[string]CustomGateway, error) {
 	out := make(map[string]CustomGateway, len(gateways))
 	for _, gateway := range gateways {
 		normalized, err := normalizeCustomGateway(gateway)
@@ -127,16 +103,6 @@ func customGatewaysForOptions(gateways []CustomGateway, useRegistered bool) (map
 		out[normalized.ID] = cloneCustomGateway(normalized)
 	}
 	return out, nil
-}
-
-func snapshotCustomGateways() map[string]CustomGateway {
-	customGatewayRegistry.RLock()
-	defer customGatewayRegistry.RUnlock()
-	out := make(map[string]CustomGateway, len(customGatewayRegistry.gateways))
-	for id, gateway := range customGatewayRegistry.gateways {
-		out[id] = cloneCustomGateway(gateway)
-	}
-	return out
 }
 
 func cloneCustomGateway(gateway CustomGateway) CustomGateway {
@@ -217,7 +183,7 @@ func validateCustomGatewayRequirements(gateway CustomGateway, modelID string, re
 	}
 }
 
-func (e *Engine) customGatewayTransport(ctx context.Context, route Route) (client.Provider, bool, error) {
+func (e *Engine) customGatewayTransport(ctx context.Context, route Route) (core.Provider, bool, error) {
 	gateway, ok := e.customGateway(route.Provider)
 	if !ok {
 		return nil, false, nil
@@ -245,8 +211,8 @@ func (e *Engine) customGatewayTransport(ctx context.Context, route Route) (clien
 			}
 		}
 	}
-	compat := &client.OpenAICompatConfig{MaxTokensField: gateway.MaxTokensField}
-	provider := client.NewOpenAIClient(secret, gateway.BaseURL, compat, client.WithProviderName(gateway.ID))
+	compat := &adapters.OpenAICompatConfig{MaxTokensField: gateway.MaxTokensField}
+	provider := adapters.NewOpenAIClient(secret, gateway.BaseURL, compat, core.WithProviderName(gateway.ID))
 	return provider, true, nil
 }
 
@@ -313,7 +279,7 @@ func customGatewayCapabilityNames(gateway CustomGateway) []string {
 // stable engine contract. Providers that emit structured tool calls bypass
 // this fallback.
 func ParseInlineToolCalls(content string) (string, []ToolCall) {
-	clean, calls := client.ParseInlineToolCalls(content)
+	clean, calls := core.ParseInlineToolCalls(content)
 	if len(calls) == 0 {
 		return clean, nil
 	}

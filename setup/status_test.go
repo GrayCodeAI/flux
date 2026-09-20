@@ -15,7 +15,7 @@ import (
 func TestFormatStatus_DisabledRouting(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: false,
-		ProviderConfig:    "/home/user/.rho/provider.json",
+		ProviderConfig:    "/home/user/.rho/adapters.json",
 		ConfigVersion:     2,
 		Configured:        []string{},
 		CatalogCache:      "/home/user/.flux/model_catalog.json",
@@ -29,7 +29,7 @@ func TestFormatStatus_DisabledRouting(t *testing.T) {
 	if strings.Contains(out, "legacy provider client") {
 		t.Fatal("status output still describes the retired host-side provider client")
 	}
-	if !strings.Contains(out, "none (set API keys or deployments in provider.json)") {
+	if !strings.Contains(out, "none (set API keys or deployments in adapters.json)") {
 		t.Fatal("expected 'none' deployment message")
 	}
 	if !strings.Contains(out, "using embedded catalog: 10 models") {
@@ -40,7 +40,7 @@ func TestFormatStatus_DisabledRouting(t *testing.T) {
 func TestFormatStatus_EnabledRouting(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting:  true,
-		ProviderConfig:     "/home/user/.rho/provider.json",
+		ProviderConfig:     "/home/user/.rho/adapters.json",
 		ConfigVersion:      2,
 		Configured:         []string{"anthropic-direct", "openai-direct"},
 		CatalogCache:       "/home/user/.flux/model_catalog.json",
@@ -71,7 +71,7 @@ func TestFormatStatus_EnabledRouting(t *testing.T) {
 func TestFormatStatus_StaleCatalog(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: true,
-		ProviderConfig:    "/home/user/.rho/provider.json",
+		ProviderConfig:    "/home/user/.rho/adapters.json",
 		CatalogCache:      "/home/user/.flux/model_catalog.json",
 		CatalogExists:     true,
 		CatalogModified:   time.Now().UTC().Add(-1 * time.Hour),
@@ -86,7 +86,7 @@ func TestFormatStatus_StaleCatalog(t *testing.T) {
 func TestFormatStatus_ActiveModel(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: true,
-		ProviderConfig:    "/home/user/.rho/provider.json",
+		ProviderConfig:    "/home/user/.rho/adapters.json",
 		CatalogCache:      "/home/user/.flux/model_catalog.json",
 		ActiveModel:       "anthropic/claude-sonnet-4",
 		RoutingSource:     "model",
@@ -104,7 +104,7 @@ func TestFormatStatus_ActiveModel(t *testing.T) {
 func TestFormatStatus_NoActiveModel(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: true,
-		ProviderConfig:    "/home/user/.rho/provider.json",
+		ProviderConfig:    "/home/user/.rho/adapters.json",
 		CatalogCache:      "/home/user/.flux/model_catalog.json",
 	}
 	out := FormatStatus(report)
@@ -116,7 +116,7 @@ func TestFormatStatus_NoActiveModel(t *testing.T) {
 func TestFormatStatus_ConfigVersion(t *testing.T) {
 	report := StatusReport{
 		DeploymentRouting: false,
-		ProviderConfig:    "/home/user/.rho/provider.json",
+		ProviderConfig:    "/home/user/.rho/adapters.json",
 		ConfigVersion:     2,
 	}
 	out := FormatStatus(report)
@@ -162,7 +162,7 @@ func TestSaveProviderConfigV2_Nil(t *testing.T) {
 
 func TestDeploymentStatusFromPathsIgnoresAmbientRoutingAndCredentials(t *testing.T) {
 	dir := t.TempDir()
-	providerPath := filepath.Join(dir, "provider.json")
+	providerPath := filepath.Join(dir, "adapters.json")
 	catalogPath := filepath.Join(dir, "model_catalog.json")
 	if err := config.SaveProviderConfig(&config.ProviderConfig{}, providerPath); err != nil {
 		t.Fatal(err)

@@ -49,7 +49,7 @@ func (hs HealthStatus) IsHealthy() bool {
 }
 
 // ProviderPinger is the interface that providers must implement for health checking.
-// This is satisfied by the client.Provider interface's Ping method.
+// This is satisfied by the core.Provider interface's Ping method.
 type ProviderPinger interface {
 	Ping(ctx context.Context) error
 	Name() string

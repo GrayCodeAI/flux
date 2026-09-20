@@ -52,10 +52,8 @@ e, err := engine.New(engine.Options{
 
 `StateDir` derives `model_catalog.json` and `provider.json` when explicit paths
 are absent. Explicit paths win. The store, paths, remote catalog URL, and custom
-gateways belong to the Engine instance; production behavior does not depend on
-ambient Rho paths or a process-global custom-gateway registry. The global
-registry remains an opt-in compatibility path through
-`UseRegisteredCustomGateways`.
+gateways belong to the Engine instance; behavior does not depend on ambient
+Rho paths or a process-global custom-gateway registry.
 
 ## Stable contract
 

@@ -190,27 +190,6 @@ func TestResolveCredential(t *testing.T) {
 	}
 }
 
-func TestInferCredentialsFromAPIKey(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		secret string
-	}{
-		{"empty", ""},
-		{"placeholder", "your-api-key-here"},
-		{"anthropic shaped", "sk-ant-api03-valid-key-format-12345"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			inferences := InferCredentialsFromAPIKey(context.Background(), tt.secret)
-			if len(inferences) != 0 {
-				t.Fatalf("expected no prefix inference, got %d", len(inferences))
-			}
-		})
-	}
-}
-
 func TestInferenceForProvider_OpenAI(t *testing.T) {
 	t.Parallel()
 	inf, err := InferenceForProvider("openai")

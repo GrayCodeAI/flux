@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/flux/client"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // Node, alias, prompt-from, rate-limit, error-simulation, content-type,
@@ -318,24 +318,24 @@ type rateLimitProvider struct {
 
 func (r *rateLimitProvider) Name() string                 { return "ratelimit" }
 func (r *rateLimitProvider) Ping(_ context.Context) error { return nil }
-func (r *rateLimitProvider) Chat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.FluxResponse, error) {
+func (r *rateLimitProvider) Chat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.FluxResponse, error) {
 	r.callCount++
 	if r.callCount > r.limit {
 		return nil, fmt.Errorf("429 Too Many Requests: rate limit exceeded")
 	}
-	return &client.FluxResponse{Content: "ok", FinishReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 1}}, nil
+	return &core.FluxResponse{Content: "ok", FinishReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 1}}, nil
 }
 
-func (r *rateLimitProvider) StreamChat(_ context.Context, _ []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (r *rateLimitProvider) StreamChat(_ context.Context, _ []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
 	r.callCount++
 	if r.callCount > r.limit {
 		return nil, fmt.Errorf("429 Too Many Requests: rate limit exceeded")
 	}
-	ch := make(chan client.FluxStreamEvent, 2)
-	ch <- client.FluxStreamEvent{Type: "content", Content: "ok"}
-	ch <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.FluxUsage{CompletionTokens: 1}}
+	ch := make(chan core.FluxStreamEvent, 2)
+	ch <- core.FluxStreamEvent{Type: "content", Content: "ok"}
+	ch <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &core.FluxUsage{CompletionTokens: 1}}
 	close(ch)
-	return &client.StreamResult{Events: ch}, nil
+	return &core.StreamResult{Events: ch}, nil
 }
 
 func TestPrompt_RateLimitSimulation(t *testing.T) {

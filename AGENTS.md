@@ -31,9 +31,9 @@ make ci                          # Full CI suite
 ## Architecture
 
 - `engine/` — stable host-facing provider engine facade and DTO contract
-- `client/core/` — provider-neutral wire types, transport, stream, and retry primitives
-- `client/adapters/` — provider protocol adapters and construction registry
-- `client/` — backwards-compatible public facade, middleware, and caches
+- `provider/core/` — provider-neutral wire types, transport, stream, and retry primitives
+- `provider/adapters/` — provider protocol adapters and construction registry
+- `provider/` — provider runtime composition root
 - `credentials/` — API key storage, lookup, and safe status projection
 - `catalog/` — model catalog, discovery, capabilities, and pricing
 - `router/` and `runtime/` — route policy and runtime resolution
@@ -50,13 +50,13 @@ make ci                          # Full CI suite
 ## Common Pitfalls
 
 - `engine`, `llm`, `graph` and `tools` are the host contract surface. Rho
-  must not assemble `client`, `catalog`, `config`, `credentials`, `router` or
+  must not assemble `provider`, `catalog`, `config`, `credentials`, `router` or
   `runtime`. Six symbols Rho needs (`ChatOptions`, `ContinuationConfig`,
   `StreamResult`, `ResponseFormat`, `ImageURLPart`, `InputAudioPart`) live in
   `llm` with no `engine` alias; widening the facade to cover them is a
   deliberate API change, not an incidental one.
-- `client.Provider` remains the lower-level compatibility boundary for other
-  consumers; preserve its method set and the facade's type identity
+- `provider/core.Provider` is the lower-level provider contract; keep its
+  method set stable and use it across feature packages
 - Streaming tests need careful goroutine management
 - `go.work` here should stay minimal; the parent `graycode-eco/go.work`
   connects this independent `flux` checkout beside Rho for local development.
@@ -65,20 +65,20 @@ make ci                          # Full CI suite
 
 ## Naming Conventions
 
-- **Provider interface**: `client.Provider` with `Chat()`, `StreamChat()`, `Ping()`, `Name()` — implemented per LLM vendor
-- **Client types**: `FluxClient`, `FluxMessage`, `FluxResponse`, `FluxTool`, `FluxUsage` — `Flux` prefix for public types
-- **Config struct**: `FluxConfig` with `Provider`, `APIKey`, `BaseURL`, `Model`, `MaxRetries` fields
-- **Provider implementations**: `AnthropicClient`, `OpenAIClient`, `GeminiClient`, `BedrockClient`, etc. — in `client/` package
-- **Compatibility configs**: `OpenAICompat`, `GrokCompat`, `OpenRouterCompat` — `Compat` suffix for provider quirks
+- **Provider interface**: `provider/core.Provider` with `Chat()`, `StreamChat()`, `Ping()`, `Name()`
+- **Core request types**: `provider/core.FluxMessage`, `FluxResponse`, `FluxTool`, `FluxUsage`
+- **Config struct**: `provider/core.FluxConfig` with `Provider`, `APIKey`, `BaseURL`, `Model`, `MaxRetries`
+- **Provider implementations**: `provider/adapters/AnthropicClient`, `OpenAIClient`, `GeminiClient`, etc.
+- **Compatibility configs**: `provider/adapters.OpenAICompat`, `GrokCompat`, `OpenRouterCompat`
 - **Error type**: `FluxError` with `Provider`, `Op`, `StatusCode`, `RequestID`, `Message`, `Err` fields
 - **Stream types**: `StreamResult`, `SSEEvent`, `StreamEvent` — streaming is SSE-based
 - **Retry config**: `RetryConfig` embeds `types.RetryConfig` + adds `RetryOn []int` for HTTP status codes
-- **Version wiring**: `client.Version` set via `SetVersion()` from root package — avoids circular import
+- **Version wiring**: `provider.Version` set via `SetVersion()` from root package — avoids circular import
 
 ## API Patterns
 
 - **Provider auto-detection**: `DetectProvider()` checks env vars in priority order (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
-- **Client creation**: `client.NewFluxClient(&FluxConfig{...})` or `client.Client(&FluxConfig{...})` — both work
+- **Client creation**: `provider.NewFluxClient(&core.FluxConfig{...})` or `provider.Client(&core.FluxConfig{...})`
 - **Chat method**: `c.Chat(ctx, messages, opts)` — non-streaming, returns `*FluxResponse`
 - **Stream method**: `c.StreamChat(ctx, messages, opts)` — returns `*StreamResult`, caller must `defer sr.Close()`
 - **Auto-continuation**: `StreamChatContinue()` transparently retries when `stop_reason == max_tokens`
@@ -111,38 +111,38 @@ make ci                          # Full CI suite
 - **Do not touch**: `Provider` interface (`Chat`, `StreamChat`, `Ping`, `Name`) — breaking change for all implementations
 - **Do not touch**: `FluxMessage`, `FluxResponse`, `ChatOptions` struct field names — serialization contract
 - **Do not touch**: `FluxError` struct — used by consumers for error type assertions
-- **Do not touch**: `client.FluxConfig` — constructor contract for all consumers
+- **Do not touch**: `provider/core.FluxConfig` — constructor contract for all consumers
 - **Safe to extend**: add new provider implementations, new SSE event types, new cache strategies
-- **When adding a provider**: create `client/<provider>.go`, implement `Provider` interface, register in `provider_registry.go`
+- **When adding a provider**: create `provider/<provider>.go`, implement `Provider` interface, register in `provider_registry.go`
 
 ## Key File Locations
 
 | What | Where |
 |---|---|
-| Provider interface | `client/client.go` (`Provider`, `FluxConfig`, `FluxMessage`, `ContentPart`) |
-| Chat implementation | `client/chat.go` (`Chat()`, `StreamChat()`, `StreamChatContinue()`) |
+| Provider interface | `provider/core/core.go` (`Provider`, `FluxConfig`, `FluxMessage`, `ContentPart`) |
+| Chat implementation | `provider/chat.go` (`Chat()`, `StreamChat()`, `StreamChatContinue()`) |
 | Host-facing engine facade | `engine/` |
-| Provider-neutral core | `client/core/` |
-| Anthropic provider | `client/adapters/anthropic.go` |
-| OpenAI provider | `client/adapters/openai.go` |
-| Gemini provider | `client/adapters/gemini.go` |
-| Bedrock provider | `client/adapters/bedrock.go` |
-| Vertex provider | `client/adapters/vertex.go` |
-| Azure provider | `client/adapters/azure.go` |
-| Provider registry | `client/adapters/provider_registry.go` |
-| Provider compatibility | `client/adapters/compat.go` (`OpenAICompat`, `GrokCompat`, etc.) |
-| SSE streaming | `client/stream.go` (`parseSSEStream()`, `SSEEvent`) |
-| Retry logic | `client/retry.go` (`RetryConfig`, `backoffDelay()`, `shouldRetry()`) |
-| Rate limiting | `client/ratelimit.go`, `client/adaptive_ratelimit.go` |
-| Caching | `client/cache.go`, `client/semantic_cache.go`, `client/cache_analytics.go` |
-| Fallback chains | `client/fallback.go` |
-| Auto-continuation | `client/continuation.go` |
-| Error types | `client/errors.go` (`FluxError`, `IsRetriable()`, `IsAuthError()`) |
+| Provider-neutral core | `provider/core/` |
+| Anthropic provider | `provider/adapters/anthropic.go` |
+| OpenAI provider | `provider/adapters/openai.go` |
+| Gemini provider | `provider/adapters/gemini.go` |
+| Bedrock provider | `provider/adapters/bedrock.go` |
+| Vertex provider | `provider/adapters/vertex.go` |
+| Azure provider | `provider/adapters/azure.go` |
+| Provider registry | `provider/adapters/provider_registry.go` |
+| Provider compatibility | `provider/adapters/compat.go` (`OpenAICompat`, `GrokCompat`, etc.) |
+| SSE streaming | `provider/stream.go` (`parseSSEStream()`, `SSEEvent`) |
+| Retry logic | `provider/core/retry.go` (`RetryConfig`, `backoffDelay()`, `shouldRetry()`) |
+| Rate limiting | `provider/resilience/ratelimit.go`, `provider/resilience/adaptive_ratelimit.go` |
+| Caching | `provider/cache/cache.go`, `provider/cache/semantic_cache.go` |
+| Fallback chains | `provider/resilience/fallback.go` |
+| Auto-continuation | `provider/resilience/continuation.go` |
+| Error types | `provider/errors.go` (`FluxError`, `IsRetriable()`, `IsAuthError()`) |
 | Error constants | `errors/errors.go` (API error messages, prompt-too-long parsing) |
 | Model catalog | `catalog/` (pricing, context windows, capabilities per provider) |
 | Credentials | `credentials/` (key storage, env detection, scrubbing) — `HasSecret` is silent on miss (boolean predicate); `LookupSecret` logs `Debug` on `ErrNotFound` and `Warn` on real backend errors |
-| Mock provider | `client/mock.go` |
-| Main test file | `client/client_test.go` (httptest servers, provider detection) |
+| Mock provider | `provider/testkit/mock.go` |
+| Main test file | `provider/client_test.go` (httptest servers, provider detection) |
 | Linter config | `.golangci.yml` (govet, ineffassign, misspell — minimal) |
 
 This is an independent repository consumed by Rho. In the local

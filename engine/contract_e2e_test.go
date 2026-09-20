@@ -6,37 +6,38 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/flux/catalog"
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/llm"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 type contractProvider struct {
-	chatMessages   []client.FluxMessage
-	chatOptions    client.ChatOptions
-	streamMessages []client.FluxMessage
-	streamOptions  client.ChatOptions
+	chatMessages   []core.FluxMessage
+	chatOptions    core.ChatOptions
+	streamMessages []core.FluxMessage
+	streamOptions  core.ChatOptions
 }
 
 func (p *contractProvider) Name() string               { return "contract" }
 func (p *contractProvider) Ping(context.Context) error { return nil }
 
-func (p *contractProvider) Chat(_ context.Context, messages []client.FluxMessage, opts client.ChatOptions) (*client.FluxResponse, error) {
+func (p *contractProvider) Chat(_ context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.FluxResponse, error) {
 	p.chatMessages, p.chatOptions = messages, opts
-	return &client.FluxResponse{
+	return &core.FluxResponse{
 		Content: "complete", FinishReason: "end_turn", RequestID: "req-blocking",
-		Usage: &client.FluxUsage{PromptTokens: 4, CompletionTokens: 2, TotalTokens: 6},
+		Usage: &core.FluxUsage{PromptTokens: 4, CompletionTokens: 2, TotalTokens: 6},
 	}, nil
 }
 
-func (p *contractProvider) StreamChat(_ context.Context, messages []client.FluxMessage, opts client.ChatOptions) (*client.StreamResult, error) {
+func (p *contractProvider) StreamChat(_ context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 	p.streamMessages, p.streamOptions = messages, opts
-	events := make(chan client.FluxStreamEvent, 4)
-	events <- client.FluxStreamEvent{Type: "content", Content: "checking"}
-	events <- client.FluxStreamEvent{Type: "tool_call", ToolCall: &client.ToolCall{ID: "call-1", Name: "read_file", Arguments: map[string]interface{}{"path": "main.go"}}}
-	events <- client.FluxStreamEvent{Type: "usage", Usage: &client.FluxUsage{PromptTokens: 5, CompletionTokens: 3, TotalTokens: 8}}
-	events <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "req-stream"}
+	events := make(chan core.FluxStreamEvent, 4)
+	events <- core.FluxStreamEvent{Type: "content", Content: "checking"}
+	events <- core.FluxStreamEvent{Type: "tool_call", ToolCall: &core.ToolCall{ID: "call-1", Name: "read_file", Arguments: map[string]interface{}{"path": "main.go"}}}
+	events <- core.FluxStreamEvent{Type: "usage", Usage: &core.FluxUsage{PromptTokens: 5, CompletionTokens: 3, TotalTokens: 8}}
+	events <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "req-stream"}
 	close(events)
-	return client.NewStreamResultWithRequestID(events, "req-stream", nil), nil
+	return llm.NewStreamResult(events, "req-stream", nil), nil
 }
 
 func TestEngineContractEndToEnd(t *testing.T) {
@@ -57,8 +58,8 @@ func TestEngineContractEndToEnd(t *testing.T) {
 	if err := eng.SetSelection(ctx, "", modelID); err != nil {
 		t.Fatal(err)
 	}
-	provider := &contractProvider{}
-	eng.resolveTransport = func(context.Context, Route) (client.Provider, error) { return provider, nil }
+	mockProvider := &contractProvider{}
+	eng.resolveTransport = func(context.Context, Route) (core.Provider, error) { return mockProvider, nil }
 
 	topP := 0.8
 	request := GenerateRequest{
@@ -78,11 +79,11 @@ func TestEngineContractEndToEnd(t *testing.T) {
 	if response.Content != "complete" || response.Usage == nil || response.Usage.TotalTokens != 6 {
 		t.Fatalf("blocking response not normalized: %+v", response)
 	}
-	if provider.chatOptions.Model != modelID || provider.chatOptions.System != request.SystemPrompt || !provider.chatOptions.EnableCaching || provider.chatOptions.ReasoningEffort != "high" || provider.chatOptions.MetadataUserID != "user-1" {
-		t.Fatalf("blocking options lost at boundary: %+v", provider.chatOptions)
+	if mockProvider.chatOptions.Model != modelID || mockProvider.chatOptions.System != request.SystemPrompt || !mockProvider.chatOptions.EnableCaching || mockProvider.chatOptions.ReasoningEffort != "high" || mockProvider.chatOptions.MetadataUserID != "user-1" {
+		t.Fatalf("blocking options lost at boundary: %+v", mockProvider.chatOptions)
 	}
-	if provider.chatOptions.Metadata["session.id"] != "session-1" || provider.chatOptions.Metadata["turn.id"] != "turn-1" {
-		t.Fatalf("correlation metadata lost at boundary: %+v", provider.chatOptions.Metadata)
+	if mockProvider.chatOptions.Metadata["session.id"] != "session-1" || mockProvider.chatOptions.Metadata["turn.id"] != "turn-1" {
+		t.Fatalf("correlation metadata lost at boundary: %+v", mockProvider.chatOptions.Metadata)
 	}
 
 	stream, err := eng.Stream(ctx, request)
@@ -106,60 +107,60 @@ func TestEngineContractEndToEnd(t *testing.T) {
 	if events[3].Usage == nil || events[3].Usage.TotalTokens != 8 {
 		t.Fatalf("stream usage not normalized: %+v", events[3])
 	}
-	if len(provider.streamOptions.Tools) != 1 || provider.streamOptions.MaxTokens != 1024 || provider.streamOptions.ServiceTier != "priority" {
-		t.Fatalf("stream options lost at boundary: %+v", provider.streamOptions)
+	if len(mockProvider.streamOptions.Tools) != 1 || mockProvider.streamOptions.MaxTokens != 1024 || mockProvider.streamOptions.ServiceTier != "priority" {
+		t.Fatalf("stream options lost at boundary: %+v", mockProvider.streamOptions)
 	}
 }
 
 type continuationProvider struct {
 	calls    int
-	requests [][]client.FluxMessage
+	requests [][]core.FluxMessage
 }
 
 func (p *continuationProvider) Name() string               { return "continuation" }
 func (p *continuationProvider) Ping(context.Context) error { return nil }
-func (p *continuationProvider) Chat(context.Context, []client.FluxMessage, client.ChatOptions) (*client.FluxResponse, error) {
+func (p *continuationProvider) Chat(context.Context, []core.FluxMessage, core.ChatOptions) (*core.FluxResponse, error) {
 	return nil, nil
 }
 
-func (p *continuationProvider) StreamChat(_ context.Context, messages []client.FluxMessage, _ client.ChatOptions) (*client.StreamResult, error) {
+func (p *continuationProvider) StreamChat(_ context.Context, messages []core.FluxMessage, _ core.ChatOptions) (*core.StreamResult, error) {
 	p.calls++
-	p.requests = append(p.requests, append([]client.FluxMessage(nil), messages...))
-	events := make(chan client.FluxStreamEvent, 3)
+	p.requests = append(p.requests, append([]core.FluxMessage(nil), messages...))
+	events := make(chan core.FluxStreamEvent, 3)
 	if p.calls == 1 {
-		events <- client.FluxStreamEvent{Type: "content", Content: "part one"}
-		events <- client.FluxStreamEvent{Type: "usage", Usage: &client.FluxUsage{CompletionTokens: 2, TotalTokens: 4}}
-		events <- client.FluxStreamEvent{Type: "done", StopReason: "max_tokens", RequestID: "request-1"}
+		events <- core.FluxStreamEvent{Type: "content", Content: "part one"}
+		events <- core.FluxStreamEvent{Type: "usage", Usage: &core.FluxUsage{CompletionTokens: 2, TotalTokens: 4}}
+		events <- core.FluxStreamEvent{Type: "done", StopReason: "max_tokens", RequestID: "request-1"}
 	} else {
-		events <- client.FluxStreamEvent{Type: "content", Content: "part two"}
-		events <- client.FluxStreamEvent{Type: "usage", Usage: &client.FluxUsage{CompletionTokens: 2, TotalTokens: 5}}
-		events <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "request-2"}
+		events <- core.FluxStreamEvent{Type: "content", Content: "part two"}
+		events <- core.FluxStreamEvent{Type: "usage", Usage: &core.FluxUsage{CompletionTokens: 2, TotalTokens: 5}}
+		events <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn", RequestID: "request-2"}
 	}
 	close(events)
-	return client.NewStreamResultWithRequestID(events, "request-id", nil), nil
+	return llm.NewStreamResult(events, "request-id", nil), nil
 }
 
 func TestEngineContinuationPreservesEventsAndConversationShape(t *testing.T) {
-	provider := &continuationProvider{}
+	mock := &continuationProvider{}
 	source, err := streamWithContinuation(
-		context.Background(), provider,
-		[]client.FluxMessage{{Role: "user", Content: "write a long answer"}},
-		client.ChatOptions{Model: "model"},
+		context.Background(), mock,
+		[]core.FluxMessage{{Role: "user", Content: "write a long answer"}},
+		core.ChatOptions{Model: "model"},
 		Limits{MaxContinuations: 1, MaxTotalOutputTokens: 100},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer source.Close()
-	var events []client.FluxStreamEvent
+	var events []core.FluxStreamEvent
 	for event := range source.Events {
 		events = append(events, event)
 	}
-	if provider.calls != 2 {
-		t.Fatalf("provider calls = %d, want 2", provider.calls)
+	if mock.calls != 2 {
+		t.Fatalf("provider calls = %d, want 2", mock.calls)
 	}
-	if len(provider.requests[1]) != 3 || provider.requests[1][1].Role != "assistant" || provider.requests[1][1].Content != "part one" || provider.requests[1][2].Content != "Continue." {
-		t.Fatalf("continuation conversation shape: %+v", provider.requests[1])
+	if len(mock.requests[1]) != 3 || mock.requests[1][1].Role != "assistant" || mock.requests[1][1].Content != "part one" || mock.requests[1][2].Content != "Continue." {
+		t.Fatalf("continuation conversation shape: %+v", mock.requests[1])
 	}
 	var sawContinuation, sawFinal bool
 	for _, event := range events {

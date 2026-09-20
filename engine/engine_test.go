@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/flux/catalog"
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/config"
 	"github.com/GrayCodeAI/flux/credentials"
 	"github.com/GrayCodeAI/flux/llm"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 func TestNewUsesInjectedCredentialStore(t *testing.T) {
@@ -149,14 +149,14 @@ func TestMessageConversionPreservesToolsAndMultimodalParts(t *testing.T) {
 }
 
 func TestNormalizedStreamContract(t *testing.T) {
-	sourceEvents := make(chan client.FluxStreamEvent, 3)
-	sourceEvents <- client.FluxStreamEvent{Type: "content", Content: "hello"}
-	sourceEvents <- client.FluxStreamEvent{Type: "tool_call", ToolCall: &client.ToolCall{ID: "1", Name: "read"}}
-	sourceEvents <- client.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &client.FluxUsage{PromptTokens: 2, CompletionTokens: 3, TotalTokens: 5}}
+	sourceEvents := make(chan core.FluxStreamEvent, 3)
+	sourceEvents <- core.FluxStreamEvent{Type: "content", Content: "hello"}
+	sourceEvents <- core.FluxStreamEvent{Type: "tool_call", ToolCall: &core.ToolCall{ID: "1", Name: "read"}}
+	sourceEvents <- core.FluxStreamEvent{Type: "done", StopReason: "end_turn", Usage: &core.FluxUsage{PromptTokens: 2, CompletionTokens: 3, TotalTokens: 5}}
 	close(sourceEvents)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stream := newStream(ctx, cancel, client.NewStreamResult(sourceEvents, nil), Route{Provider: "mock", Model: "mock/model"})
+	stream := newStream(ctx, cancel, llm.NewStreamResult(sourceEvents, "", nil), Route{Provider: "mock", Model: "mock/model"})
 	defer stream.Close()
 
 	var events []Event
@@ -183,14 +183,14 @@ func TestNormalizedStreamContract(t *testing.T) {
 // them as warning events and still deliver the done/usage event without
 // setting Err().
 func TestStreamDiagnosticErrorEventIsNonFatal(t *testing.T) {
-	sourceEvents := make(chan client.FluxStreamEvent, 3)
-	sourceEvents <- client.FluxStreamEvent{Type: "content", Content: "answer"}
-	sourceEvents <- client.FluxStreamEvent{Type: "error", Error: "model produced reasoning tokens but no answer", Warning: "model produced reasoning tokens but no answer"}
-	sourceEvents <- client.FluxStreamEvent{Type: "done", StopReason: "stop", Usage: &client.FluxUsage{PromptTokens: 1, CompletionTokens: 2, TotalTokens: 3}}
+	sourceEvents := make(chan core.FluxStreamEvent, 3)
+	sourceEvents <- core.FluxStreamEvent{Type: "content", Content: "answer"}
+	sourceEvents <- core.FluxStreamEvent{Type: "error", Error: "model produced reasoning tokens but no answer", Warning: "model produced reasoning tokens but no answer"}
+	sourceEvents <- core.FluxStreamEvent{Type: "done", StopReason: "stop", Usage: &core.FluxUsage{PromptTokens: 1, CompletionTokens: 2, TotalTokens: 3}}
 	close(sourceEvents)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stream := newStream(ctx, cancel, client.NewStreamResult(sourceEvents, nil), Route{Provider: "mock", Model: "mock/model"})
+	stream := newStream(ctx, cancel, llm.NewStreamResult(sourceEvents, "", nil), Route{Provider: "mock", Model: "mock/model"})
 	defer stream.Close()
 
 	var events []Event
@@ -217,13 +217,13 @@ func TestStreamDiagnosticErrorEventIsNonFatal(t *testing.T) {
 // Genuinely fatal error events (no Warning marker) keep the previous
 // behavior: the stream terminates and Err() carries the classified error.
 func TestStreamFatalErrorEventStillTerminal(t *testing.T) {
-	sourceEvents := make(chan client.FluxStreamEvent, 2)
-	sourceEvents <- client.FluxStreamEvent{Type: "content", Content: "partial"}
-	sourceEvents <- client.FluxStreamEvent{Type: "error", Error: "connection reset"}
+	sourceEvents := make(chan core.FluxStreamEvent, 2)
+	sourceEvents <- core.FluxStreamEvent{Type: "content", Content: "partial"}
+	sourceEvents <- core.FluxStreamEvent{Type: "error", Error: "connection reset"}
 	close(sourceEvents)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	stream := newStream(ctx, cancel, client.NewStreamResult(sourceEvents, nil), Route{Provider: "mock", Model: "mock/model"})
+	stream := newStream(ctx, cancel, llm.NewStreamResult(sourceEvents, "", nil), Route{Provider: "mock", Model: "mock/model"})
 	defer stream.Close()
 
 	var events []Event

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/flux/client"
 	"github.com/GrayCodeAI/flux/credentials"
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 type NativeCompactionOpts struct {
 	Provider        string
 	Model           string
-	Messages        []client.FluxMessage
+	Messages        []core.FluxMessage
 	ContextWindow   int
 	ThresholdPct    int
 	MaxOutputTokens int
@@ -144,7 +144,7 @@ func supportsAnthropicCompactionSelection(provider, model string) bool {
 	return false
 }
 
-func anthropicCompactionMessages(messages []client.FluxMessage) ([]map[string]any, string) {
+func anthropicCompactionMessages(messages []core.FluxMessage) ([]map[string]any, string) {
 	var system string
 	out := make([]map[string]any, 0, len(messages))
 	for _, message := range messages {
