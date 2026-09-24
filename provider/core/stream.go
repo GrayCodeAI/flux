@@ -10,7 +10,10 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 // SSEEvent represents a single Server-Sent Event.
@@ -28,6 +31,201 @@ const (
 	StreamChannelBuffer = 256
 )
 
+type closeOnceReadCloser struct {
+	io.ReadCloser
+	once sync.Once
+	err  error
+}
+
+func (r *closeOnceReadCloser) Close() error {
+	r.once.Do(func() { r.err = r.ReadCloser.Close() })
+	return r.err
+}
+
+func BindStreamBody(ctx context.Context, body io.ReadCloser, cancel context.CancelFunc) (io.ReadCloser, context.CancelFunc) {
+	wrapped := &closeOnceReadCloser{ReadCloser: body}
+	stop := context.AfterFunc(ctx, func() { _ = wrapped.Close() })
+	var once sync.Once
+	cleanup := func() {
+		once.Do(func() {
+			cancel()
+			stop()
+			_ = wrapped.Close()
+		})
+	}
+	return wrapped, cleanup
+}
+
+var ErrStreamTruncated = errors.New("stream ended before terminal event")
+
+type StreamEventHandler func(context.Context, FluxStreamEvent) (FluxStreamEvent, error)
+
+func TransformStreamResult(ctx context.Context, source *StreamResult, handler StreamEventHandler) *StreamResult {
+	if source == nil {
+		return nil
+	}
+
+	streamCtx, cancel := context.WithCancel(ctx)
+	out := make(chan FluxStreamEvent, cap(source.Events))
+	go func() {
+		defer close(out)
+		defer source.Close()
+		defer cancel()
+
+		for {
+			select {
+			case <-streamCtx.Done():
+				return
+			case event, ok := <-source.Events:
+				if streamCtx.Err() != nil {
+					return
+				}
+				sourceEnded := !ok
+				if sourceEnded {
+					event = FluxStreamEvent{
+						Type:      "error",
+						Error:     ErrStreamTruncated.Error(),
+						RequestID: source.RequestID,
+						ErrorInfo: &llm.StreamErrorInfo{Kind: llm.ErrKindTruncated, Retryable: true},
+					}
+				}
+				if handler != nil {
+					var err error
+					event, err = handler(streamCtx, event)
+					if err != nil {
+						if streamCtx.Err() != nil {
+							return
+						}
+						event = FluxStreamEvent{Type: "error", Error: err.Error(), RequestID: source.RequestID}
+					}
+				}
+				if event.RequestID == "" {
+					event.RequestID = source.RequestID
+				}
+				if !sendLifecycleEvent(streamCtx, out, event) {
+					return
+				}
+				if sourceEnded || isTerminalStreamEvent(event) {
+					return
+				}
+			}
+		}
+	}()
+
+	return llm.NewStreamResult(out, source.RequestID, func() {
+		cancel()
+		source.Close()
+	})
+}
+
+func CoordinateStreamResult(ctx context.Context, source *StreamResult) *StreamResult {
+	return TransformStreamResult(ctx, source, nil)
+}
+
+func isTerminalStreamEvent(event FluxStreamEvent) bool {
+	return event.Type == "done" || event.Type == "error" && event.Warning == ""
+}
+
+func sendLifecycleEvent(ctx context.Context, out chan<- FluxStreamEvent, event FluxStreamEvent) bool {
+	select {
+	case out <- event:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func CloneUsage(usage *FluxUsage) *FluxUsage {
+	if usage == nil {
+		return nil
+	}
+	cloned := *usage
+	return &cloned
+}
+
+func MergeUsage(previous, current *FluxUsage) *FluxUsage {
+	if previous == nil {
+		merged := CloneUsage(current)
+		if merged != nil && merged.TotalTokens == 0 {
+			merged.TotalTokens = merged.PromptTokens + merged.CompletionTokens
+		}
+		return merged
+	}
+	if current == nil {
+		return CloneUsage(previous)
+	}
+	merged := &FluxUsage{
+		PromptTokens:        max(previous.PromptTokens, current.PromptTokens),
+		CompletionTokens:    max(previous.CompletionTokens, current.CompletionTokens),
+		CacheCreationTokens: max(previous.CacheCreationTokens, current.CacheCreationTokens),
+		CacheReadTokens:     max(previous.CacheReadTokens, current.CacheReadTokens),
+		ThinkingTokens:      max(previous.ThinkingTokens, current.ThinkingTokens),
+	}
+	merged.TotalTokens = max(usageTotal(previous), usageTotal(current), merged.PromptTokens+merged.CompletionTokens)
+	return merged
+}
+
+func UsageDelta(previous, current *FluxUsage) *FluxUsage {
+	if current == nil {
+		return nil
+	}
+	if previous == nil {
+		delta := CloneUsage(current)
+		if delta.TotalTokens == 0 {
+			delta.TotalTokens = delta.PromptTokens + delta.CompletionTokens
+		}
+		if usageIsZero(delta) {
+			return nil
+		}
+		return delta
+	}
+
+	delta := &FluxUsage{
+		PromptTokens:        positiveUsageDelta(current.PromptTokens, previous.PromptTokens),
+		CompletionTokens:    positiveUsageDelta(current.CompletionTokens, previous.CompletionTokens),
+		CacheCreationTokens: positiveUsageDelta(current.CacheCreationTokens, previous.CacheCreationTokens),
+		CacheReadTokens:     positiveUsageDelta(current.CacheReadTokens, previous.CacheReadTokens),
+		ThinkingTokens:      positiveUsageDelta(current.ThinkingTokens, previous.ThinkingTokens),
+	}
+	currentTotal := usageTotal(current)
+	previousTotal := usageTotal(previous)
+	switch {
+	case current.TotalTokens == 0:
+		delta.TotalTokens = delta.PromptTokens + delta.CompletionTokens
+	case currentTotal > previousTotal:
+		delta.TotalTokens = currentTotal - previousTotal
+	case delta.PromptTokens > 0 || delta.CompletionTokens > 0:
+		delta.TotalTokens = delta.PromptTokens + delta.CompletionTokens
+	}
+	if usageIsZero(delta) {
+		return nil
+	}
+	return delta
+}
+
+func positiveUsageDelta(current, previous int) int {
+	if current <= previous {
+		return 0
+	}
+	return current - previous
+}
+
+func usageTotal(usage *FluxUsage) int {
+	if usage.TotalTokens > 0 {
+		return usage.TotalTokens
+	}
+	return usage.PromptTokens + usage.CompletionTokens
+}
+
+func usageIsZero(usage *FluxUsage) bool {
+	return usage.PromptTokens == 0 &&
+		usage.CompletionTokens == 0 &&
+		usage.CacheCreationTokens == 0 &&
+		usage.CacheReadTokens == 0 &&
+		usage.ThinkingTokens == 0 &&
+		usage.TotalTokens == 0
+}
+
 // ParseSSEStream reads an SSE stream and sends events to a channel.
 // The goroutine closes the channel and body when done or context is cancelled.
 // Scanner errors are emitted as SSEEvent with Event="error" so callers can detect truncation.
@@ -41,24 +239,32 @@ func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger
 		scanner.Buffer(make([]byte, 0, sseScannerInitBuf), sseScannerMaxBuf)
 
 		var event, data strings.Builder
-		for scanner.Scan() {
+		dispatch := func() bool {
+			if data.Len() == 0 {
+				event.Reset()
+				data.Reset()
+				return true
+			}
 			select {
+			case ch <- SSEEvent{Event: strings.TrimSpace(event.String()), Data: strings.TrimSpace(data.String())}:
+				event.Reset()
+				data.Reset()
+				return true
 			case <-ctx.Done():
+				return false
+			}
+		}
+
+		for scanner.Scan() {
+			if ctx.Err() != nil {
 				return
-			default:
 			}
 
 			line := scanner.Text()
 			if line == "" {
-				if data.Len() > 0 {
-					select {
-					case ch <- SSEEvent{Event: strings.TrimSpace(event.String()), Data: strings.TrimSpace(data.String())}:
-					case <-ctx.Done():
-						return
-					}
+				if !dispatch() {
+					return
 				}
-				event.Reset()
-				data.Reset()
 				continue
 			}
 			if strings.HasPrefix(line, "event:") {
@@ -71,11 +277,6 @@ func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			// Context cancellation produces "context canceled" from the
-			// scanner when the body is closed; that is the expected
-			// shutdown path, not a stream error. Skip the warning and
-			// the synthetic error event so callers (and operators) don't
-			// see noise for every normal cancel/close.
 			if ctxErr := ctx.Err(); ctxErr != nil || errors.Is(err, context.Canceled) {
 				return
 			}
@@ -84,7 +285,9 @@ func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger
 			case ch <- SSEEvent{Event: "error", Data: fmt.Sprintf("stream read error: %v", err)}:
 			case <-ctx.Done():
 			}
+			return
 		}
+		dispatch()
 	}()
 	return ch
 }
@@ -479,7 +682,6 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 				return
 			case evt, ok := <-sseEvents:
 				if !ok {
-					finish("")
 					return
 				}
 				// Propagate SSE-level errors

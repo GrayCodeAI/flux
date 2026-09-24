@@ -13,6 +13,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/GrayCodeAI/flux/tools"
 )
@@ -84,6 +85,7 @@ const (
 	ErrKindUnavailable     = "unavailable"
 	ErrKindInvalidRequest  = "invalid_request"
 	ErrKindCanceled        = "canceled"
+	ErrKindTruncated       = "truncated"
 	ErrKindInternal        = "internal"
 )
 
@@ -272,10 +274,11 @@ type FluxStreamEvent struct {
 	Warning  string    `json:"warning,omitempty"`
 	// ProviderBlock is set on "provider_block" events: one completed opaque
 	// block (for example a signed thinking block) to replay next turn.
-	ProviderBlock *ProviderBlock `json:"provider_block,omitempty"`
-	RequestID     string         `json:"request_id,omitempty"`
-	Usage         *FluxUsage     `json:"usage,omitempty"`
-	StopReason    string         `json:"stop_reason,omitempty"`
+	ProviderBlock *ProviderBlock   `json:"provider_block,omitempty"`
+	RequestID     string           `json:"request_id,omitempty"`
+	ErrorInfo     *StreamErrorInfo `json:"error_info,omitempty"`
+	Usage         *FluxUsage       `json:"usage,omitempty"`
+	StopReason    string           `json:"stop_reason,omitempty"`
 	// TTFT and TTFTms both carry time-to-first-token in milliseconds but ride
 	// different events: the dedicated "ttft" event populates TTFT, while the
 	// terminal "done" event populates TTFTms. The engine normalizes the two
@@ -297,6 +300,11 @@ type StreamResult struct {
 // NewStreamResult constructs a stream result. The cancel function is optional
 // and must be idempotent.
 func NewStreamResult(events <-chan FluxStreamEvent, requestID string, cancel context.CancelFunc) *StreamResult {
+	if cancel != nil {
+		cleanup := cancel
+		var once sync.Once
+		cancel = func() { once.Do(cleanup) }
+	}
 	return &StreamResult{Events: events, RequestID: requestID, cancel: cancel}
 }
 

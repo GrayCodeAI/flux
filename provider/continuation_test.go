@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 )
 
@@ -236,6 +237,50 @@ func TestContinuation_StreamContinuesOnMaxTokens(t *testing.T) {
 	}
 	if mock.callCount != 2 {
 		t.Errorf("callCount = %d, want 2", mock.callCount)
+	}
+}
+
+type fatalStreamProvider struct {
+	closes atomic.Int32
+}
+
+func (*fatalStreamProvider) Name() string               { return "fatal-stream" }
+func (*fatalStreamProvider) Ping(context.Context) error { return nil }
+func (*fatalStreamProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return nil, nil
+}
+
+func (p *fatalStreamProvider) StreamChat(context.Context, []FluxMessage, ChatOptions) (*StreamResult, error) {
+	events := make(chan FluxStreamEvent, 2)
+	events <- FluxStreamEvent{Type: "error", Error: "connection reset"}
+	events <- FluxStreamEvent{Type: "done", StopReason: "stop"}
+	close(events)
+	return NewStreamResult(events, func() { p.closes.Add(1) }), nil
+}
+
+func TestContinuation_StreamFatalErrorClosesSourceWithoutDone(t *testing.T) {
+	t.Parallel()
+	provider := &fatalStreamProvider{}
+	result, err := StreamChatWithContinuation(
+		context.Background(), provider,
+		[]FluxMessage{{Role: "user", Content: "hello"}},
+		ChatOptions{Model: "test"},
+		ContinuationConfig{MaxContinuations: 2, MaxTotalTokens: 100},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Close()
+
+	var events []FluxStreamEvent
+	for event := range result.Events {
+		events = append(events, event)
+	}
+	if len(events) != 1 || events[0].Type != "error" || events[0].Error != "connection reset" {
+		t.Fatalf("events = %+v, want one fatal error", events)
+	}
+	if got := provider.closes.Load(); got != 1 {
+		t.Fatalf("source close count = %d, want 1", got)
 	}
 }
 

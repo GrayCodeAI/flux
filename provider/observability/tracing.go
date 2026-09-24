@@ -3,6 +3,8 @@ package observability
 import (
 	"context"
 
+	"github.com/GrayCodeAI/flux/llm"
+	"github.com/GrayCodeAI/flux/provider/core"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -88,25 +90,25 @@ func (tp *TracingProvider) StreamChat(ctx context.Context, messages []FluxMessag
 
 	span.SetAttributes(attribute.String("request_id", sr.RequestID))
 
-	// Wrap the events channel so the span ends when the stream finishes.
-	origEvents := sr.Events
-	wrappedEvents := make(chan FluxStreamEvent, cap(origEvents))
+	streamCtx, cancel := context.WithCancel(ctx)
+	coordinated := core.CoordinateStreamResult(streamCtx, sr)
+	wrappedEvents := make(chan FluxStreamEvent, cap(coordinated.Events))
 	go func() {
 		defer span.End()
 		defer close(wrappedEvents)
-		for evt := range origEvents {
+		defer coordinated.Close()
+		terminal := false
+		for evt := range coordinated.Events {
 			switch evt.Type {
 			case "error":
 				if evt.Warning != "" {
-					// Non-fatal health diagnostic: record it without
-					// failing the span (the stream still completes).
 					span.SetAttributes(attribute.String("warning", evt.Warning))
 				} else {
+					terminal = true
 					span.SetStatus(codes.Error, evt.Error)
 					span.SetAttributes(attribute.Bool("error", true))
 				}
 			case "usage":
-				// Token usage is delivered on the "usage" event, not "done".
 				if evt.Usage != nil {
 					span.SetAttributes(
 						attribute.Int("usage.prompt_tokens", evt.Usage.PromptTokens),
@@ -115,22 +117,24 @@ func (tp *TracingProvider) StreamChat(ctx context.Context, messages []FluxMessag
 					)
 				}
 			case "done":
+				terminal = true
 				span.SetStatus(codes.Ok, "")
 			}
-			// Respect cancellation on the send: if the consumer abandons the
-			// stream, this goroutine must not block forever forwarding events
-			// (which would leak the goroutine and keep the span open).
 			select {
 			case wrappedEvents <- evt:
-			case <-ctx.Done():
-				sr.Close()
+			case <-streamCtx.Done():
 				return
+			}
+		}
+		if !terminal {
+			if err := streamCtx.Err(); err != nil {
+				span.SetStatus(codes.Error, err.Error())
 			}
 		}
 	}()
 
-	return &StreamResult{
-		Events:    wrappedEvents,
-		RequestID: sr.RequestID,
-	}, nil
+	return llm.NewStreamResult(wrappedEvents, sr.RequestID, func() {
+		cancel()
+		coordinated.Close()
+	}), nil
 }

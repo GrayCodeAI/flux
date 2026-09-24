@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // ProviderCallback defines hooks that are invoked at various points during
@@ -151,30 +153,15 @@ func (cp *CallbackProvider) StreamChat(ctx context.Context, messages []FluxMessa
 		return nil, err
 	}
 
-	// Wrap the events channel to invoke OnStreamEvent for each event.
 	cbs := cp.snapshotCallbacks()
-	origEvents := result.Events
-	wrappedEvents := make(chan FluxStreamEvent, cap(origEvents))
-
-	go func() {
-		defer close(wrappedEvents)
-		for evt := range origEvents {
-			// Fire stream event callbacks.
-			for _, cb := range cbs {
-				cp.safeCall("OnStreamEvent", func() {
-					cb.OnStreamEvent(ctx, provider, model, evt)
-				})
-			}
-			select {
-			case wrappedEvents <- evt:
-			case <-ctx.Done():
-				result.Close()
-				return
-			}
+	return core.TransformStreamResult(ctx, result, func(_ context.Context, evt FluxStreamEvent) (FluxStreamEvent, error) {
+		for _, cb := range cbs {
+			cp.safeCall("OnStreamEvent", func() {
+				cb.OnStreamEvent(ctx, provider, model, evt)
+			})
 		}
-	}()
-
-	return NewStreamResultWithRequestID(wrappedEvents, result.RequestID, result.Close), nil
+		return evt, nil
+	}), nil
 }
 
 // --- internal helpers ---

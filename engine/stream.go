@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/GrayCodeAI/flux/llm"
 	"github.com/GrayCodeAI/flux/provider/core"
 )
 
@@ -92,6 +93,9 @@ func (s *Stream) forward() {
 			return
 		case event, ok := <-s.source.Events:
 			if !ok {
+				if s.ctx.Err() == nil {
+					s.setError(classify("stream", s.route, core.ErrStreamTruncated))
+				}
 				return
 			}
 			normalized, err := normalizeEvent(event)
@@ -100,6 +104,9 @@ func (s *Stream) forward() {
 				return
 			}
 			if !s.emit(normalized) {
+				return
+			}
+			if normalized.Type == EventDone {
 				return
 			}
 		}
@@ -124,7 +131,7 @@ func (s *Stream) setError(err error) {
 func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 	out := Event{
 		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
-		Usage: fromClientUsage(event.Usage), StopReason: event.StopReason,
+		ErrorInfo: event.ErrorInfo, Usage: fromClientUsage(event.Usage), StopReason: event.StopReason,
 		TTFTms: event.TTFTms,
 	}
 	if out.TTFTms == 0 {
@@ -153,7 +160,10 @@ func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 			// client/core marks these with Warning so they can be surfaced
 			// without terminating the stream — the terminal done/usage event
 			// follows. Forward as a warning event; do not set Err()/stop.
-			return Event{Type: EventWarning, Warning: event.Warning}, nil
+			return Event{Type: EventWarning, RequestID: event.RequestID, Error: event.Error, ErrorInfo: event.ErrorInfo, Warning: event.Warning}, nil
+		}
+		if event.ErrorInfo != nil && event.ErrorInfo.Kind == llm.ErrKindTruncated {
+			return Event{}, core.ErrStreamTruncated
 		}
 		return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error}
 	default:

@@ -243,7 +243,10 @@ func (c *ConcentrateResponsesClient) StreamChat(ctx context.Context, messages []
 		return nil, core.FormatAPIError("concentrate", "stream", resp.StatusCode, requestID, detail, readErr)
 	}
 
-	return c.handleStream(streamCtx, cancel, resp, requestID), nil
+	streamBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	resp.Body = streamBody
+	result := c.handleStream(streamCtx, cleanup, resp, requestID)
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 // Ping checks the health of the Concentrate API.

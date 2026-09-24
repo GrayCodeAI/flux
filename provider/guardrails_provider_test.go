@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/GrayCodeAI/flux/provider/resilience"
 )
@@ -271,6 +273,58 @@ func TestGuardrailProvider_ChatNoGuardrails(t *testing.T) {
 	}
 	if resp.Content != "safe response" {
 		t.Fatalf("expected 'safe response', got %q", resp.Content)
+	}
+}
+
+type guardrailStreamProvider struct {
+	closes atomic.Int32
+}
+
+func (*guardrailStreamProvider) Name() string               { return "guardrail-stream" }
+func (*guardrailStreamProvider) Ping(context.Context) error { return nil }
+func (*guardrailStreamProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return nil, nil
+}
+
+func (p *guardrailStreamProvider) StreamChat(ctx context.Context, _ []FluxMessage, _ ChatOptions) (*StreamResult, error) {
+	streamCtx, cancel := context.WithCancel(ctx)
+	events := make(chan FluxStreamEvent)
+	go func() {
+		<-streamCtx.Done()
+		close(events)
+	}()
+	return NewStreamResult(events, func() {
+		p.closes.Add(1)
+		cancel()
+	}), nil
+}
+
+func TestGuardrailProvider_StreamClosePropagates(t *testing.T) {
+	t.Parallel()
+	inner := &guardrailStreamProvider{}
+	gp := resilience.NewGuardrailProvider(inner, NewGuardrails(GuardrailRule{
+		Type:    GuardrailCustom,
+		Name:    "block",
+		Pattern: `blocked`,
+		Action:  GuardrailBlock,
+	}))
+	result, err := gp.StreamChat(context.Background(), []FluxMessage{{Role: "user", Content: "hello"}}, ChatOptions{Model: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result.Close()
+	result.Close()
+
+	select {
+	case _, ok := <-result.Events:
+		if ok {
+			t.Fatal("unexpected event after close")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("guardrail stream did not close")
+	}
+	if got := inner.closes.Load(); got != 1 {
+		t.Fatalf("inner close count = %d, want 1", got)
 	}
 }
 
