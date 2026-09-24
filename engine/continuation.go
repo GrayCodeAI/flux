@@ -40,6 +40,7 @@ func streamWithContinuation(ctx context.Context, provider core.Provider, message
 			var segment strings.Builder
 			hadToolCall := false
 			var terminal core.FluxStreamEvent
+		segmentLoop:
 			for event := range current.Events {
 				switch event.Type {
 				case "content":
@@ -52,7 +53,13 @@ func streamWithContinuation(ctx context.Context, provider core.Provider, message
 					}
 				case "done":
 					terminal = event
-					continue
+					break segmentLoop
+				case "error":
+					if event.Warning == "" {
+						_ = emitEngineEvent(streamCtx, out, event)
+						current.Close()
+						return
+					}
 				}
 				if !emitEngineEvent(streamCtx, out, event) {
 					current.Close()
@@ -60,12 +67,12 @@ func streamWithContinuation(ctx context.Context, provider core.Provider, message
 				}
 			}
 			current.Close()
+			if terminal.Type == "" {
+				return
+			}
 
 			needsContinuation := terminal.StopReason == "max_tokens" || terminal.StopReason == "length"
 			if !needsContinuation || hadToolCall || totalOutput >= maxTotalTokens || attempt >= maxContinuations {
-				if terminal.Type == "" {
-					terminal = core.FluxStreamEvent{Type: "done", StopReason: terminal.StopReason, RequestID: requestID}
-				}
 				_ = emitEngineEvent(streamCtx, out, terminal)
 				return
 			}

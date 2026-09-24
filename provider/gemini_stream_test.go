@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 // slogDiscard returns a *slog.Logger that discards all output. Used
@@ -222,9 +224,6 @@ func TestGemini_Stream_SharedParser_DoneWithUsage(t *testing.T) {
 	}
 }
 
-// TestGemini_Stream_SharedParser_EmptyStream: a server that returns
-// 200 with no body should still emit a "done" event so consumers
-// don't hang.
 func TestGemini_Stream_SharedParser_EmptyStream(t *testing.T) {
 	t.Setenv(geminiSharedParserEnvVar, "1")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -243,10 +242,10 @@ func TestGemini_Stream_SharedParser_EmptyStream(t *testing.T) {
 	events := drainGeminiStream(t, sr, 3*time.Second)
 
 	if len(events) != 1 {
-		t.Fatalf("expected 1 event (done), got %d: %+v", len(events), events)
+		t.Fatalf("expected 1 truncated error, got %d: %+v", len(events), events)
 	}
-	if events[0].Type != "done" {
-		t.Errorf("event type = %q, want \"done\"", events[0].Type)
+	if events[0].Type != "error" || events[0].ErrorInfo == nil || events[0].ErrorInfo.Kind != llm.ErrKindTruncated {
+		t.Fatalf("event = %+v, want truncated error", events[0])
 	}
 }
 
@@ -420,7 +419,9 @@ func TestGemini_Stream_SharedParser_FeatureFlag(t *testing.T) {
 // semantic without going through the HTTP layer.
 func TestProcessGeminiStream_PreservesDoneWithUsage(t *testing.T) {
 	usageFrame := `{"candidates":[{"content":{"parts":[],"role":"model"},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":2,"totalTokenCount":3}}`
+	priorUsageFrame := `{"usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1,"totalTokenCount":2}}`
 	sseCh := make(chan SSEEvent, 2)
+	sseCh <- SSEEvent{Data: priorUsageFrame}
 	sseCh <- SSEEvent{Data: usageFrame}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -477,10 +478,7 @@ func TestProcessGeminiStream_DoneWithoutUsage(t *testing.T) {
 	}
 }
 
-// TestProcessGeminiStream_EmptyStream_EmitsDone: when the SSE
-// channel closes without a finish reason, a bare "done" event is
-// emitted (matches the original streamLoop's if !doneSent fallback).
-func TestProcessGeminiStream_EmptyStream_EmitsDone(t *testing.T) {
+func TestProcessGeminiStream_EmptyStream_HasNoTerminal(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	sseCh := make(chan SSEEvent)
@@ -488,11 +486,8 @@ func TestProcessGeminiStream_EmptyStream_EmitsDone(t *testing.T) {
 
 	out := processGeminiStream(ctx, sseCh, slogDiscard())
 	events := collectFluxStreamEvents(t, out, 2*time.Second)
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d: %+v", len(events), events)
-	}
-	if events[0].Type != "done" {
-		t.Errorf("event type = %q, want done", events[0].Type)
+	if len(events) != 0 {
+		t.Fatalf("events = %+v, want none", events)
 	}
 }
 

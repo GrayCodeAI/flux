@@ -6,8 +6,11 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 func testLogger() *slog.Logger {
@@ -36,6 +39,20 @@ func TestSSEParseBasicEvents(t *testing.T) {
 	}
 	if events[1].Event != "done" || events[1].Data != "bye" {
 		t.Errorf("event[1] = %+v, want event=done data=bye", events[1])
+	}
+}
+
+func TestSSEParseFlushesUnterminatedFinalEvent(t *testing.T) {
+	t.Parallel()
+	body := io.NopCloser(strings.NewReader("data: [DONE]"))
+	ch := ParseSSEStream(context.Background(), body, testLogger())
+
+	var events []SSEEvent
+	for event := range ch {
+		events = append(events, event)
+	}
+	if len(events) != 1 || events[0].Data != "[DONE]" {
+		t.Fatalf("events = %+v, want one [DONE] event", events)
 	}
 }
 
@@ -110,6 +127,202 @@ func TestSSEParseContextCancellation(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("channel did not close after context cancellation")
 	}
+}
+
+func TestCoordinateStreamResultTerminalContract(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		events      []FluxStreamEvent
+		wantTypes   []string
+		wantErrKind string
+	}{
+		{
+			name:        "truncated",
+			events:      []FluxStreamEvent{{Type: "content", Content: "partial"}},
+			wantTypes:   []string{"content", "error"},
+			wantErrKind: llm.ErrKindTruncated,
+		},
+		{
+			name: "fatal before done",
+			events: []FluxStreamEvent{
+				{Type: "error", Error: "connection reset"},
+				{Type: "done"},
+			},
+			wantTypes: []string{"error"},
+		},
+		{
+			name: "terminal before late usage",
+			events: []FluxStreamEvent{
+				{Type: "done", StopReason: "stop"},
+				{Type: "usage", Usage: &FluxUsage{TotalTokens: 1}},
+			},
+			wantTypes: []string{"done"},
+		},
+		{
+			name: "warning before done",
+			events: []FluxStreamEvent{
+				{Type: "error", Error: "empty response", Warning: "empty response"},
+				{Type: "done", StopReason: "stop"},
+			},
+			wantTypes: []string{"error", "done"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			events := make(chan FluxStreamEvent, len(tt.events))
+			for _, event := range tt.events {
+				events <- event
+			}
+			close(events)
+
+			var closes atomic.Int32
+			source := llm.NewStreamResult(events, "request-1", func() { closes.Add(1) })
+			result := CoordinateStreamResult(context.Background(), source)
+			var got []FluxStreamEvent
+			for event := range result.Events {
+				got = append(got, event)
+			}
+			result.Close()
+
+			if len(got) != len(tt.wantTypes) {
+				t.Fatalf("events = %+v, want types %v", got, tt.wantTypes)
+			}
+			for i, wantType := range tt.wantTypes {
+				if got[i].Type != wantType {
+					t.Fatalf("event[%d].Type = %q, want %q", i, got[i].Type, wantType)
+				}
+				if got[i].RequestID != "request-1" {
+					t.Fatalf("event[%d].RequestID = %q, want request-1", i, got[i].RequestID)
+				}
+			}
+			if tt.wantErrKind != "" {
+				last := got[len(got)-1]
+				if last.ErrorInfo == nil || last.ErrorInfo.Kind != tt.wantErrKind || !last.ErrorInfo.Retryable {
+					t.Fatalf("terminal error info = %+v, want retryable kind %q", last.ErrorInfo, tt.wantErrKind)
+				}
+			}
+			if count := closes.Load(); count != 1 {
+				t.Fatalf("source close count = %d, want 1", count)
+			}
+		})
+	}
+}
+
+func TestTransformStreamResultCloseUnblocksForwarder(t *testing.T) {
+	t.Parallel()
+
+	events := make(chan FluxStreamEvent)
+	streamCtx, cancel := context.WithCancel(context.Background())
+	producerDone := make(chan struct{})
+	go func() {
+		defer close(events)
+		defer close(producerDone)
+		<-streamCtx.Done()
+	}()
+
+	var closes atomic.Int32
+	source := llm.NewStreamResult(events, "request-2", func() {
+		closes.Add(1)
+		cancel()
+	})
+	result := TransformStreamResult(context.Background(), source, func(_ context.Context, event FluxStreamEvent) (FluxStreamEvent, error) {
+		return event, nil
+	})
+	result.Close()
+
+	select {
+	case <-producerDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("producer did not stop after stream close")
+	}
+	select {
+	case _, ok := <-result.Events:
+		if ok {
+			t.Fatal("unexpected event after close")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("transformed event channel did not close")
+	}
+	result.Close()
+	if got := closes.Load(); got != 1 {
+		t.Fatalf("source close count = %d, want 1", got)
+	}
+}
+
+func TestUsageDeltaHandlesCumulativeAndSplitUsage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("cumulative", func(t *testing.T) {
+		var state *FluxUsage
+		var prompt, completion int
+		for _, usage := range []*FluxUsage{
+			{PromptTokens: 1, CompletionTokens: 1, TotalTokens: 2},
+			{PromptTokens: 1, CompletionTokens: 2, TotalTokens: 3},
+		} {
+			delta := UsageDelta(state, usage)
+			state = MergeUsage(state, usage)
+			if delta != nil {
+				prompt += delta.PromptTokens
+				completion += delta.CompletionTokens
+			}
+		}
+		if prompt != 1 || completion != 2 {
+			t.Fatalf("prompt=%d completion=%d, want 1/2", prompt, completion)
+		}
+	})
+
+	t.Run("split then aggregate", func(t *testing.T) {
+		var state *FluxUsage
+		var prompt, completion int
+		for _, usage := range []*FluxUsage{
+			{PromptTokens: 10},
+			{CompletionTokens: 5},
+			{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
+		} {
+			delta := UsageDelta(state, usage)
+			state = MergeUsage(state, usage)
+			if delta != nil {
+				prompt += delta.PromptTokens
+				completion += delta.CompletionTokens
+			}
+		}
+		if prompt != 10 || completion != 5 {
+			t.Fatalf("prompt=%d completion=%d, want 10/5", prompt, completion)
+		}
+	})
+
+	t.Run("reverse split then aggregate", func(t *testing.T) {
+		var state *FluxUsage
+		var prompt, completion int
+		for _, usage := range []*FluxUsage{
+			{CompletionTokens: 5},
+			{PromptTokens: 10},
+			{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
+		} {
+			delta := UsageDelta(state, usage)
+			state = MergeUsage(state, usage)
+			if delta != nil {
+				prompt += delta.PromptTokens
+				completion += delta.CompletionTokens
+			}
+		}
+		if prompt != 10 || completion != 5 {
+			t.Fatalf("prompt=%d completion=%d, want 10/5", prompt, completion)
+		}
+	})
+
+	t.Run("duplicate aggregate", func(t *testing.T) {
+		usage := &FluxUsage{PromptTokens: 3, CompletionTokens: 5, TotalTokens: 8}
+		state := MergeUsage(nil, usage)
+		if delta := UsageDelta(state, usage); delta != nil {
+			t.Fatalf("delta = %+v, want nil", delta)
+		}
+	})
 }
 
 // --- ProcessAnthropicStream tests ---
@@ -430,6 +643,26 @@ func TestSSEOpenAIUsage(t *testing.T) {
 	}
 	if !usageFound {
 		t.Error("expected usage event")
+	}
+}
+
+func TestSSEOpenAIChannelCloseDoesNotSynthesizeDone(t *testing.T) {
+	t.Parallel()
+	events := make(chan SSEEvent, 1)
+	events <- SSEEvent{Data: `{"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}`}
+	close(events)
+
+	var results []FluxStreamEvent
+	for event := range ProcessOpenAIStream(context.Background(), events, testLogger()) {
+		results = append(results, event)
+	}
+	if len(results) == 0 {
+		t.Fatal("expected content event")
+	}
+	for _, event := range results {
+		if event.Type == "done" {
+			t.Fatalf("unexpected done event: %+v", event)
+		}
 	}
 }
 

@@ -112,3 +112,93 @@ func TestActualCostUSD(t *testing.T) {
 		t.Errorf("unexpected cost %f", cost)
 	}
 }
+
+type doneUsageStreamProvider struct {
+	includeUsageEvent bool
+}
+
+func (*doneUsageStreamProvider) Name() string               { return "done-usage" }
+func (*doneUsageStreamProvider) Ping(context.Context) error { return nil }
+func (*doneUsageStreamProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return nil, nil
+}
+
+func (p *doneUsageStreamProvider) StreamChat(context.Context, []FluxMessage, ChatOptions) (*StreamResult, error) {
+	events := make(chan FluxStreamEvent, 2)
+	usage := &FluxUsage{PromptTokens: 3, CompletionTokens: 5, TotalTokens: 8}
+	if p.includeUsageEvent {
+		events <- FluxStreamEvent{Type: "usage", Usage: usage}
+	}
+	events <- FluxStreamEvent{Type: "done", Usage: usage}
+	close(events)
+	return NewStreamResult(events, func() {}), nil
+}
+
+func TestBudgetProvider_DeduplicatesStreamUsage(t *testing.T) {
+	t.Parallel()
+	for _, includeUsageEvent := range []bool{false, true} {
+		t.Run(map[bool]string{false: "done_only", true: "usage_and_done"}[includeUsageEvent], func(t *testing.T) {
+			store := observability.NewMemoryBudgetStore()
+			store.SetBudget("stream", 1)
+			provider := observability.NewBudgetProvider(&doneUsageStreamProvider{includeUsageEvent: includeUsageEvent}, store)
+			result, err := provider.StreamChat(
+				context.Background(),
+				[]FluxMessage{{Role: "user", Content: "hello"}},
+				ChatOptions{Model: "gpt-4o", MaxTokens: 100, VirtualKeyID: "stream"},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer result.Close()
+			for range result.Events {
+			}
+
+			_, input, output, ok := store.Usage("stream")
+			if !ok || input != 3 || output != 5 {
+				t.Fatalf("usage = in:%d out:%d ok:%t, want 3/5", input, output, ok)
+			}
+		})
+	}
+}
+
+type continuationUsageStreamProvider struct{}
+
+func (*continuationUsageStreamProvider) Name() string               { return "continuation-usage" }
+func (*continuationUsageStreamProvider) Ping(context.Context) error { return nil }
+func (*continuationUsageStreamProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return nil, nil
+}
+
+func (*continuationUsageStreamProvider) StreamChat(context.Context, []FluxMessage, ChatOptions) (*StreamResult, error) {
+	events := make(chan FluxStreamEvent, 4)
+	usage := &FluxUsage{PromptTokens: 3, CompletionTokens: 5, TotalTokens: 8}
+	events <- FluxStreamEvent{Type: "usage", Usage: usage}
+	events <- FluxStreamEvent{Type: "continuation"}
+	events <- FluxStreamEvent{Type: "usage", Usage: usage}
+	events <- FluxStreamEvent{Type: "done", Usage: usage}
+	close(events)
+	return NewStreamResult(events, func() {}), nil
+}
+
+func TestBudgetProvider_ResetsUsageAtContinuation(t *testing.T) {
+	t.Parallel()
+	store := observability.NewMemoryBudgetStore()
+	store.SetBudget("stream", 1)
+	provider := observability.NewBudgetProvider(&continuationUsageStreamProvider{}, store)
+	result, err := provider.StreamChat(
+		context.Background(),
+		[]FluxMessage{{Role: "user", Content: "hello"}},
+		ChatOptions{Model: "gpt-4o", MaxTokens: 100, VirtualKeyID: "stream"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Close()
+	for range result.Events {
+	}
+
+	_, input, output, ok := store.Usage("stream")
+	if !ok || input != 6 || output != 10 {
+		t.Fatalf("usage = in:%d out:%d ok:%t, want 6/10", input, output, ok)
+	}
+}

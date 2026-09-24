@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -132,20 +133,24 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messages []core.FluxMessa
 	if opts.Model == "" {
 		return nil, fmt.Errorf("flux: model is required for gemini")
 	}
+	streamCtx, cancel := context.WithCancel(ctx)
 	body, err := c.buildBody(messages, opts)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	url := fmt.Sprintf("%s/models/%s:streamGenerateContent?alt=sse", c.baseURL, opts.Model)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(streamCtx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: gemini stream request creation failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 
-	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
+	resp, err := core.DoWithRetry(streamCtx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: gemini stream request failed: %w", err)
 	}
 
@@ -154,19 +159,23 @@ func (c *GeminiClient) StreamChat(ctx context.Context, messages []core.FluxMessa
 	if resp.StatusCode != http.StatusOK {
 		detail, readErr := core.ParseProviderError(resp.Body)
 		_ = resp.Body.Close()
+		cancel()
 		return nil, core.FormatAPIError("gemini", "stream", resp.StatusCode, requestID, detail, readErr)
 	}
 
-	streamCtx, cancel := context.WithCancel(ctx)
+	streamBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	var events <-chan core.FluxStreamEvent
 	if geminiSharedParserEnabled() {
-		sseEvents := core.ParseSSEStream(streamCtx, resp.Body, c.logger)
-		events := processGeminiStream(streamCtx, sseEvents, c.logger)
-		return llm.NewStreamResult(events, requestID, cancel), nil
+		sseEvents := core.ParseSSEStream(streamCtx, streamBody, c.logger)
+		events = processGeminiStream(streamCtx, sseEvents, c.logger)
+	} else {
+		buffered := make(chan core.FluxStreamEvent, 64)
+		events = buffered
+		go c.streamLoop(streamCtx, streamBody, buffered)
 	}
-	// Fallback (opt-out via FLUX_GEMINI_SHARED_PARSER=0): old bespoke parser.
-	events := make(chan core.FluxStreamEvent, 64)
-	go c.streamLoop(streamCtx, resp.Body, events)
-	return llm.NewStreamResult(events, requestID, cancel), nil
+	result := llm.NewStreamResult(events, requestID, cleanup)
+
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 func (c *GeminiClient) Ping(ctx context.Context) error {
@@ -553,6 +562,19 @@ func mapGeminiFinishReason(reason string) string {
 	}
 }
 
+func geminiUsageSnapshot(usage *geminiUsage) *core.FluxUsage {
+	if usage == nil {
+		return nil
+	}
+	return &core.FluxUsage{
+		PromptTokens:     usage.PromptTokenCount,
+		CompletionTokens: usage.CandidatesTokenCount,
+		TotalTokens:      usage.TotalTokenCount,
+		ThinkingTokens:   usage.ThoughtsTokenCount,
+		CacheReadTokens:  usage.CachedContentTokenCount,
+	}
+}
+
 // --- Streaming ---
 
 // processGeminiStream converts Gemini SSE events (parsed by the shared
@@ -567,26 +589,22 @@ func mapGeminiFinishReason(reason string) string {
 //     original Gemini "done with usage" contract).
 //   - A bare finish reason without usage emits a "done" event with
 //     StopReason but no Usage.
-//   - If the SSE channel closes without a finish reason, a bare "done"
-//     is emitted (matches the original "if !doneSent" fallback).
 func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, logger *slog.Logger) <-chan core.FluxStreamEvent {
 	ch := make(chan core.FluxStreamEvent, core.StreamChannelBuffer)
 	go func() {
 		defer close(ch)
-		doneSent := false
+		var pendingUsage *core.FluxUsage
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case evt, ok := <-sseEvents:
 				if !ok {
-					if !doneSent {
-						core.Emit(ctx, ch, core.FluxStreamEvent{Type: "done"})
+					if pendingUsage != nil {
+						core.Emit(ctx, ch, core.FluxStreamEvent{Type: "usage", Usage: pendingUsage})
 					}
 					return
 				}
-				// Propagate SSE-level errors (raised by core.ParseSSEStream on
-				// scanner failure or non-cancel context expiry).
 				if evt.Event == "error" {
 					core.Emit(ctx, ch, core.FluxStreamEvent{Type: "error", Error: evt.Data})
 					return
@@ -599,6 +617,9 @@ func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, lo
 				if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 					logger.Debug("failed to parse gemini event", "error", err)
 					continue
+				}
+				if chunk.Usage != nil {
+					pendingUsage = geminiUsageSnapshot(chunk.Usage)
 				}
 				if len(chunk.Candidates) == 0 {
 					continue
@@ -622,25 +643,12 @@ func processGeminiStream(ctx context.Context, sseEvents <-chan core.SSEEvent, lo
 						})
 					}
 				}
-				// Final-chunk emission: a "done" event with Usage
-				// (when present) and StopReason (when present). The
-				// original streamLoop emitted these together in a
-				// single event when the chunk carried both.
-				if chunk.Usage != nil || candidate.FinishReason != "" {
-					evt := core.FluxStreamEvent{Type: "done"}
-					if chunk.Usage != nil {
-						evt.Usage = &core.FluxUsage{
-							PromptTokens:     chunk.Usage.PromptTokenCount,
-							CompletionTokens: chunk.Usage.CandidatesTokenCount,
-							TotalTokens:      chunk.Usage.TotalTokenCount,
-							ThinkingTokens:   chunk.Usage.ThoughtsTokenCount,
-							CacheReadTokens:  chunk.Usage.CachedContentTokenCount,
-						}
-					}
-					if candidate.FinishReason != "" {
-						evt.StopReason = mapGeminiFinishReason(candidate.FinishReason)
-					}
-					core.Emit(ctx, ch, evt)
+				if candidate.FinishReason != "" {
+					core.Emit(ctx, ch, core.FluxStreamEvent{
+						Type:       "done",
+						StopReason: mapGeminiFinishReason(candidate.FinishReason),
+						Usage:      pendingUsage,
+					})
 					return
 				}
 			}
@@ -653,7 +661,16 @@ func (c *GeminiClient) streamLoop(ctx context.Context, body io.ReadCloser, event
 	defer close(events)
 	defer func() { _ = body.Close() }()
 
-	doneSent := false
+	var pendingUsage *core.FluxUsage
+	processLine := func(line string) bool {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.HasPrefix(line, "data:") {
+			return false
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		return c.processStreamChunkWithUsage(ctx, data, events, &pendingUsage)
+	}
+
 	buf := make([]byte, 0, 64*1024)
 	tmp := make([]byte, 4096)
 	for {
@@ -667,33 +684,45 @@ func (c *GeminiClient) streamLoop(ctx context.Context, body io.ReadCloser, event
 				}
 				line := string(buf[:idx])
 				buf = buf[idx+1:]
-				line = strings.TrimSpace(line)
-				if line == "" || !strings.HasPrefix(line, "data: ") {
-					continue
-				}
-				data := strings.TrimPrefix(line, "data: ")
-				if c.processStreamChunk(ctx, data, events) {
-					doneSent = true
+				if processLine(line) {
+					return
 				}
 			}
 		}
 		if readErr != nil {
-			break
-		}
-	}
-
-	if !doneSent {
-		select {
-		case events <- core.FluxStreamEvent{Type: "done"}:
-		case <-ctx.Done():
+			if len(buf) > 0 && processLine(string(buf)) {
+				return
+			}
+			if !errors.Is(readErr, io.EOF) {
+				select {
+				case events <- core.FluxStreamEvent{Type: "error", Error: readErr.Error()}:
+				case <-ctx.Done():
+				}
+				return
+			}
+			if pendingUsage != nil {
+				select {
+				case events <- core.FluxStreamEvent{Type: "usage", Usage: pendingUsage}:
+				case <-ctx.Done():
+				}
+			}
+			return
 		}
 	}
 }
 
 func (c *GeminiClient) processStreamChunk(ctx context.Context, data string, events chan<- core.FluxStreamEvent) bool {
+	var pendingUsage *core.FluxUsage
+	return c.processStreamChunkWithUsage(ctx, data, events, &pendingUsage)
+}
+
+func (c *GeminiClient) processStreamChunkWithUsage(ctx context.Context, data string, events chan<- core.FluxStreamEvent, pendingUsage **core.FluxUsage) bool {
 	var chunk geminiResponse
 	if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 		return false
+	}
+	if chunk.Usage != nil {
+		*pendingUsage = geminiUsageSnapshot(chunk.Usage)
 	}
 	if len(chunk.Candidates) == 0 {
 		return false
@@ -725,18 +754,9 @@ func (c *GeminiClient) processStreamChunk(ctx context.Context, data string, even
 			}
 		}
 	}
-	if chunk.Usage != nil {
+	if candidate.FinishReason != "" {
 		select {
-		case events <- core.FluxStreamEvent{
-			Type: "done",
-			Usage: &core.FluxUsage{
-				PromptTokens:     chunk.Usage.PromptTokenCount,
-				CompletionTokens: chunk.Usage.CandidatesTokenCount,
-				TotalTokens:      chunk.Usage.TotalTokenCount,
-				ThinkingTokens:   chunk.Usage.ThoughtsTokenCount,
-				CacheReadTokens:  chunk.Usage.CachedContentTokenCount,
-			},
-		}:
+		case events <- core.FluxStreamEvent{Type: "done", StopReason: mapGeminiFinishReason(candidate.FinishReason), Usage: *pendingUsage}:
 			return true
 		case <-ctx.Done():
 		}

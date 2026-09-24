@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -129,20 +130,24 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.FluxMess
 		return nil, err
 	}
 
+	streamCtx, cancel := context.WithCancel(ctx)
 	streamURL := strings.Replace(c.modelURL(opts.Model), "/invoke", "/invoke-with-response-stream", 1)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, streamURL, bytes.NewReader(streamBody))
+	req, err := http.NewRequestWithContext(streamCtx, http.MethodPost, streamURL, bytes.NewReader(streamBody))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: bedrock stream request creation failed: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.amazon.eventstream")
 	req.Header.Set("Content-Type", "application/json")
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(streamBody)), nil }
 	if err := c.sign(req, streamBody, time.Now().UTC()); err != nil {
+		cancel()
 		return nil, err
 	}
 
-	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger) //nolint:bodyclose // closed in goroutine for streaming
+	resp, err := core.DoWithRetry(streamCtx, c.httpClient, req, c.retry, c.logger) //nolint:bodyclose // closed in goroutine for streaming
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: bedrock stream request failed: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -152,10 +157,12 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.FluxMess
 			}
 		}()
 		detail, readErr := core.ParseProviderError(resp.Body)
+		cancel()
 		return nil, core.FormatAPIError("bedrock stream", "stream", resp.StatusCode, resp.Header.Get("X-Amzn-Requestid"), detail, readErr)
 	}
 
-	streamCtx, cancel := context.WithCancel(ctx)
+	boundBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	resp.Body = boundBody
 	ch := make(chan core.FluxStreamEvent, 64)
 
 	go func() {
@@ -190,13 +197,13 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.FluxMess
 				}
 			}()
 			if err != nil {
-				if err != io.EOF {
+				if !errors.Is(err, io.EOF) {
 					select {
-					case ch <- core.FluxStreamEvent{Type: "error", Content: err.Error()}:
+					case ch <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
 					case <-streamCtx.Done():
 					}
 				}
-				break
+				return
 			}
 
 			// Parse the chunk payload
@@ -238,25 +245,24 @@ func (c *BedrockClient) StreamChat(ctx context.Context, messages []core.FluxMess
 				if chunk.Delta != nil && chunk.Delta.StopReason != "" {
 					finishReason = chunk.Delta.StopReason
 				}
+				usage = mergeBedrockUsage(usage, chunk.Usage)
 			case "message_start":
-				if chunk.Message != nil && chunk.Message.Usage != nil {
-					usage = chunk.Message.Usage
+				if chunk.Message != nil {
+					usage = mergeBedrockUsage(usage, chunk.Message.Usage)
 				}
+			case "message_stop":
+				doneEvt := core.FluxStreamEvent{Type: "done", StopReason: finishReason, Usage: usage}
+				select {
+				case ch <- doneEvt:
+				case <-streamCtx.Done():
+				}
+				return
 			}
-		}
-
-		// Send final done event with usage (matching Anthropic/OpenAI pattern)
-		doneEvt := core.FluxStreamEvent{Type: "done", StopReason: finishReason}
-		if usage != nil {
-			doneEvt.Usage = usage
-		}
-		select {
-		case ch <- doneEvt:
-		case <-streamCtx.Done():
 		}
 	}()
 
-	return llm.NewStreamResult(ch, resp.Header.Get("X-Amzn-Requestid"), cancel), nil
+	result := llm.NewStreamResult(ch, resp.Header.Get("X-Amzn-Requestid"), cleanup)
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 func (c *BedrockClient) Ping(ctx context.Context) error {
@@ -335,6 +341,11 @@ func (c *BedrockClient) modelURL(model string) string {
 }
 
 // anthropicStreamChunk represents a chunk from Bedrock's streaming response.
+type bedrockStreamUsage struct {
+	InputTokens  int `json:"input_tokens,omitempty"`
+	OutputTokens int `json:"output_tokens,omitempty"`
+}
+
 type anthropicStreamChunk struct {
 	Type         string `json:"type"`
 	Index        int    `json:"index,omitempty"`
@@ -351,8 +362,26 @@ type anthropicStreamChunk struct {
 		StopReason  string `json:"stop_reason,omitempty"`
 	} `json:"delta,omitempty"`
 	Message *struct {
-		Usage *core.FluxUsage `json:"usage,omitempty"`
+		Usage *bedrockStreamUsage `json:"usage,omitempty"`
 	} `json:"message,omitempty"`
+	Usage *bedrockStreamUsage `json:"usage,omitempty"`
+}
+
+func mergeBedrockUsage(current *core.FluxUsage, update *bedrockStreamUsage) *core.FluxUsage {
+	if update == nil {
+		return current
+	}
+	if current == nil {
+		current = &core.FluxUsage{}
+	}
+	if update.InputTokens > 0 {
+		current.PromptTokens = update.InputTokens
+	}
+	if update.OutputTokens > 0 {
+		current.CompletionTokens = update.OutputTokens
+	}
+	current.TotalTokens = current.PromptTokens + current.CompletionTokens
+	return current
 }
 
 // eventStreamReader parses Amazon EventStream binary frames from a reader.

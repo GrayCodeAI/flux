@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/types"
@@ -129,6 +130,48 @@ func TestOpenAIClient_StreamChat_Success(t *testing.T) {
 	}
 	if content != "Hello stream" {
 		t.Errorf("content = %q", content)
+	}
+}
+
+func TestOpenAIClient_StreamChat_CloseClosesBody(t *testing.T) {
+	t.Parallel()
+	body := newBlockingReadCloser()
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+			Body:       body,
+		}, nil
+	})
+	c := NewOpenAIClient("sk-test", "https://api.openai.com/v1", nil)
+	c.SetRetry(core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}})
+	c.httpClient = &http.Client{Transport: transport}
+	result, err := c.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "gpt-4o", MaxTokens: 256})
+	if err != nil {
+		t.Fatalf("StreamChat: %v", err)
+	}
+
+	select {
+	case <-body.started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("stream body read did not start")
+	}
+	result.Close()
+	select {
+	case <-body.closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("stream body did not close")
+	}
+	if got := body.closeCount.Load(); got != 1 {
+		t.Fatalf("body close count = %d, want 1", got)
+	}
+	select {
+	case _, ok := <-result.Events:
+		if ok {
+			t.Fatal("unexpected event after close")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("result event channel did not close")
 	}
 }
 

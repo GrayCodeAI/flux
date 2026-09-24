@@ -104,43 +104,49 @@ func (c *VertexClient) StreamChat(ctx context.Context, messages []core.FluxMessa
 	if opts.Model == "" {
 		return nil, fmt.Errorf("flux: model is required for vertex")
 	}
+	streamCtx, cancel := context.WithCancel(ctx)
 	body, err := c.buildBody(messages, opts, true)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
 	// Check request size (30 MB Vertex limit)
 	if len(body) > maxVertexRequestSize {
+		cancel()
 		return nil, fmt.Errorf("flux: request size %d bytes exceeds Vertex limit of %d bytes", len(body), maxVertexRequestSize)
 	}
 
 	url := fmt.Sprintf("%s/%s:streamRawPredict", c.baseURL(), opts.Model)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(streamCtx, "POST", url, bytes.NewReader(body))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: vertex stream request failed: %w", err)
 	}
 	c.setHeaders(req)
 	req.Header.Set("Accept", "text/event-stream")
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 
-	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
+	resp, err := core.DoWithRetry(streamCtx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: vertex stream request failed: %w", err)
 	}
 
 	if resp.StatusCode != 200 {
 		detail, readErr := core.ParseProviderError(resp.Body)
 		_ = resp.Body.Close()
+		cancel()
 		return nil, core.FormatAPIError("vertex", "stream", resp.StatusCode, resp.Header.Get("X-Goog-Request-Id"), detail, readErr)
 	}
 
 	requestID := resp.Header.Get("X-Goog-Request-Id")
-
-	streamCtx, cancel := context.WithCancel(ctx)
-	sseEvents := core.ParseSSEStream(streamCtx, resp.Body, c.logger)
+	streamBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	sseEvents := core.ParseSSEStream(streamCtx, streamBody, c.logger)
 	events := core.ProcessAnthropicStream(streamCtx, sseEvents, c.logger)
+	result := llm.NewStreamResult(events, requestID, cleanup)
 
-	return llm.NewStreamResult(events, requestID, cancel), nil
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 func (c *VertexClient) Ping(ctx context.Context) error {

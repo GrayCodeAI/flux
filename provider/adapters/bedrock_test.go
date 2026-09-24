@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GrayCodeAI/flux/llm"
 	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/types"
 )
@@ -385,7 +386,8 @@ func TestBedrockClient_StreamChat_Success(t *testing.T) {
 		`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}`,
 		`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" from Bedrock stream!"}}`,
 		`{"type":"content_block_stop","index":0}`,
-		`{"type":"message_delta","delta":{"stop_reason":"end_turn"}}`,
+		`{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":3}}`,
+		`{"type":"message_stop"}`,
 	}
 	var eventStreamData []byte
 	for _, c := range chunks {
@@ -410,13 +412,56 @@ func TestBedrockClient_StreamChat_Success(t *testing.T) {
 	defer result.Close()
 
 	var content string
+	var done core.FluxStreamEvent
 	for evt := range result.Events {
 		if evt.Type == "content" {
 			content += evt.Content
 		}
+		if evt.Type == "done" {
+			done = evt
+		}
 	}
 	if content != "Hello from Bedrock stream!" {
 		t.Errorf("content = %q", content)
+	}
+	if done.StopReason != "end_turn" || done.Usage == nil || done.Usage.TotalTokens != 8 {
+		t.Fatalf("done = %+v", done)
+	}
+}
+
+func TestBedrockClient_StreamChat_MissingMessageStopIsTruncated(t *testing.T) {
+	t.Parallel()
+	chunks := []string{
+		`{"type":"message_start","message":{"usage":{"input_tokens":5}}}`,
+		`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"partial"}}`,
+		`{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":1}}`,
+	}
+	var eventStreamData []byte
+	for _, chunk := range chunks {
+		eventStreamData = append(eventStreamData, buildEventStreamFrame(chunk)...)
+	}
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/vnd.amazon.eventstream"}},
+			Body:       io.NopCloser(bytes.NewReader(eventStreamData)),
+		}, nil
+	})
+	client := NewBedrockClient("AKID", "secret", "", "us-east-1")
+	client.retry = core.RetryConfig{RetryConfig: types.RetryConfig{MaxRetries: 0}}
+	client.httpClient = &http.Client{Transport: transport}
+	result, err := client.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "Hi"}}, core.ChatOptions{Model: "anthropic.claude", MaxTokens: 256})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Close()
+
+	var terminal core.FluxStreamEvent
+	for event := range result.Events {
+		terminal = event
+	}
+	if terminal.Type != "error" || terminal.ErrorInfo == nil || terminal.ErrorInfo.Kind != llm.ErrKindTruncated {
+		t.Fatalf("terminal = %+v, want truncated error", terminal)
 	}
 }
 

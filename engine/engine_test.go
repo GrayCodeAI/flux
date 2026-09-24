@@ -240,6 +240,30 @@ func TestStreamFatalErrorEventStillTerminal(t *testing.T) {
 	}
 }
 
+func TestStreamSilentSourceCloseIsTruncated(t *testing.T) {
+	sourceEvents := make(chan core.FluxStreamEvent)
+	close(sourceEvents)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := newStream(ctx, cancel, llm.NewStreamResult(sourceEvents, "", nil), Route{Provider: "mock", Model: "mock/model"})
+	defer stream.Close()
+
+	var events []Event
+	for stream.Next() {
+		events = append(events, stream.Event())
+	}
+	err := stream.Err()
+	if !IsCode(err, ErrorProviderUnavailable) {
+		t.Fatalf("error = %v, want provider_unavailable", err)
+	}
+	if !errors.Is(err, core.ErrStreamTruncated) {
+		t.Fatalf("error = %v, want stream truncation cause", err)
+	}
+	if len(events) != 1 || events[0].Type != EventRouteSelected {
+		t.Fatalf("events = %+v, want only route_selected", events)
+	}
+}
+
 func TestSnapshotPublishesCapabilities(t *testing.T) {
 	compiled := &catalog.CompiledCatalog{
 		ModelsByID: map[string]catalog.Model{

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // UsageLimitProvider wraps any Provider and enforces token/cost budgets
@@ -80,28 +82,25 @@ func (u *UsageLimitProvider) StreamChat(ctx context.Context, messages []FluxMess
 		return nil, err
 	}
 
-	// Wrap the events channel to intercept usage events.
-	wrappedCh := make(chan FluxStreamEvent, cap(result.Events))
-	go func() {
-		defer close(wrappedCh)
-		for evt := range result.Events {
-			if evt.Type == "usage" && evt.Usage != nil {
-				total := evt.Usage.TotalTokens
+	var previousUsage *core.FluxUsage
+	return core.TransformStreamResult(ctx, result, func(_ context.Context, evt FluxStreamEvent) (FluxStreamEvent, error) {
+		if evt.Type == "continuation" {
+			previousUsage = nil
+			return evt, nil
+		}
+		if (evt.Type == "usage" || evt.Type == "done") && evt.Usage != nil {
+			delta := core.UsageDelta(previousUsage, evt.Usage)
+			previousUsage = core.MergeUsage(previousUsage, evt.Usage)
+			if delta != nil {
+				total := delta.TotalTokens
 				if total == 0 {
-					total = evt.Usage.PromptTokens + evt.Usage.CompletionTokens
+					total = delta.PromptTokens + delta.CompletionTokens
 				}
 				u.tracker.Record(total, 0, opts.Provider, opts.Model)
 			}
-			select {
-			case wrappedCh <- evt:
-			case <-ctx.Done():
-				result.Close()
-				return
-			}
 		}
-	}()
-
-	return NewStreamResult(wrappedCh, result.Close), nil
+		return evt, nil
+	}), nil
 }
 
 // recordUsage extracts token count from an FluxResponse and records it.

@@ -80,40 +80,17 @@ func (gp *GuardrailProvider) StreamChat(ctx context.Context, messages []FluxMess
 		return result, nil
 	}
 
-	origEvents := result.Events
-	wrappedEvents := make(chan FluxStreamEvent, cap(origEvents))
-
-	go func() {
-		defer close(wrappedEvents)
-		for evt := range origEvents {
-			if evt.Type == "content" && gp.guardrails != nil {
-				violations, checkErr := gp.guardrails.Check(ctx, evt.Content)
-				if checkErr != nil {
-					select {
-					case wrappedEvents <- FluxStreamEvent{
-						Type:  "error",
-						Error: checkErr.Error(),
-					}:
-					case <-ctx.Done():
-					}
-					result.Close()
-					return
-				}
-				if len(violations) > 0 {
-					evt.Content = core.ApplyRedactions(evt.Content, violations)
-				}
-			}
-			select {
-			case wrappedEvents <- evt:
-			case <-ctx.Done():
-				result.Close()
-				return
-			}
+	return core.TransformStreamResult(ctx, result, func(streamCtx context.Context, evt FluxStreamEvent) (FluxStreamEvent, error) {
+		if evt.Type != "content" {
+			return evt, nil
 		}
-	}()
-
-	return &StreamResult{
-		Events:    wrappedEvents,
-		RequestID: result.RequestID,
-	}, nil
+		violations, err := gp.guardrails.Check(streamCtx, evt.Content)
+		if err != nil {
+			return evt, err
+		}
+		if len(violations) > 0 {
+			evt.Content = core.ApplyRedactions(evt.Content, violations)
+		}
+		return evt, nil
+	}), nil
 }

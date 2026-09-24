@@ -133,14 +133,17 @@ func (c *AzureClient) StreamChat(ctx context.Context, messages []core.FluxMessag
 		return nil, fmt.Errorf("flux: model is required for azure")
 	}
 
+	streamCtx, cancel := context.WithCancel(ctx)
 	reqBody := c.buildRequest(messages, opts, true)
 	body, err := json.Marshal(reqBody)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: azure stream marshal request failed: %w", err)
 	}
 	url := fmt.Sprintf("%s/openai/deployments/%s/chat/completions?api-version=%s", c.endpoint, opts.Model, c.apiVersion)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(streamCtx, "POST", url, bytes.NewReader(body))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: azure stream request creation failed: %w", err)
 	}
 	c.setHeaders(req)
@@ -149,8 +152,9 @@ func (c *AzureClient) StreamChat(ctx context.Context, messages []core.FluxMessag
 
 	c.logger.Debug("azure stream", "model", opts.Model, "endpoint", c.endpoint)
 
-	resp, err := core.DoWithRetry(ctx, c.httpClient, req, c.retry, c.logger)
+	resp, err := core.DoWithRetry(streamCtx, c.httpClient, req, c.retry, c.logger)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: azure stream request failed: %w", err)
 	}
 
@@ -158,14 +162,16 @@ func (c *AzureClient) StreamChat(ctx context.Context, messages []core.FluxMessag
 	if resp.StatusCode != 200 {
 		detail, readErr := core.ParseProviderError(resp.Body)
 		_ = resp.Body.Close()
+		cancel()
 		return nil, core.FormatAPIError("azure", "stream", resp.StatusCode, requestID, detail, readErr)
 	}
 
-	streamCtx, cancel := context.WithCancel(ctx)
-	sseEvents := core.ParseSSEStream(streamCtx, resp.Body, c.logger)
+	streamBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	sseEvents := core.ParseSSEStream(streamCtx, streamBody, c.logger)
 	events := core.ProcessOpenAIStream(streamCtx, sseEvents, c.logger)
+	result := llm.NewStreamResult(events, requestID, cleanup)
 
-	return llm.NewStreamResult(events, requestID, cancel), nil
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 func (c *AzureClient) Ping(ctx context.Context) error {

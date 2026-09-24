@@ -176,6 +176,43 @@ func TestEngineContinuationPreservesEventsAndConversationShape(t *testing.T) {
 	}
 }
 
+type terminalErrorProvider struct{}
+
+func (*terminalErrorProvider) Name() string               { return "terminal-error" }
+func (*terminalErrorProvider) Ping(context.Context) error { return nil }
+func (*terminalErrorProvider) Chat(context.Context, []core.FluxMessage, core.ChatOptions) (*core.FluxResponse, error) {
+	return nil, nil
+}
+
+func (*terminalErrorProvider) StreamChat(context.Context, []core.FluxMessage, core.ChatOptions) (*core.StreamResult, error) {
+	events := make(chan core.FluxStreamEvent, 2)
+	events <- core.FluxStreamEvent{Type: "error", Error: "connection reset"}
+	events <- core.FluxStreamEvent{Type: "done", StopReason: "stop"}
+	close(events)
+	return llm.NewStreamResult(events, "request-error", nil), nil
+}
+
+func TestEngineContinuationDoesNotAppendDoneAfterFatalError(t *testing.T) {
+	source, err := streamWithContinuation(
+		context.Background(), &terminalErrorProvider{},
+		[]core.FluxMessage{{Role: "user", Content: "hello"}},
+		core.ChatOptions{Model: "model"},
+		Limits{MaxContinuations: 1, MaxTotalOutputTokens: 100},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer source.Close()
+
+	var events []core.FluxStreamEvent
+	for event := range source.Events {
+		events = append(events, event)
+	}
+	if len(events) != 1 || events[0].Type != "error" || events[0].Error != "connection reset" {
+		t.Fatalf("events = %+v, want one fatal error", events)
+	}
+}
+
 func firstCatalogModelID(cat catalog.Catalog) string {
 	for id := range cat.Models {
 		return id
