@@ -42,6 +42,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   timeout (including net/http `Client.Timeout`) and counts it against the
   deployment, and the engine reports it as a retryable
   `ErrorProviderUnavailable` instead of `ErrorCancelled`.
+- Engine stream errors keep the provider's classification: a stream error's
+  `ErrorInfo.Kind` now maps to `ErrorRateLimited`, `ErrorAuthentication`,
+  `ErrorContextExceeded` or `ErrorInvalidRequest` (content filtering
+  included), carries `Retryable`, and names the route's provider and model,
+  instead of every stream failure becoming a non-retryable
+  `ErrorProviderUnavailable`.
 
 ### Changed
 - Removed process-global custom gateway and dynamic provider registration,

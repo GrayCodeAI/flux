@@ -136,3 +136,43 @@ func TestStreamCallerCancellationReportsContextCause(t *testing.T) {
 		})
 	}
 }
+
+func TestStreamErrorKindsMapToEngineCodes(t *testing.T) {
+	tests := []struct {
+		kind          string
+		retryable     bool
+		wantCode      ErrorCode
+		wantRetryable bool
+	}{
+		{llm.ErrKindRateLimited, true, ErrorRateLimited, true},
+		{llm.ErrKindAuth, false, ErrorAuthentication, false},
+		{llm.ErrKindContextExceeded, false, ErrorContextExceeded, false},
+		{llm.ErrKindInvalidRequest, false, ErrorInvalidRequest, false},
+		{llm.ErrKindContentFiltered, false, ErrorInvalidRequest, false},
+		{llm.ErrKindUnavailable, true, ErrorProviderUnavailable, true},
+		{llm.ErrKindInternal, true, ErrorProviderUnavailable, true},
+		{llm.ErrKindTimeout, false, ErrorProviderUnavailable, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.kind, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			stream := streamOf(ctx, cancel, core.FluxStreamEvent{
+				Type: "error", Error: "provider said no",
+				ErrorInfo: &llm.StreamErrorInfo{Kind: tt.kind, Retryable: tt.retryable},
+			})
+			defer stream.Close()
+			drainEngineStream(t, stream)
+
+			var err *Error
+			if !errors.As(stream.Err(), &err) {
+				t.Fatalf("error = %v, want *Error", stream.Err())
+			}
+			if err.Code != tt.wantCode || err.Retryable != tt.wantRetryable {
+				t.Fatalf("error = {code %s retryable %v}, want {code %s retryable %v}", err.Code, err.Retryable, tt.wantCode, tt.wantRetryable)
+			}
+			if err.Provider != lifecycleRoute.Provider || err.Model != lifecycleRoute.Model || err.Message != "provider said no" {
+				t.Fatalf("error = %+v, want route and provider message", err)
+			}
+		})
+	}
+}

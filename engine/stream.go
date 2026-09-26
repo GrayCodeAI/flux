@@ -132,7 +132,7 @@ func (s *Stream) forward() {
 				}
 				return
 			}
-			normalized, err := normalizeEvent(event)
+			normalized, err := normalizeEvent(event, s.route)
 			if err != nil {
 				s.setError(classify("stream", s.route, err))
 				return
@@ -209,7 +209,7 @@ func (s *Stream) setError(err error) {
 	s.mu.Unlock()
 }
 
-func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
+func normalizeEvent(event core.FluxStreamEvent, route Route) (Event, error) {
 	out := Event{
 		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
 		Error: event.Error, Warning: event.Warning, ErrorInfo: cloneErrorInfo(event.ErrorInfo),
@@ -241,7 +241,10 @@ func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 		// forward handles the caller's own cancellation before normalizing, so
 		// a cancellation reaching here came from a context the provider owns
 		// (for example an adapter-side timeout): an upstream failure.
-		return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error, Retryable: true}
+		return Event{}, &Error{
+			Code: ErrorProviderUnavailable, Operation: "stream", Provider: route.Provider, Model: route.Model,
+			Message: event.Error, Retryable: true,
+		}
 	case "error":
 		if event.Warning != "" {
 			// Non-fatal health diagnostic (e.g. a reasoning-only response):
@@ -254,17 +257,10 @@ func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 				Route: cloneRoute(event.Route),
 			}, nil
 		}
-		if event.ErrorInfo != nil {
-			switch event.ErrorInfo.Kind {
-			case llm.ErrKindTruncated:
-				return Event{}, core.ErrStreamTruncated
-			case llm.ErrKindCanceled, llm.ErrKindTimeout:
-				// Not the caller's cancellation (forward checked its context):
-				// an upstream timeout or cancel, worth retrying.
-				return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error, Retryable: true}
-			}
+		if event.ErrorInfo != nil && event.ErrorInfo.Kind == llm.ErrKindTruncated {
+			return Event{}, core.ErrStreamTruncated
 		}
-		return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error}
+		return Event{}, streamEventError(event, route)
 	default:
 		out.Type = event.Type
 	}
@@ -272,6 +268,36 @@ func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 		out.ToolCall = cloneToolCall(event.ToolCall)
 	}
 	return out, nil
+}
+
+// streamEventError converts a fatal provider stream event into the engine's
+// typed error. It prefers the event's ErrorInfo over its message text so hosts
+// can tell an authentication failure from a rate limit or an outage.
+func streamEventError(event core.FluxStreamEvent, route Route) *Error {
+	err := &Error{
+		Code: ErrorProviderUnavailable, Operation: "stream", Provider: route.Provider, Model: route.Model,
+		Message: event.Error,
+	}
+	info := event.ErrorInfo
+	if info == nil {
+		return err
+	}
+	err.Retryable = info.Retryable
+	switch info.Kind {
+	case llm.ErrKindRateLimited:
+		err.Code = ErrorRateLimited
+	case llm.ErrKindAuth:
+		err.Code = ErrorAuthentication
+	case llm.ErrKindContextExceeded:
+		err.Code = ErrorContextExceeded
+	case llm.ErrKindInvalidRequest, llm.ErrKindContentFiltered:
+		err.Code = ErrorInvalidRequest
+	case llm.ErrKindCanceled, llm.ErrKindTimeout:
+		// Not the caller's cancellation (forward checked its context): an
+		// upstream timeout or cancel, worth retrying.
+		err.Retryable = true
+	}
+	return err
 }
 
 func cloneErrorInfo(info *llm.StreamErrorInfo) *llm.StreamErrorInfo {
