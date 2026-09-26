@@ -167,6 +167,11 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []core.FluxMessage
 				return resp, nil
 			}
 			lastErr = err
+			if ctx.Err() != nil {
+				// The caller cancelled or its deadline passed: stop, and do not
+				// count the failure against the deployment.
+				return nil, err
+			}
 			r.recordFailure(choice.DeploymentID, err)
 			if !IsTransient(err) {
 				if ShouldTryNextDeployment(err) {
@@ -226,16 +231,23 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 					r.recordSuccess(choice.DeploymentID)
 					return
 				}
+				if streamCtx.Err() != nil {
+					// The caller cancelled or its deadline passed. Only the
+					// caller's context decides this: an upstream timeout also
+					// matches context.DeadlineExceeded but must fail over. No
+					// failover and no breaker failure; the coordinated wrapper
+					// around this stream emits the terminal cancelled event.
+					return
+				}
 				lastErr = err
 				r.recordFailure(choice.DeploymentID, err)
-				if isContextError(err) {
-					return
-				}
 				if !fallback {
-					sendRouterEvent(streamCtx, out, routerErrorEvent(err, route))
+					if !streamFailureForwarded(err) {
+						sendRouterEvent(streamCtx, out, routerErrorEvent(err, route))
+					}
 					return
 				}
-				if !IsTransient(err) {
+				if !isRetryableStreamFailure(err) {
 					if ShouldTryNextDeployment(err) {
 						break
 					}
@@ -249,7 +261,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 			lastErr = fmt.Errorf("no route configured")
 		}
 		sendRouterEvent(streamCtx, out, routerErrorEvent(
-			fmt.Errorf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr), lastRoute,
+			fmt.Errorf("deployment router: all deployments failed for %q: %w", target.canonicalModelID, lastErr), lastRoute,
 		))
 	}()
 	return core.CoordinateStreamResult(ctx, llm.NewStreamResult(out, "", cancel)), nil
@@ -501,19 +513,83 @@ func sendRouterEvent(ctx context.Context, out chan<- core.FluxStreamEvent, event
 	}
 }
 
+// deploymentStreamError is a stream failure a deployment reported. It keeps
+// the event's ErrorInfo so breaker accounting and the router's own terminal
+// event do not have to re-parse the message.
+type deploymentStreamError struct {
+	message string
+	info    *llm.StreamErrorInfo
+	// forwarded is set when the failing event was already sent downstream.
+	forwarded bool
+}
+
+func (e *deploymentStreamError) Error() string { return e.message }
+
+func streamFailureForwarded(err error) bool {
+	var streamErr *deploymentStreamError
+	return errors.As(err, &streamErr) && streamErr.forwarded
+}
+
+// isRetryableStreamFailure extends IsTransient with the kinds a deployment
+// reported in-band: an upstream timeout or an unavailable deployment is worth
+// trying elsewhere even when its message matches no transient pattern.
+func isRetryableStreamFailure(err error) bool {
+	var streamErr *deploymentStreamError
+	if errors.As(err, &streamErr) && streamErr.info != nil {
+		switch streamErr.info.Kind {
+		case llm.ErrKindTimeout, llm.ErrKindUnavailable:
+			return true
+		}
+	}
+	return IsTransient(err)
+}
+
+// routerErrorEvent builds the router's terminal error event. It is only used
+// while the caller's context is live, so it never reports a cancellation.
 func routerErrorEvent(err error, route *llm.ResolvedRoute) core.FluxStreamEvent {
-	event := core.FluxStreamEvent{Type: "error", Route: route}
+	event := core.FluxStreamEvent{Type: "error", Route: cloneResolvedRoute(route)}
 	if err != nil {
 		event.Error = err.Error()
 	}
-	if isContextError(err) {
-		event.Type = "cancelled"
-		kind := llm.ErrKindCanceled
-		if errors.Is(err, context.DeadlineExceeded) {
-			kind = llm.ErrKindTimeout
-		}
-		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind}
+	var streamErr *deploymentStreamError
+	if errors.As(err, &streamErr) && streamErr.info != nil {
+		info := *streamErr.info
+		event.ErrorInfo = &info
 	}
+	return event
+}
+
+// isStreamFailureEvent reports whether a deployment event ends its stream
+// with a failure.
+func isStreamFailureEvent(event core.FluxStreamEvent) bool {
+	return event.Type == "error" || event.Type == "cancelled" || event.Type == "canceled"
+}
+
+// providerFailureEvent normalizes a failure a deployment reported while the
+// caller's context is still live. A "cancelled" event or a canceled kind here
+// comes from a context the deployment owns (for example an adapter-side
+// timeout), so it is an upstream failure the router may fail over from, not
+// the caller's cancellation.
+func providerFailureEvent(event core.FluxStreamEvent, deploymentID string) core.FluxStreamEvent {
+	cancelled := event.Type == "cancelled" || event.Type == "canceled"
+	event.Type = "error"
+	if event.Error == "" {
+		event.Error = fmt.Sprintf("deployment %q stream failed", deploymentID)
+	}
+	if event.ErrorInfo == nil && !cancelled {
+		return event
+	}
+	info := llm.StreamErrorInfo{Kind: llm.ErrKindCanceled}
+	if event.ErrorInfo != nil {
+		info = *event.ErrorInfo
+	}
+	switch info.Kind {
+	case llm.ErrKindCanceled:
+		info.Kind, info.Retryable = llm.ErrKindUnavailable, true
+	case llm.ErrKindTimeout:
+		info.Retryable = true
+	}
+	event.ErrorInfo = &info
 	return event
 }
 
@@ -523,17 +599,6 @@ func cloneResolvedRoute(route *llm.ResolvedRoute) *llm.ResolvedRoute {
 	}
 	cloned := *route
 	return &cloned
-}
-
-func streamEventIsCancellation(event core.FluxStreamEvent) bool {
-	return event.ErrorInfo != nil && (event.ErrorInfo.Kind == llm.ErrKindCanceled || event.ErrorInfo.Kind == llm.ErrKindTimeout)
-}
-
-func streamEventContextError(event core.FluxStreamEvent) error {
-	if event.ErrorInfo != nil && event.ErrorInfo.Kind == llm.ErrKindTimeout {
-		return context.DeadlineExceeded
-	}
-	return context.Canceled
 }
 
 func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- core.FluxStreamEvent, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string, route llm.ResolvedRoute) (fallback bool, err error) {
@@ -569,19 +634,19 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 	}
 	for event := range stream.Events {
 		event = annotate(event)
-		if event.Type == "cancelled" || event.Type == "canceled" || streamEventIsCancellation(event) {
-			_ = sendRouterEvent(ctx, out, event)
-			return false, streamEventContextError(event)
-		}
-		if event.Type == "error" {
+		if isStreamFailureEvent(event) {
+			if ctx.Err() != nil {
+				// The caller cancelled or its deadline passed; the deployment
+				// is only reporting the consequence.
+				return false, ctx.Err()
+			}
+			event = providerFailureEvent(event, deploymentID)
+			failure := &deploymentStreamError{message: event.Error, info: event.ErrorInfo}
 			if emitted {
-				_ = sendRouterEvent(ctx, out, event)
-				return false, fmt.Errorf("%s", event.Error)
+				failure.forwarded = sendRouterEvent(ctx, out, event)
+				return false, failure
 			}
-			if event.Error == "" {
-				return true, fmt.Errorf("deployment %q stream failed before output", deploymentID)
-			}
-			return true, fmt.Errorf("%s", event.Error)
+			return true, failure
 		}
 		if isOutputEvent(event) {
 			emitted = true
@@ -602,9 +667,15 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 		return false, ctx.Err()
 	}
 	if emitted {
-		return false, fmt.Errorf("deployment %q stream ended after output without done", deploymentID)
+		return false, &deploymentStreamError{
+			message: fmt.Sprintf("deployment %q stream ended after output without done", deploymentID),
+			info:    &llm.StreamErrorInfo{Kind: llm.ErrKindTruncated, Retryable: true},
+		}
 	}
-	return true, fmt.Errorf("deployment %q stream ended before output", deploymentID)
+	return true, &deploymentStreamError{
+		message: fmt.Sprintf("deployment %q stream ended before output", deploymentID),
+		info:    &llm.StreamErrorInfo{Kind: llm.ErrKindUnavailable, Retryable: true},
+	}
 }
 
 func (r *DeploymentRouter) resolveOffering(target deploymentTarget, deploymentID string) (catalog.ModelOffering, DeploymentAdapter, error) {
@@ -866,7 +937,8 @@ func (r *DeploymentRouter) recordSuccess(deploymentID string) {
 }
 
 // recordFailure records a deployment failure on its circuit breaker when the
-// error says something about the deployment's health.
+// error says something about the deployment's health. Callers must not pass a
+// failure caused by the caller's own cancellation or deadline.
 func (r *DeploymentRouter) recordFailure(deploymentID string, err error) {
 	if !shouldRecordBreakerFailure(err) {
 		return
@@ -876,9 +948,27 @@ func (r *DeploymentRouter) recordFailure(deploymentID string, err error) {
 	}
 }
 
+// shouldRecordBreakerFailure reports whether err describes the deployment's
+// health. A deadline that reaches it is the deployment timing out (net/http's
+// Client.Timeout matches context.DeadlineExceeded), because callers filter out
+// their own cancellation first.
 func shouldRecordBreakerFailure(err error) bool {
-	if err == nil || isContextError(err) {
+	if err == nil || errors.Is(err, context.Canceled) {
 		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var streamErr *deploymentStreamError
+	if errors.As(err, &streamErr) && streamErr.info != nil {
+		switch streamErr.info.Kind {
+		case llm.ErrKindTimeout, llm.ErrKindUnavailable, llm.ErrKindTruncated:
+			return true
+		case llm.ErrKindRateLimited, llm.ErrKindAuth, llm.ErrKindContextExceeded,
+			llm.ErrKindContentFiltered, llm.ErrKindInvalidRequest, llm.ErrKindCanceled:
+			return false
+		}
+		// Internal or unknown kinds fall through to the message checks.
 	}
 	var providerErr *core.FluxError
 	if errors.As(err, &providerErr) {
@@ -902,8 +992,4 @@ func shouldRecordBreakerFailure(err error) bool {
 		return false
 	}
 	return strings.Contains(message, "connection") || strings.Contains(message, "transport") || strings.Contains(message, "unavailable") || strings.Contains(message, "bad gateway") || strings.Contains(message, "service unavailable")
-}
-
-func isContextError(err error) bool {
-	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }

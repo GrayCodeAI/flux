@@ -808,6 +808,11 @@ func TestInferStreamErrorKind(t *testing.T) {
 		{"deadline", "context deadline exceeded", llm.ErrKindTimeout, true},
 		{"timed out", "request timed out", llm.ErrKindTimeout, true},
 		{"canceled", "context canceled", llm.ErrKindCanceled, false},
+		{"cancelled spelling", "context cancelled", llm.ErrKindCanceled, false},
+		// Provider prose that merely contains "cancelled" is not a
+		// cancellation; only the consumer's own context can say that.
+		{"provider prose is not a cancellation", "request was cancelled upstream", llm.ErrKindInternal, true},
+		{"client timeout is a timeout", "context deadline exceeded (Client.Timeout exceeded while reading body)", llm.ErrKindTimeout, true},
 		{"unavailable", "503 service unavailable", llm.ErrKindUnavailable, true},
 		{"bad gateway", "502 bad gateway", llm.ErrKindUnavailable, true},
 		{"invalid request", "invalid_request_error: bad param", llm.ErrKindInvalidRequest, false},
@@ -866,7 +871,12 @@ func TestEnsureStreamErrorInfo(t *testing.T) {
 		{
 			name:     "cancelled with deadline is timeout",
 			event:    FluxStreamEvent{Type: "cancelled", Error: "context deadline exceeded"},
-			wantKind: llm.ErrKindTimeout, wantRetries: true,
+			wantKind: llm.ErrKindTimeout, wantRetries: false,
+		},
+		{
+			name:     "cancelled with provider wording stays canceled",
+			event:    FluxStreamEvent{Type: "cancelled", Error: "rate limit"},
+			wantKind: llm.ErrKindCanceled, wantRetries: false,
 		},
 		{
 			name: "existing ErrorInfo is preserved",

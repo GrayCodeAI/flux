@@ -205,13 +205,13 @@ func ensureStreamErrorInfo(event FluxStreamEvent) FluxStreamEvent {
 		kind, retryable := inferStreamErrorKind(event.Error)
 		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind, Retryable: retryable}
 	case "cancelled", "canceled":
-		kind, retryable := inferStreamErrorKind(event.Error)
-		// An unrecognizable cancellation message is still a cancellation, not
-		// an internal fault, and must not be reported as retryable.
-		if kind == llm.ErrKindInternal {
-			kind, retryable = llm.ErrKindCanceled, false
+		// A cancellation is never an internal fault and never retryable; only
+		// a deadline distinguishes it from a plain cancel.
+		kind := llm.ErrKindCanceled
+		if inferred, _ := inferStreamErrorKind(event.Error); inferred == llm.ErrKindTimeout {
+			kind = llm.ErrKindTimeout
 		}
-		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind, Retryable: retryable}
+		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind}
 	}
 	return event
 }
@@ -223,8 +223,13 @@ func ensureStreamErrorInfo(event FluxStreamEvent) FluxStreamEvent {
 // rather than a per-provider table, so it does not become a maintenance sink
 // across flux's many providers. Matching is deliberately textual only: bare
 // HTTP status digits are not matched, because they false-positive against
-// ordinary content such as model ids and token counts. Unrecognized messages
-// fall back to internal/retryable, matching streamErrorEvent.
+// ordinary content such as model ids and token counts. Only Go's own
+// "context canceled" text maps to the canceled kind: a bare "cancelled" is as
+// likely to be provider prose ("subscription cancelled") as a cancellation.
+// Whether a canceled or timeout kind is the caller's cancellation is decided
+// by the consumer from its own context, never from this inference.
+// Unrecognized messages fall back to internal/retryable, matching
+// streamErrorEvent.
 func inferStreamErrorKind(message string) (kind string, retryable bool) {
 	msg := strings.ToLower(message)
 	switch {
@@ -245,7 +250,7 @@ func inferStreamErrorKind(message string) (kind string, retryable bool) {
 		return llm.ErrKindContentFiltered, false
 	case containsAny(msg, "deadline exceeded", "timeout", "timed out", "etimedout"):
 		return llm.ErrKindTimeout, true
-	case containsAny(msg, "context canceled", "context cancelled", "canceled", "cancelled"):
+	case containsAny(msg, "context canceled", "context cancelled"):
 		return llm.ErrKindCanceled, false
 	case containsAny(msg, "service unavailable", "bad gateway", "temporarily unavailable",
 		"upstream error", "overloaded_error", "overloaded"):

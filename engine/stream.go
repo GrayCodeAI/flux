@@ -98,54 +98,48 @@ func (s *Stream) forward() {
 	if !s.emit(Event{Type: EventRouteSelected, Route: cloneRoute(&s.route)}) {
 		// The context ended before the first event; the stream must still
 		// finish with the cancelled terminal instead of closing silently.
-		if !s.isClosed() && s.ctx.Err() != nil {
-			err := s.ctx.Err()
-			s.setError(classify("stream", s.route, err))
-			s.emitCancellation(err)
+		if !s.isClosed() {
+			s.finishCancelled(s.source.RequestID)
 		}
 		return
 	}
 	for {
 		select {
 		case <-s.ctx.Done():
-			if s.isClosed() {
-				return
+			if !s.isClosed() {
+				s.finishCancelled(s.source.RequestID)
 			}
-			err := s.ctx.Err()
-			s.setError(classify("stream", s.route, err))
-			s.emitCancellation(err)
 			return
 		case event, ok := <-s.source.Events:
 			if !ok {
 				if s.ctx.Err() == nil {
 					s.setError(classify("stream", s.route, core.ErrStreamTruncated))
 				} else if !s.isClosed() {
-					err := s.ctx.Err()
-					s.setError(classify("stream", s.route, err))
-					s.emitCancellation(err)
+					s.finishCancelled(s.source.RequestID)
 				}
 				return
 			}
 			if event.RequestID == "" && s.source != nil {
 				event.RequestID = s.source.RequestID
 			}
+			if isTerminalFailure(event) && s.ctx.Err() != nil {
+				// The caller cancelled or the request deadline passed, and the
+				// provider reported the consequence. Only the engine's own
+				// context decides this: an upstream timeout carries the same
+				// timeout kind but is a provider failure.
+				if !s.isClosed() {
+					s.finishCancelled(event.RequestID)
+				}
+				return
+			}
 			normalized, err := normalizeEvent(event)
 			if err != nil {
 				s.setError(classify("stream", s.route, err))
 				return
 			}
-			if normalized.Type == EventCancelled {
-				s.setError(classify("stream", s.route, streamContextError(normalized)))
-				if !s.emit(normalized) {
-					return
-				}
-				return
-			}
 			if !s.emit(normalized) {
 				if !s.isClosed() && s.ctx.Err() != nil {
-					err := s.ctx.Err()
-					s.setError(classify("stream", s.route, err))
-					s.emitCancellation(err)
+					s.finishCancelled(normalized.RequestID)
 				}
 				return
 			}
@@ -165,7 +159,18 @@ func (s *Stream) emit(event Event) bool {
 	}
 }
 
-func (s *Stream) emitCancellation(err error) {
+// finishCancelled records the caller's cancellation as the terminal error and
+// emits the terminal cancelled event.
+func (s *Stream) finishCancelled(requestID string) {
+	err := s.ctx.Err()
+	if err == nil {
+		return
+	}
+	s.setError(classify("stream", s.route, err))
+	s.emitCancellation(err, requestID)
+}
+
+func (s *Stream) emitCancellation(err error, requestID string) {
 	if err == nil || s.isClosed() {
 		return
 	}
@@ -176,6 +181,7 @@ func (s *Stream) emitCancellation(err error) {
 	event := Event{
 		Type:      EventCancelled,
 		Error:     err.Error(),
+		RequestID: requestID,
 		ErrorInfo: &llm.StreamErrorInfo{Kind: kind},
 		Route:     cloneRoute(&s.route),
 	}
@@ -232,10 +238,10 @@ func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 	case "continuation":
 		out.Type = EventContinuation
 	case "cancelled", "canceled":
-		out.Type = EventCancelled
-		if out.ErrorInfo == nil {
-			out.ErrorInfo = &llm.StreamErrorInfo{Kind: llm.ErrKindCanceled}
-		}
+		// forward handles the caller's own cancellation before normalizing, so
+		// a cancellation reaching here came from a context the provider owns
+		// (for example an adapter-side timeout): an upstream failure.
+		return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error, Retryable: true}
 	case "error":
 		if event.Warning != "" {
 			// Non-fatal health diagnostic (e.g. a reasoning-only response):
@@ -250,14 +256,12 @@ func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 		}
 		if event.ErrorInfo != nil {
 			switch event.ErrorInfo.Kind {
-			case llm.ErrKindCanceled:
-				out.Type = EventCancelled
-				return out, nil
-			case llm.ErrKindTimeout:
-				out.Type = EventCancelled
-				return out, nil
 			case llm.ErrKindTruncated:
 				return Event{}, core.ErrStreamTruncated
+			case llm.ErrKindCanceled, llm.ErrKindTimeout:
+				// Not the caller's cancellation (forward checked its context):
+				// an upstream timeout or cancel, worth retrying.
+				return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error, Retryable: true}
 			}
 		}
 		return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error}
@@ -304,9 +308,8 @@ func cloneToolCall(call *llm.ToolCall) *llm.ToolCall {
 	return &cloned
 }
 
-func streamContextError(event Event) error {
-	if event.ErrorInfo != nil && event.ErrorInfo.Kind == llm.ErrKindTimeout {
-		return context.DeadlineExceeded
-	}
-	return context.Canceled
+// isTerminalFailure reports whether a provider event ends the stream with a
+// failure. Warning-marked errors are non-fatal diagnostics.
+func isTerminalFailure(event core.FluxStreamEvent) bool {
+	return event.Type == "cancelled" || event.Type == "canceled" || event.Type == "error" && event.Warning == ""
 }

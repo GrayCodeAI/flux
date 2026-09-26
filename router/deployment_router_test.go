@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/llm"
 	"github.com/GrayCodeAI/flux/provider/core"
 )
 
@@ -490,6 +491,10 @@ func TestShouldRecordBreakerFailure(t *testing.T) {
 	}{
 		{"nil", nil, false},
 		{"caller canceled", context.Canceled, false},
+		{"upstream deadline", fmt.Errorf("post: %w", context.DeadlineExceeded), true},
+		{"stream timeout kind", &deploymentStreamError{message: "read timed out", info: &llm.StreamErrorInfo{Kind: llm.ErrKindTimeout}}, true},
+		{"stream auth kind", &deploymentStreamError{message: "HTTP 503 but auth", info: &llm.StreamErrorInfo{Kind: llm.ErrKindAuth}}, false},
+		{"stream internal kind uses message", &deploymentStreamError{message: "connection reset", info: &llm.StreamErrorInfo{Kind: llm.ErrKindInternal}}, true},
 		{"server error status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 503}, true},
 		{"overloaded status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 529}, true},
 		{"rate limited status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 429}, false},

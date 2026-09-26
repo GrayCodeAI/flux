@@ -36,6 +36,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   describe the deployment's health (5xx, 529, transport failures). Caller
   cancellation, rate limits and 4xx request errors no longer take a healthy
   deployment out of rotation.
+- Upstream timeouts and provider messages that merely contain "cancelled" are
+  no longer mistaken for the caller's cancellation. Only the caller's own
+  context decides that: `DeploymentRouter` fails over from an upstream
+  timeout (including net/http `Client.Timeout`) and counts it against the
+  deployment, and the engine reports it as a retryable
+  `ErrorProviderUnavailable` instead of `ErrorCancelled`.
 
 ### Changed
 - Removed process-global custom gateway and dynamic provider registration,
