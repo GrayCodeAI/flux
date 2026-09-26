@@ -436,3 +436,32 @@ func TestDeploymentRouterRetriesPreferDifferentEndpoint(t *testing.T) {
 		t.Fatalf("healthy deployment called %d times; want 1", healthy.callCount)
 	}
 }
+
+func TestShouldRecordBreakerFailure(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"nil", nil, false},
+		{"caller canceled", context.Canceled, false},
+		{"server error status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 503}, true},
+		{"overloaded status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 529}, true},
+		{"rate limited status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 429}, false},
+		{"bad request status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 400}, false},
+		{"transport error without status", &core.FluxError{Provider: "p", Op: "chat", Message: "dial tcp: connection refused"}, true},
+		{"http 502 in message", fmt.Errorf("upstream returned HTTP 502"), true},
+		{"rate limit message", fmt.Errorf("429 rate limit exceeded"), false},
+		{"connection reset", fmt.Errorf("read: connection reset by peer"), true},
+		{"invalid request message", fmt.Errorf("invalid_request_error: bad param"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := shouldRecordBreakerFailure(tt.err); got != tt.want {
+				t.Fatalf("shouldRecordBreakerFailure(%v) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
+	}
+}

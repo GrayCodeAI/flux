@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"sort"
@@ -166,7 +167,7 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []core.FluxMessage
 				return resp, nil
 			}
 			lastErr = err
-			r.recordFailure(choice.DeploymentID)
+			r.recordFailure(choice.DeploymentID, err)
 			if !IsTransient(err) {
 				if ShouldTryNextDeployment(err) {
 					break
@@ -218,7 +219,7 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 					return
 				}
 				lastErr = err
-				r.recordFailure(choice.DeploymentID)
+				r.recordFailure(choice.DeploymentID, err)
 				if !fallback {
 					select {
 					case out <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
@@ -809,9 +810,45 @@ func (r *DeploymentRouter) recordSuccess(deploymentID string) {
 	}
 }
 
-// recordFailure records a deployment failure on its circuit breaker.
-func (r *DeploymentRouter) recordFailure(deploymentID string) {
+// recordFailure records a deployment failure on its circuit breaker when the
+// error says something about the deployment's health.
+func (r *DeploymentRouter) recordFailure(deploymentID string, err error) {
+	if !shouldRecordBreakerFailure(err) {
+		return
+	}
 	if cb := r.getCircuitBreaker(deploymentID); cb != nil {
 		cb.Failure()
 	}
+}
+
+func shouldRecordBreakerFailure(err error) bool {
+	if err == nil || isContextError(err) {
+		return false
+	}
+	var providerErr *core.FluxError
+	if errors.As(err, &providerErr) {
+		if providerErr.StatusCode == 0 {
+			return true
+		}
+		switch providerErr.StatusCode {
+		case 500, 502, 503, 504, 529:
+			return true
+		default:
+			return false
+		}
+	}
+	message := strings.ToLower(err.Error())
+	for _, code := range []string{"500", "502", "503", "504", "529"} {
+		if strings.Contains(message, "http "+code) || strings.Contains(message, "http/"+code) || strings.Contains(message, "status "+code) || strings.Contains(message, "code "+code) {
+			return true
+		}
+	}
+	if strings.Contains(message, "429") || strings.Contains(message, "rate limit") {
+		return false
+	}
+	return strings.Contains(message, "connection") || strings.Contains(message, "transport") || strings.Contains(message, "unavailable") || strings.Contains(message, "bad gateway") || strings.Contains(message, "service unavailable")
+}
+
+func isContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
