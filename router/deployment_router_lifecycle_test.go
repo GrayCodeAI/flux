@@ -261,3 +261,49 @@ func TestDeploymentRouterForwardsEventsAfterOutputUntilDone(t *testing.T) {
 		t.Fatalf("fallback calls = %d, want 0", got)
 	}
 }
+
+func TestDeploymentRouterWarningDiagnosticsAreNotFatal(t *testing.T) {
+	t.Parallel()
+	diagnostic := core.FluxStreamEvent{Type: "error", Error: "reasoning-only response", Warning: "reasoning-only response"}
+	tests := []struct {
+		name   string
+		script []core.FluxStreamEvent
+		want   []string
+	}{
+		{
+			name: "after output",
+			script: []core.FluxStreamEvent{
+				{Type: "content", Content: "a"},
+				diagnostic,
+				{Type: "done", Usage: &core.FluxUsage{CompletionTokens: 1}},
+			},
+			want: []string{"route_changed", "content", "error", "done"},
+		},
+		{
+			name:   "before output",
+			script: []core.FluxStreamEvent{diagnostic, {Type: "content", Content: "a"}, {Type: "done"}},
+			want:   []string{"route_changed", "error", "content", "done"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			primary := &scriptedStreamProvider{name: "direct", events: tt.script}
+			fallback := &scriptedStreamProvider{name: "vertex", events: healthyScript("vertex")}
+			r := newTwoStageRouter(t, primary, fallback)
+
+			events := drainStream(t, startRouterStream(t, context.Background(), r))
+			if got := eventTypes(events); fmt.Sprint(got) != fmt.Sprint(tt.want) {
+				t.Fatalf("events = %v, want %v", got, tt.want)
+			}
+			for _, event := range events {
+				if event.Type == "error" && event.Warning == "" {
+					t.Fatalf("diagnostic lost its warning marker: %+v", event)
+				}
+			}
+			if got := fallback.calls.Load(); got != 0 {
+				t.Fatalf("fallback calls = %d, want 0 for a non-fatal diagnostic", got)
+			}
+		})
+	}
+}

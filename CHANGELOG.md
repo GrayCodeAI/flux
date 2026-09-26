@@ -57,6 +57,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   events (Anthropic reports output usage before `message_stop`) used to end
   the deployment stream, dropping the remaining content and `done` and
   surfacing a truncation error.
+- `DeploymentRouter` treats warning-marked diagnostic `error` events (for
+  example a reasoning-only response) as non-fatal, like `provider/core` and
+  the engine already did, instead of ending the stream or failing over.
 - A `provider/core` stream cancelled while its consumer was behind (the
   forwarder blocked delivering an event) now still ends with the terminal
   `cancelled` event instead of closing silently.

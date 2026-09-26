@@ -560,9 +560,11 @@ func routerErrorEvent(err error, route *llm.ResolvedRoute) core.FluxStreamEvent 
 }
 
 // isStreamFailureEvent reports whether a deployment event ends its stream
-// with a failure.
+// with a failure. Warning-marked "error" events are non-fatal diagnostics
+// (for example a reasoning-only response) that precede the real terminal,
+// matching provider/core and the engine.
 func isStreamFailureEvent(event core.FluxStreamEvent) bool {
-	return event.Type == "error" || event.Type == "cancelled" || event.Type == "canceled"
+	return event.Type == "error" && event.Warning == "" || event.Type == "cancelled" || event.Type == "canceled"
 }
 
 // providerFailureEvent normalizes a failure a deployment reported while the
