@@ -15,10 +15,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   credential lookup is required for the replicated route.
 - Client-owned OpenAI-compatible provider registration through
   `FluxClient.RegisterCustomProvider`.
+- Streams end with exactly one terminal event. When the caller's context is
+  cancelled or its deadline passes, `provider/core` stream wrappers emit a
+  terminal `cancelled` event and the engine emits `engine.EventCancelled`
+  (with `ErrorInfo` and the route) before `Err()` reports `ErrorCancelled`.
+  Hosts that switch on event types should handle `cancelled`.
+- Terminal `error`/`cancelled` stream events leaving `provider/core` always
+  carry a `StreamErrorInfo` (`Kind`/`Retryable`), inferred from the provider
+  message when the adapter set none. Existing `ErrorInfo` is never
+  overwritten, and a cancellation never reports as an internal fault.
+- Responses and stream events report the route that actually served the
+  request: `ResolvedRoute.DeploymentID` and `Attempts` after a deployment
+  failover, a `route_changed` event per deployment attempt, and the route on
+  engine events.
 
 ### Fixed
 - Circuit breakers now admit at most one concurrent half-open probe and do
   not reserve probes during route filtering.
+- `DeploymentRouter` records a circuit-breaker failure only for errors that
+  describe the deployment's health (5xx, 529, transport failures). Caller
+  cancellation, rate limits and 4xx request errors no longer take a healthy
+  deployment out of rotation.
 
 ### Changed
 - Removed process-global custom gateway and dynamic provider registration,
