@@ -340,3 +340,32 @@ This sequence keeps Flux's differentiator intact: a small, composable, Go provid
 - Current Flux source already has more policy, budget, batch, and guardrail functionality than `README.md` highlights. Before implementation, each roadmap item should be checked against all composition paths and public/internal package boundaries to avoid duplicating an existing feature under another package.
 - A formal provider conformance harness, representative sanitized request corpus, and reproducible cross-language gateway benchmark do not exist yet in the reviewed Flux checkout; these are prerequisites for measuring the proposed gains.
 - Whether to add `/v1/responses` immediately or only after Anthropic compatibility is a product prioritization decision, not something the landscape evidence alone can determine.
+
+## 4. Addendum (2026-09-27): meta-gateway and catalog donors
+
+### Takeaway
+
+Section 1 correctly excludes OpenRouter and Vercel AI Gateway from the OSS peer set because their routing services are hosted. They still matter as **design donors**: Flux ships an `openrouter` adapter and plans a Models.dev-generated catalog, and both hosted gateways expose request-scoped routing controls that Flux's deployment router could normalize without adopting a control plane.
+
+### Cited Findings
+
+All sources below were accessed on **2026-09-27**.
+
+- **Flux baseline (repo-confirmed).** `provider/adapters/openrouter.go` is a 39-line wrapper over the OpenAI-compatible client: it forwards `ChatOptions` unchanged and sends neither OpenRouter's `provider` routing object nor its attribution headers. `docs/plans/audit-remediation.md` (WP14 catalog-data) already plans a generator from Models.dev `api.json` to catalog v1 with a reviewed overlay.
+- **OpenRouter provider routing (official-docs).** A request's `provider` object accepts `order`, `allow_fallbacks`, `only`, `ignore`, `sort` (price, throughput or latency), `require_parameters`, `data_collection`, `zdr`, `quantizations`, `max_price`, `preferred_min_throughput` and `preferred_max_latency`; the optional attribution headers are `HTTP-Referer` and `X-OpenRouter-Title`. [Provider selection](https://openrouter.ai/docs/guides/routing/provider-selection)
+- **OpenRouter 2026 announcements (official).** "In-Region Routing: Keep your data in the US or EU" (2026-09-09), "Give any model a terminal and files" (2026-09-08) and "Batch API: half-price inference by bundling requests" (2026-09-22). [Announcements](https://openrouter.ai/announcements/all)
+- **Vercel AI Gateway routing (official-docs, page updated 2026-09-10).** `providerOptions.gateway` takes `order`, `only` and `sort` (`cost`, `ttft` or `tps`), `caching: 'auto'` for providers that need explicit cache markers, and a request-scoped `byok` credential map; model fallbacks and per-provider timeouts are documented alongside. [Provider options](https://vercel.com/docs/ai-gateway/models-and-providers/provider-options)
+- **Models.dev (repo/API-confirmed).** MIT-licensed, 7,011 stars, source pushed 2026-09-26. Data lives as TOML under `providers/` (serving details such as pricing) and `models/` (model facts, inherited with `base_model`), and is published as `https://models.dev/api.json` plus `models.json` and `catalog.json`. [Repository](https://github.com/anomalyco/models.dev)
+
+### Inferences
+
+1. **OpenRouter passthrough, not emulation.** Give the `openrouter` adapter an explicit, typed provider-preference option (order, only/ignore, fallbacks, sort, ZDR/data-collection, price ceiling) and opt-in attribution headers whose values the host supplies. Flux should never inject its own attribution or silently widen provider choice.
+2. **A normalized routing hint for the deployment router.** A request-scoped `order`/`only`/`sort` hint, the shape both hosted gateways converged on, can reorder or narrow deployments the operator already approved. It must never add a deployment outside an explicit routing policy (the explicit-policy exclusivity rule in `docs/plans/audit-remediation.md`).
+3. **Data residency as policy.** OpenRouter's in-region routing shows that region is a first-class request constraint. In Flux it belongs in the per-attempt policy checks (Priority 0), not in endpoint strings.
+4. **Catalog provenance from Models.dev.** Implement WP14 as planned, and record the source and fetch time per field so Priority 2 item 13 (signed/versioned catalog provenance) has real data to carry.
+
+### Gaps
+
+- OpenRouter's in-region hostnames and request parameters were not verified; only the announcement title and date were. An "Auto router" and "Fusion" release reported by the 2026-09-26 research refresh did not appear in the May–September 2026 announcement listing and are left out.
+- Neither hosted gateway's routing algorithm is public, so their `sort` semantics are inputs for API shape, not evidence of routing quality.
+

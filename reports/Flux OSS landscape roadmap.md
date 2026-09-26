@@ -141,6 +141,8 @@ OpenTelemetry GenAI conventions should be adopted through the OTel API, with con
 | **Borrow** | Optional operation interfaces and explicit unsupported states | any-llm-go | Keeps `core.Provider` narrow |
 | **Borrow** | Schema descriptor plus validation/repair metadata | BAML, Pydantic AI | Makes structured output explicit without owning a prompt lab |
 | **Borrow** | Backend-neutral endpoint signals | Gateway API Inference Extension | Adds pool/load/capability hints without Kubernetes DTOs |
+| **Borrow** | Request-scoped `order`/`only`/`sort` routing hints and OpenRouter provider-preference passthrough | OpenRouter, Vercel AI Gateway (hosted; design donors only) | Normalizes the routing controls hosts already use without widening operator policy; see the 2026-09-27 addendum in `oss_gateways.md` |
+| **Adopt** | Models.dev catalog data with a reviewed overlay and per-field provenance | Models.dev (MIT) | Implements the planned WP14 generator from a maintained, openly licensed source |
 | **Defer** | Default semantic cache and semantic routing | LiteLLM, Bifrost, Helicone | Exact identity and cost/latency baselines are not yet trustworthy |
 | **Defer** | P2C/PeakEWMA and sticky affinity | Helicone, Portkey | Useful but lower priority until persistent snapshots and tenant scope exist |
 | **Defer** | Public model-call middleware and custom selectors | Vercel AI SDK, current Flux seams | Lifecycle defects would be multiplied by extension points |
