@@ -118,6 +118,33 @@ func TestDeploymentRouterFallsBackAcrossStages(t *testing.T) {
 	}
 }
 
+func TestDeploymentRouterReportsActualRouteAndAttempts(t *testing.T) {
+	t.Parallel()
+	primary := &deploymentMockProvider{name: "direct", err: fmt.Errorf("HTTP 503 unavailable")}
+	fallback := &deploymentMockProvider{name: "vertex"}
+	r, err := NewDeploymentRouter(DeploymentRouterOptions{
+		Catalog: testCompiledCatalog(t),
+		Deployments: map[string]DeploymentAdapter{
+			"anthropic-direct": {Provider: primary},
+			"anthropic-vertex": {Provider: fallback},
+		},
+		Routing: RoutingPolicy{Providers: map[string][]RoutingStage{"anthropic": {
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-direct", Weight: 100}}},
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-vertex", Weight: 100}}},
+		}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Route == nil || resp.Route.DeploymentID != "anthropic-vertex" || resp.Route.Attempts != 2 {
+		t.Fatalf("route = %+v, want fallback deployment and two attempts", resp.Route)
+	}
+}
+
 func TestShouldTryNextDeploymentCredits(t *testing.T) {
 	t.Parallel()
 	err := fmt.Errorf("requires more credits, or fewer max_tokens; can only afford 5705")

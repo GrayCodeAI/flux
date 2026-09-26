@@ -137,6 +137,7 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []core.FluxMessage
 		return nil, err
 	}
 	var lastErr error
+	attemptsMade := 0
 	for stageIndex, stage := range r.routeFor(target.canonicalModelID) {
 		choices := r.eligibleChoices(target, stage, opts)
 		if len(choices) == 0 {
@@ -157,9 +158,11 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []core.FluxMessage
 				lastErr = fmt.Errorf("stage %d has no available deployments", stageIndex)
 				break
 			}
+			attemptsMade++
 			resp, err := r.chatWithDeployment(ctx, messages, opts, target, choice.DeploymentID)
 			if err == nil {
 				r.recordSuccess(choice.DeploymentID)
+				attachResponseRoute(resp, deploymentRoute(opts, target, choice.DeploymentID, attemptsMade))
 				return resp, nil
 			}
 			lastErr = err
@@ -436,6 +439,52 @@ func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []co
 	}
 	nativeOpts := optsForOffering(opts, offering)
 	return adapter.Provider.Chat(ctx, messages, nativeOpts)
+}
+
+// deploymentRoute describes the deployment that served (or is serving) a
+// request, so hosts can attribute usage and price to the actual backend.
+func deploymentRoute(opts core.ChatOptions, target deploymentTarget, deploymentID string, attempts int) *llm.ResolvedRoute {
+	provider := strings.TrimSpace(opts.Provider)
+	if provider == "" {
+		provider = ownerProviderID(target.canonicalModelID)
+	}
+	model := strings.TrimSpace(opts.Model)
+	if model == "" {
+		model = target.canonicalModelID
+	}
+	return &llm.ResolvedRoute{
+		Provider: provider, Model: model, DeploymentRouting: true,
+		DeploymentID: deploymentID, Attempts: attempts,
+	}
+}
+
+// attachResponseRoute fills the response route from the router's view without
+// overwriting anything the deployment already reported.
+func attachResponseRoute(resp *core.FluxResponse, route *llm.ResolvedRoute) {
+	if resp == nil || route == nil {
+		return
+	}
+	if resp.Route == nil {
+		resp.Route = route
+		return
+	}
+	merged := *resp.Route
+	if merged.Provider == "" {
+		merged.Provider = route.Provider
+	}
+	if merged.Model == "" {
+		merged.Model = route.Model
+	}
+	if !merged.DeploymentRouting {
+		merged.DeploymentRouting = route.DeploymentRouting
+	}
+	if merged.DeploymentID == "" {
+		merged.DeploymentID = route.DeploymentID
+	}
+	if merged.Attempts < route.Attempts {
+		merged.Attempts = route.Attempts
+	}
+	resp.Route = &merged
 }
 
 func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- core.FluxStreamEvent, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string) (fallback bool, err error) {
