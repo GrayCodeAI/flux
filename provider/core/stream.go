@@ -80,6 +80,16 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 		})
 	}
 
+	// emitCancellation delivers the terminal cancelled event when the
+	// caller's context ended. Close (closed) suppresses it: the consumer has
+	// stopped listening.
+	emitCancellation := func() {
+		if channelClosed(closed) || ctx.Err() == nil {
+			return
+		}
+		_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
+	}
+
 	go func() {
 		defer close(out)
 		defer closeSource()
@@ -87,23 +97,17 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 		for {
 			select {
 			case <-streamCtx.Done():
-				if channelClosed(closed) || ctx.Err() == nil {
-					return
-				}
-				_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
+				emitCancellation()
 				return
 			case event, ok := <-source.Events:
 				if streamCtx.Err() != nil {
-					if channelClosed(closed) || ctx.Err() == nil {
-						return
-					}
-					_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
+					emitCancellation()
 					return
 				}
 				sourceEnded := !ok
 				if sourceEnded {
 					if ctx.Err() != nil {
-						_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
+						emitCancellation()
 						return
 					}
 					event = FluxStreamEvent{
@@ -118,10 +122,7 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 					event, err = handler(streamCtx, event)
 					if err != nil {
 						if streamCtx.Err() != nil {
-							if channelClosed(closed) || ctx.Err() == nil {
-								return
-							}
-							_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
+							emitCancellation()
 							return
 						}
 						event = streamErrorEvent(source.RequestID, err)
@@ -132,6 +133,9 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 				}
 				event = ensureStreamErrorInfo(event)
 				if !sendLifecycleEvent(streamCtx, out, event) {
+					// Cancelled while the consumer was behind: the pending
+					// event is dropped, but the terminal still follows.
+					emitCancellation()
 					return
 				}
 				if sourceEnded || isTerminalStreamEvent(event) {

@@ -48,6 +48,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   included), carries `Retryable`, and names the route's provider and model,
   instead of every stream failure becoming a non-retryable
   `ErrorProviderUnavailable`.
+- A `provider/core` stream cancelled while its consumer was behind (the
+  forwarder blocked delivering an event) now still ends with the terminal
+  `cancelled` event instead of closing silently.
 
 ### Changed
 - Removed process-global custom gateway and dynamic provider registration,

@@ -288,6 +288,40 @@ func TestCoordinateStreamResultCancellationEmitsTerminal(t *testing.T) {
 	result.Close()
 }
 
+func TestTransformStreamResultCancelWhileForwardingEmitsTerminal(t *testing.T) {
+	t.Parallel()
+
+	for run := 0; run < 100; run++ {
+		source := make(chan FluxStreamEvent)
+		ctx, cancel := context.WithCancel(context.Background())
+		result := CoordinateStreamResult(ctx, llm.NewStreamResult(source, "request-busy", nil))
+
+		// The unbuffered wrapper takes the event and parks delivering it,
+		// because nobody is reading yet; then the caller cancels.
+		source <- FluxStreamEvent{Type: "content", Content: "pending"}
+		cancel()
+
+		var last FluxStreamEvent
+		deadline := time.After(time.Second)
+	drain:
+		for {
+			select {
+			case event, ok := <-result.Events:
+				if !ok {
+					break drain
+				}
+				last = event
+			case <-deadline:
+				t.Fatalf("run %d: stream did not close", run)
+			}
+		}
+		if last.Type != "cancelled" || last.ErrorInfo == nil || last.ErrorInfo.Kind != llm.ErrKindCanceled {
+			t.Fatalf("run %d: last event = %+v, want cancelled terminal", run, last)
+		}
+		result.Close()
+	}
+}
+
 func TestUsageDeltaHandlesCumulativeAndSplitUsage(t *testing.T) {
 	t.Parallel()
 
