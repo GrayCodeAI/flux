@@ -655,12 +655,22 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 			}
 			continue
 		}
-		if emitted || event.Type == "done" {
+		if event.Type == "done" {
 			if !flush() || !sendRouterEvent(ctx, out, event) {
 				return false, ctx.Err()
 			}
 			return false, nil
 		}
+		if emitted {
+			// Usage, TTFT and provider-block events arrive between output
+			// events; only done ends a successful stream.
+			if !sendRouterEvent(ctx, out, event) {
+				return false, ctx.Err()
+			}
+			continue
+		}
+		// Before output, hold non-output events so a failover leaves no
+		// trace of the failed deployment.
 		buffered = append(buffered, event)
 	}
 	if ctx.Err() != nil {

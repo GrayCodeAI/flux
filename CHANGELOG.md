@@ -52,6 +52,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   included), carries `Retryable`, and names the route's provider and model,
   instead of every stream failure becoming a non-retryable
   `ErrorProviderUnavailable`.
+- `DeploymentRouter` streams no longer end at the first non-output event
+  after output. A `usage`, `ttft` or `provider_block` event between content
+  events (Anthropic reports output usage before `message_stop`) used to end
+  the deployment stream, dropping the remaining content and `done` and
+  surfacing a truncation error.
 - A `provider/core` stream cancelled while its consumer was behind (the
   forwarder blocked delivering an event) now still ends with the terminal
   `cancelled` event instead of closing silently.

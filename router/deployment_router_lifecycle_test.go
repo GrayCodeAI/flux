@@ -236,3 +236,28 @@ func TestDeploymentRouterChatCallerDeadlineStopsFailover(t *testing.T) {
 		t.Fatalf("primary breaker failures = %d, want 0 for the caller's deadline", got)
 	}
 }
+
+func TestDeploymentRouterForwardsEventsAfterOutputUntilDone(t *testing.T) {
+	t.Parallel()
+	// Anthropic reports output usage in message_delta, after the text and
+	// before message_stop; signed thinking blocks also follow output.
+	primary := &scriptedStreamProvider{name: "direct", events: []core.FluxStreamEvent{
+		{Type: "usage", Usage: &core.FluxUsage{PromptTokens: 10}},
+		{Type: "content", Content: "a"},
+		{Type: "usage", Usage: &core.FluxUsage{CompletionTokens: 3}},
+		{Type: "provider_block", ProviderBlock: &llm.ProviderBlock{Provider: "anthropic", Type: "thinking"}},
+		{Type: "content", Content: "b"},
+		{Type: "done", StopReason: "end_turn"},
+	}}
+	fallback := &scriptedStreamProvider{name: "vertex", events: healthyScript("vertex")}
+	r := newTwoStageRouter(t, primary, fallback)
+
+	events := drainStream(t, startRouterStream(t, context.Background(), r))
+	want := []string{"route_changed", "usage", "content", "usage", "provider_block", "content", "done"}
+	if got := eventTypes(events); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+	if got := fallback.calls.Load(); got != 0 {
+		t.Fatalf("fallback calls = %d, want 0", got)
+	}
+}
