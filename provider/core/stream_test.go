@@ -254,6 +254,40 @@ func TestTransformStreamResultCloseUnblocksForwarder(t *testing.T) {
 	}
 }
 
+func TestCoordinateStreamResultCancellationEmitsTerminal(t *testing.T) {
+	t.Parallel()
+
+	events := make(chan FluxStreamEvent)
+	ctx, cancel := context.WithCancel(context.Background())
+	result := CoordinateStreamResult(ctx, llm.NewStreamResult(events, "request-cancel", nil))
+	cancel()
+
+	select {
+	case event, ok := <-result.Events:
+		if !ok {
+			t.Fatal("stream closed without cancellation terminal")
+		}
+		if event.Type != "cancelled" || event.ErrorInfo == nil || event.ErrorInfo.Kind != llm.ErrKindCanceled {
+			t.Fatalf("event = %+v, want canceled terminal", event)
+		}
+		if event.RequestID != "request-cancel" {
+			t.Fatalf("request ID = %q, want request-cancel", event.RequestID)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("cancellation terminal was not emitted")
+	}
+
+	select {
+	case _, ok := <-result.Events:
+		if ok {
+			t.Fatal("unexpected event after cancellation terminal")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("stream did not close after cancellation terminal")
+	}
+	result.Close()
+}
+
 func TestUsageDeltaHandlesCumulativeAndSplitUsage(t *testing.T) {
 	t.Parallel()
 
@@ -746,5 +780,127 @@ functions.read_file:1
 	path, _ := toolCalls[1].Arguments["path"].(string)
 	if path != "/tmp/test.go" {
 		t.Errorf("second tool args[path] = %q, want /tmp/test.go", path)
+	}
+}
+
+// --- ensureStreamErrorInfo / inferStreamErrorKind tests ---
+
+func TestInferStreamErrorKind(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		message     string
+		wantKind    string
+		wantRetries bool
+	}{
+		{"empty message defaults to internal", "", llm.ErrKindInternal, true},
+		{"unrecognized defaults to internal", "something went sideways", llm.ErrKindInternal, true},
+		{"rate limit", "Rate limit exceeded for gpt-4o", llm.ErrKindRateLimited, true},
+		{"too many requests", "429 Too Many Requests", llm.ErrKindRateLimited, true},
+		{"quota", "You exceeded your current quota", llm.ErrKindRateLimited, true},
+		{"overloaded is unavailable not rate limited", "overloaded_error", llm.ErrKindUnavailable, true},
+		{"invalid api key", "invalid_api_key", llm.ErrKindAuth, false},
+		{"unauthorized", "Unauthorized", llm.ErrKindAuth, false},
+		{"forbidden", "Forbidden", llm.ErrKindAuth, false},
+		{"context length", "maximum context length is 8192 tokens", llm.ErrKindContextExceeded, false},
+		{"too many tokens", "too many tokens for this model", llm.ErrKindContextExceeded, false},
+		{"content filter", "blocked by content_filter", llm.ErrKindContentFiltered, false},
+		{"deadline", "context deadline exceeded", llm.ErrKindTimeout, true},
+		{"timed out", "request timed out", llm.ErrKindTimeout, true},
+		{"canceled", "context canceled", llm.ErrKindCanceled, false},
+		{"unavailable", "503 service unavailable", llm.ErrKindUnavailable, true},
+		{"bad gateway", "502 bad gateway", llm.ErrKindUnavailable, true},
+		{"invalid request", "invalid_request_error: bad param", llm.ErrKindInvalidRequest, false},
+		// Status digits alone are intentionally not matched: they false-positive
+		// against ordinary content such as model ids and token counts.
+		{"bare digits are not matched", "model gpt-4o-2501 returned 500 tokens", llm.ErrKindInternal, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			kind, retryable := inferStreamErrorKind(tt.message)
+			if kind != tt.wantKind {
+				t.Errorf("kind = %q, want %q", kind, tt.wantKind)
+			}
+			if retryable != tt.wantRetries {
+				t.Errorf("retryable = %v, want %v", retryable, tt.wantRetries)
+			}
+		})
+	}
+}
+
+func TestEnsureStreamErrorInfo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		event       FluxStreamEvent
+		wantNil     bool
+		wantKind    string
+		wantRetries bool
+	}{
+		{
+			name:    "content event untouched",
+			event:   FluxStreamEvent{Type: "content", Content: "hi"},
+			wantNil: true,
+		},
+		{
+			name:    "done event untouched",
+			event:   FluxStreamEvent{Type: "done"},
+			wantNil: true,
+		},
+		{
+			name:     "error gains inferred info",
+			event:    FluxStreamEvent{Type: "error", Error: "rate limit exceeded"},
+			wantKind: llm.ErrKindRateLimited, wantRetries: true,
+		},
+		{
+			name:     "bare error gains internal",
+			event:    FluxStreamEvent{Type: "error", Error: "boom"},
+			wantKind: llm.ErrKindInternal, wantRetries: true,
+		},
+		{
+			name:     "cancelled with unknown message stays canceled",
+			event:    FluxStreamEvent{Type: "cancelled", Error: "stopped"},
+			wantKind: llm.ErrKindCanceled, wantRetries: false,
+		},
+		{
+			name:     "cancelled with deadline is timeout",
+			event:    FluxStreamEvent{Type: "cancelled", Error: "context deadline exceeded"},
+			wantKind: llm.ErrKindTimeout, wantRetries: true,
+		},
+		{
+			name: "existing ErrorInfo is preserved",
+			event: FluxStreamEvent{
+				Type:      "error",
+				Error:     "rate limit exceeded",
+				ErrorInfo: &llm.StreamErrorInfo{Kind: llm.ErrKindAuth, StatusCode: 401},
+			},
+			wantKind: llm.ErrKindAuth, wantRetries: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := ensureStreamErrorInfo(tt.event)
+			if tt.wantNil {
+				if got.ErrorInfo != nil {
+					t.Fatalf("ErrorInfo = %+v, want nil", got.ErrorInfo)
+				}
+				return
+			}
+			if got.ErrorInfo == nil {
+				t.Fatal("ErrorInfo = nil, want populated")
+			}
+			if got.ErrorInfo.Kind != tt.wantKind {
+				t.Errorf("Kind = %q, want %q", got.ErrorInfo.Kind, tt.wantKind)
+			}
+			if got.ErrorInfo.Retryable != tt.wantRetries {
+				t.Errorf("Retryable = %v, want %v", got.ErrorInfo.Retryable, tt.wantRetries)
+			}
+			// A preserved StatusCode must survive the pass-through.
+			if tt.event.ErrorInfo != nil && got.ErrorInfo.StatusCode != tt.event.ErrorInfo.StatusCode {
+				t.Errorf("StatusCode = %d, want %d", got.ErrorInfo.StatusCode, tt.event.ErrorInfo.StatusCode)
+			}
+		})
 	}
 }

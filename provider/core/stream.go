@@ -64,24 +64,48 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 	if source == nil {
 		return nil
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	streamCtx, cancel := context.WithCancel(ctx)
 	out := make(chan FluxStreamEvent, cap(source.Events))
+	closed := make(chan struct{})
+	var closeOnce sync.Once
+	closeSource := func() {
+		closeOnce.Do(func() {
+			close(closed)
+			cancel()
+			source.Close()
+		})
+	}
+
 	go func() {
 		defer close(out)
-		defer source.Close()
-		defer cancel()
+		defer closeSource()
 
 		for {
 			select {
 			case <-streamCtx.Done():
+				if channelClosed(closed) || ctx.Err() == nil {
+					return
+				}
+				_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
 				return
 			case event, ok := <-source.Events:
 				if streamCtx.Err() != nil {
+					if channelClosed(closed) || ctx.Err() == nil {
+						return
+					}
+					_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
 					return
 				}
 				sourceEnded := !ok
 				if sourceEnded {
+					if ctx.Err() != nil {
+						_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
+						return
+					}
 					event = FluxStreamEvent{
 						Type:      "error",
 						Error:     ErrStreamTruncated.Error(),
@@ -94,14 +118,19 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 					event, err = handler(streamCtx, event)
 					if err != nil {
 						if streamCtx.Err() != nil {
+							if channelClosed(closed) || ctx.Err() == nil {
+								return
+							}
+							_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
 							return
 						}
-						event = FluxStreamEvent{Type: "error", Error: err.Error(), RequestID: source.RequestID}
+						event = streamErrorEvent(source.RequestID, err)
 					}
 				}
 				if event.RequestID == "" {
 					event.RequestID = source.RequestID
 				}
+				event = ensureStreamErrorInfo(event)
 				if !sendLifecycleEvent(streamCtx, out, event) {
 					return
 				}
@@ -112,18 +141,134 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 		}
 	}()
 
-	return llm.NewStreamResult(out, source.RequestID, func() {
-		cancel()
-		source.Close()
-	})
+	return llm.NewStreamResult(out, source.RequestID, closeSource)
 }
 
 func CoordinateStreamResult(ctx context.Context, source *StreamResult) *StreamResult {
 	return TransformStreamResult(ctx, source, nil)
 }
 
+func cancellationEvent(requestID string, err error) FluxStreamEvent {
+	kind := llm.ErrKindCanceled
+	if errors.Is(err, context.DeadlineExceeded) {
+		kind = llm.ErrKindTimeout
+	}
+	message := "context canceled"
+	if err != nil {
+		message = err.Error()
+	}
+	return FluxStreamEvent{
+		Type:      "cancelled",
+		Error:     message,
+		RequestID: requestID,
+		ErrorInfo: &llm.StreamErrorInfo{Kind: kind},
+	}
+}
+
+func streamErrorEvent(requestID string, err error) FluxStreamEvent {
+	kind := llm.ErrKindInternal
+	retryable := false
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		kind = llm.ErrKindTimeout
+		retryable = true
+	case errors.Is(err, context.Canceled):
+		kind = llm.ErrKindCanceled
+	default:
+		retryable = true
+	}
+	message := "stream transform failed"
+	if err != nil {
+		message = err.Error()
+	}
+	return FluxStreamEvent{
+		Type:      "error",
+		Error:     message,
+		RequestID: requestID,
+		ErrorInfo: &llm.StreamErrorInfo{Kind: kind, Retryable: retryable},
+	}
+}
+
+// ensureStreamErrorInfo guarantees that every terminal error-ish event leaving
+// this package carries a populated ErrorInfo, so consumers can dispatch on
+// Kind/Retryable instead of re-parsing the human-readable Error string.
+//
+// Events that already carry ErrorInfo are returned untouched — the producer or
+// a handler knows more than can be inferred from the message alone. Non-error
+// events are returned untouched.
+func ensureStreamErrorInfo(event FluxStreamEvent) FluxStreamEvent {
+	if event.ErrorInfo != nil {
+		return event
+	}
+	switch event.Type {
+	case "error":
+		kind, retryable := inferStreamErrorKind(event.Error)
+		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind, Retryable: retryable}
+	case "cancelled", "canceled":
+		kind, retryable := inferStreamErrorKind(event.Error)
+		// An unrecognizable cancellation message is still a cancellation, not
+		// an internal fault, and must not be reported as retryable.
+		if kind == llm.ErrKindInternal {
+			kind, retryable = llm.ErrKindCanceled, false
+		}
+		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind, Retryable: retryable}
+	}
+	return event
+}
+
+// inferStreamErrorKind maps a provider error message onto a portable
+// StreamErrorInfo kind and retryability.
+//
+// Like classifyProviderError, it keys on common cross-provider substrings
+// rather than a per-provider table, so it does not become a maintenance sink
+// across flux's many providers. Matching is deliberately textual only: bare
+// HTTP status digits are not matched, because they false-positive against
+// ordinary content such as model ids and token counts. Unrecognized messages
+// fall back to internal/retryable, matching streamErrorEvent.
+func inferStreamErrorKind(message string) (kind string, retryable bool) {
+	msg := strings.ToLower(message)
+	switch {
+	case msg == "":
+		return llm.ErrKindInternal, true
+	case containsAny(msg, "rate limit", "too many requests", "rate_limit",
+		"quota exceeded", "exceeded your current quota", "insufficient_quota",
+		"insufficient credits", "billing"):
+		return llm.ErrKindRateLimited, true
+	case containsAny(msg, "api key", "api_key", "unauthorized", "unauthenticated",
+		"authentication", "invalid_api_key", "forbidden", "permission denied"):
+		return llm.ErrKindAuth, false
+	case containsAny(msg, "context length", "context window", "maximum context",
+		"too many tokens", "context_length_exceeded", "context_exceeded"):
+		return llm.ErrKindContextExceeded, false
+	case containsAny(msg, "content filter", "content_filter", "content_policy",
+		"responsible_ai", "content_filtered"):
+		return llm.ErrKindContentFiltered, false
+	case containsAny(msg, "deadline exceeded", "timeout", "timed out", "etimedout"):
+		return llm.ErrKindTimeout, true
+	case containsAny(msg, "context canceled", "context cancelled", "canceled", "cancelled"):
+		return llm.ErrKindCanceled, false
+	case containsAny(msg, "service unavailable", "bad gateway", "temporarily unavailable",
+		"upstream error", "overloaded_error", "overloaded"):
+		return llm.ErrKindUnavailable, true
+	case containsAny(msg, "invalid request", "invalid_request", "invalid_request_error",
+		"unsupported parameter", "unprocessable"):
+		return llm.ErrKindInvalidRequest, false
+	default:
+		return llm.ErrKindInternal, true
+	}
+}
+
+func containsAny(haystack string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(haystack, needle) {
+			return true
+		}
+	}
+	return false
+}
+
 func isTerminalStreamEvent(event FluxStreamEvent) bool {
-	return event.Type == "done" || event.Type == "error" && event.Warning == ""
+	return event.Type == "done" || event.Type == "cancelled" || event.Type == "canceled" || event.Type == "error" && event.Warning == ""
 }
 
 func sendLifecycleEvent(ctx context.Context, out chan<- FluxStreamEvent, event FluxStreamEvent) bool {
@@ -131,6 +276,24 @@ func sendLifecycleEvent(ctx context.Context, out chan<- FluxStreamEvent, event F
 	case out <- event:
 		return true
 	case <-ctx.Done():
+		return false
+	}
+}
+
+func sendTerminalEvent(out chan<- FluxStreamEvent, event FluxStreamEvent, closed <-chan struct{}) bool {
+	select {
+	case out <- event:
+		return true
+	case <-closed:
+		return false
+	}
+}
+
+func channelClosed(closed <-chan struct{}) bool {
+	select {
+	case <-closed:
+		return true
+	default:
 		return false
 	}
 }

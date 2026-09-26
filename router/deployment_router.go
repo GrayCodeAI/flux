@@ -193,6 +193,8 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 	go func() {
 		defer close(out)
 		var lastErr error
+		var lastRoute *llm.ResolvedRoute
+		attemptsMade := 0
 		for stageIndex, stage := range r.routeFor(target.canonicalModelID) {
 			choices := r.eligibleChoices(target, stage, opts)
 			if len(choices) == 0 {
@@ -213,28 +215,31 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 					lastErr = fmt.Errorf("stage %d has no available deployments", stageIndex)
 					break
 				}
-				fallback, err := r.streamWithDeployment(streamCtx, out, messages, opts, target, choice.DeploymentID)
+				attemptsMade++
+				route := deploymentRoute(opts, target, choice.DeploymentID, attemptsMade)
+				lastRoute = route
+				if !sendRouterEvent(streamCtx, out, core.FluxStreamEvent{Type: "route_changed", Route: route}) {
+					return
+				}
+				fallback, err := r.streamWithDeployment(streamCtx, out, messages, opts, target, choice.DeploymentID, *route)
 				if err == nil {
 					r.recordSuccess(choice.DeploymentID)
 					return
 				}
 				lastErr = err
 				r.recordFailure(choice.DeploymentID, err)
+				if isContextError(err) {
+					return
+				}
 				if !fallback {
-					select {
-					case out <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
-					case <-streamCtx.Done():
-					}
+					sendRouterEvent(streamCtx, out, routerErrorEvent(err, route))
 					return
 				}
 				if !IsTransient(err) {
 					if ShouldTryNextDeployment(err) {
 						break
 					}
-					select {
-					case out <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
-					case <-streamCtx.Done():
-					}
+					sendRouterEvent(streamCtx, out, routerErrorEvent(err, route))
 					return
 				}
 				recentlyFailed = choice.DeploymentID
@@ -243,12 +248,11 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 		if lastErr == nil {
 			lastErr = fmt.Errorf("no route configured")
 		}
-		select {
-		case out <- core.FluxStreamEvent{Type: "error", Error: fmt.Sprintf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr)}:
-		case <-streamCtx.Done():
-		}
+		sendRouterEvent(streamCtx, out, routerErrorEvent(
+			fmt.Errorf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr), lastRoute,
+		))
 	}()
-	return llm.NewStreamResult(out, "", cancel), nil
+	return core.CoordinateStreamResult(ctx, llm.NewStreamResult(out, "", cancel)), nil
 }
 
 func (r *DeploymentRouter) Stats() map[string]int64 {
@@ -488,7 +492,51 @@ func attachResponseRoute(resp *core.FluxResponse, route *llm.ResolvedRoute) {
 	resp.Route = &merged
 }
 
-func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- core.FluxStreamEvent, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string) (fallback bool, err error) {
+func sendRouterEvent(ctx context.Context, out chan<- core.FluxStreamEvent, event core.FluxStreamEvent) bool {
+	select {
+	case out <- event:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func routerErrorEvent(err error, route *llm.ResolvedRoute) core.FluxStreamEvent {
+	event := core.FluxStreamEvent{Type: "error", Route: route}
+	if err != nil {
+		event.Error = err.Error()
+	}
+	if isContextError(err) {
+		event.Type = "cancelled"
+		kind := llm.ErrKindCanceled
+		if errors.Is(err, context.DeadlineExceeded) {
+			kind = llm.ErrKindTimeout
+		}
+		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind}
+	}
+	return event
+}
+
+func cloneResolvedRoute(route *llm.ResolvedRoute) *llm.ResolvedRoute {
+	if route == nil {
+		return nil
+	}
+	cloned := *route
+	return &cloned
+}
+
+func streamEventIsCancellation(event core.FluxStreamEvent) bool {
+	return event.ErrorInfo != nil && (event.ErrorInfo.Kind == llm.ErrKindCanceled || event.ErrorInfo.Kind == llm.ErrKindTimeout)
+}
+
+func streamEventContextError(event core.FluxStreamEvent) error {
+	if event.ErrorInfo != nil && event.ErrorInfo.Kind == llm.ErrKindTimeout {
+		return context.DeadlineExceeded
+	}
+	return context.Canceled
+}
+
+func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- core.FluxStreamEvent, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string, route llm.ResolvedRoute) (fallback bool, err error) {
 	offering, adapter, err := r.resolveOffering(target, deploymentID)
 	if err != nil {
 		return true, err
@@ -498,26 +546,36 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 	if err != nil {
 		return true, err
 	}
+	if stream == nil {
+		return true, fmt.Errorf("deployment %q returned a nil stream", deploymentID)
+	}
 	defer stream.Close()
 	emitted := false
 	var buffered []core.FluxStreamEvent
-	flush := func() {
+	annotate := func(event core.FluxStreamEvent) core.FluxStreamEvent {
+		if event.Route == nil {
+			event.Route = cloneResolvedRoute(&route)
+		}
+		return event
+	}
+	flush := func() bool {
 		for _, event := range buffered {
-			select {
-			case out <- event:
-			case <-ctx.Done():
-				return
+			if !sendRouterEvent(ctx, out, event) {
+				return false
 			}
 		}
 		buffered = nil
+		return true
 	}
 	for event := range stream.Events {
+		event = annotate(event)
+		if event.Type == "cancelled" || event.Type == "canceled" || streamEventIsCancellation(event) {
+			_ = sendRouterEvent(ctx, out, event)
+			return false, streamEventContextError(event)
+		}
 		if event.Type == "error" {
 			if emitted {
-				select {
-				case out <- event:
-				case <-ctx.Done():
-				}
+				_ = sendRouterEvent(ctx, out, event)
 				return false, fmt.Errorf("%s", event.Error)
 			}
 			if event.Error == "" {
@@ -527,24 +585,21 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 		}
 		if isOutputEvent(event) {
 			emitted = true
-			flush()
-			select {
-			case out <- event:
-			case <-ctx.Done():
+			if !flush() || !sendRouterEvent(ctx, out, event) {
 				return false, ctx.Err()
 			}
 			continue
 		}
 		if emitted || event.Type == "done" {
-			flush()
-			select {
-			case out <- event:
-			case <-ctx.Done():
+			if !flush() || !sendRouterEvent(ctx, out, event) {
 				return false, ctx.Err()
 			}
 			return false, nil
 		}
 		buffered = append(buffered, event)
+	}
+	if ctx.Err() != nil {
+		return false, ctx.Err()
 	}
 	if emitted {
 		return false, fmt.Errorf("deployment %q stream ended after output without done", deploymentID)

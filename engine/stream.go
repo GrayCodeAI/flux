@@ -2,6 +2,8 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"sync"
 
 	"github.com/GrayCodeAI/flux/llm"
@@ -16,6 +18,7 @@ type Stream struct {
 	source *core.StreamResult
 	route  Route
 	events chan Event
+	closed chan struct{}
 
 	mu      sync.Mutex
 	current Event
@@ -24,7 +27,13 @@ type Stream struct {
 }
 
 func newStream(ctx context.Context, cancel context.CancelFunc, source *core.StreamResult, route Route) *Stream {
-	s := &Stream{ctx: ctx, cancel: cancel, source: source, route: route, events: make(chan Event, 32)}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	s := &Stream{
+		ctx: ctx, cancel: cancel, source: source, route: route,
+		events: make(chan Event, 32), closed: make(chan struct{}),
+	}
 	go s.forward()
 	return s
 }
@@ -70,6 +79,9 @@ func (s *Stream) Close() error {
 		return nil
 	}
 	s.once.Do(func() {
+		if s.closed != nil {
+			close(s.closed)
+		}
 		if s.cancel != nil {
 			s.cancel()
 		}
@@ -83,27 +95,51 @@ func (s *Stream) Close() error {
 func (s *Stream) forward() {
 	defer close(s.events)
 	defer s.Close()
-	if !s.emit(Event{Type: EventRouteSelected, Route: &s.route}) {
+	if !s.emit(Event{Type: EventRouteSelected, Route: cloneRoute(&s.route)}) {
 		return
 	}
 	for {
 		select {
 		case <-s.ctx.Done():
-			s.setError(classify("stream", s.route, s.ctx.Err()))
+			if s.isClosed() {
+				return
+			}
+			err := s.ctx.Err()
+			s.setError(classify("stream", s.route, err))
+			s.emitCancellation(err)
 			return
 		case event, ok := <-s.source.Events:
 			if !ok {
 				if s.ctx.Err() == nil {
 					s.setError(classify("stream", s.route, core.ErrStreamTruncated))
+				} else if !s.isClosed() {
+					err := s.ctx.Err()
+					s.setError(classify("stream", s.route, err))
+					s.emitCancellation(err)
 				}
 				return
+			}
+			if event.RequestID == "" && s.source != nil {
+				event.RequestID = s.source.RequestID
 			}
 			normalized, err := normalizeEvent(event)
 			if err != nil {
 				s.setError(classify("stream", s.route, err))
 				return
 			}
+			if normalized.Type == EventCancelled {
+				s.setError(classify("stream", s.route, streamContextError(normalized)))
+				if !s.emit(normalized) {
+					return
+				}
+				return
+			}
 			if !s.emit(normalized) {
+				if !s.isClosed() && s.ctx.Err() != nil {
+					err := s.ctx.Err()
+					s.setError(classify("stream", s.route, err))
+					s.emitCancellation(err)
+				}
 				return
 			}
 			if normalized.Type == EventDone {
@@ -122,6 +158,38 @@ func (s *Stream) emit(event Event) bool {
 	}
 }
 
+func (s *Stream) emitCancellation(err error) {
+	if err == nil || s.isClosed() {
+		return
+	}
+	kind := llm.ErrKindCanceled
+	if errors.Is(err, context.DeadlineExceeded) {
+		kind = llm.ErrKindTimeout
+	}
+	event := Event{
+		Type:      EventCancelled,
+		Error:     err.Error(),
+		ErrorInfo: &llm.StreamErrorInfo{Kind: kind},
+		Route:     cloneRoute(&s.route),
+	}
+	select {
+	case s.events <- event:
+	case <-s.closed:
+	}
+}
+
+func (s *Stream) isClosed() bool {
+	if s.closed == nil {
+		return false
+	}
+	select {
+	case <-s.closed:
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *Stream) setError(err error) {
 	s.mu.Lock()
 	s.err = err
@@ -131,8 +199,10 @@ func (s *Stream) setError(err error) {
 func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 	out := Event{
 		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
-		ErrorInfo: event.ErrorInfo, Usage: fromClientUsage(event.Usage), StopReason: event.StopReason,
-		TTFTms: event.TTFTms,
+		Error: event.Error, Warning: event.Warning, ErrorInfo: cloneErrorInfo(event.ErrorInfo),
+		Usage: fromClientUsage(event.Usage), StopReason: event.StopReason,
+		TTFTms: event.TTFTms, TTFT: event.TTFT, Route: cloneRoute(event.Route),
+		ProviderBlock: cloneProviderBlock(event.ProviderBlock),
 	}
 	if out.TTFTms == 0 {
 		out.TTFTms = event.TTFT
@@ -154,23 +224,82 @@ func normalizeEvent(event core.FluxStreamEvent) (Event, error) {
 		out.Type = EventTTFT
 	case "continuation":
 		out.Type = EventContinuation
+	case "cancelled", "canceled":
+		out.Type = EventCancelled
+		if out.ErrorInfo == nil {
+			out.ErrorInfo = &llm.StreamErrorInfo{Kind: llm.ErrKindCanceled}
+		}
 	case "error":
 		if event.Warning != "" {
 			// Non-fatal health diagnostic (e.g. a reasoning-only response):
 			// client/core marks these with Warning so they can be surfaced
 			// without terminating the stream — the terminal done/usage event
 			// follows. Forward as a warning event; do not set Err()/stop.
-			return Event{Type: EventWarning, RequestID: event.RequestID, Error: event.Error, ErrorInfo: event.ErrorInfo, Warning: event.Warning}, nil
+			return Event{
+				Type: EventWarning, RequestID: event.RequestID, Error: event.Error,
+				ErrorInfo: cloneErrorInfo(event.ErrorInfo), Warning: event.Warning,
+				Route: cloneRoute(event.Route),
+			}, nil
 		}
-		if event.ErrorInfo != nil && event.ErrorInfo.Kind == llm.ErrKindTruncated {
-			return Event{}, core.ErrStreamTruncated
+		if event.ErrorInfo != nil {
+			switch event.ErrorInfo.Kind {
+			case llm.ErrKindCanceled:
+				out.Type = EventCancelled
+				return out, nil
+			case llm.ErrKindTimeout:
+				out.Type = EventCancelled
+				return out, nil
+			case llm.ErrKindTruncated:
+				return Event{}, core.ErrStreamTruncated
+			}
 		}
 		return Event{}, &Error{Code: ErrorProviderUnavailable, Operation: "stream", Message: event.Error}
 	default:
 		out.Type = event.Type
 	}
 	if event.ToolCall != nil {
-		out.ToolCall = &ToolCall{ID: event.ToolCall.ID, Name: event.ToolCall.Name, Arguments: event.ToolCall.Arguments}
+		out.ToolCall = cloneToolCall(event.ToolCall)
 	}
 	return out, nil
+}
+
+func cloneErrorInfo(info *llm.StreamErrorInfo) *llm.StreamErrorInfo {
+	if info == nil {
+		return nil
+	}
+	cloned := *info
+	return &cloned
+}
+
+func cloneProviderBlock(block *llm.ProviderBlock) *llm.ProviderBlock {
+	if block == nil {
+		return nil
+	}
+	cloned := *block
+	cloned.Data = append([]byte(nil), block.Data...)
+	return &cloned
+}
+
+func cloneToolCall(call *llm.ToolCall) *llm.ToolCall {
+	if call == nil {
+		return nil
+	}
+	cloned := *call
+	if call.RawArguments != nil {
+		cloned.RawArguments = append([]byte(nil), call.RawArguments...)
+	}
+	if call.ProviderMetadata != nil {
+		cloned.ProviderMetadata = make(map[string]json.RawMessage, len(call.ProviderMetadata))
+		for key, value := range call.ProviderMetadata {
+			cloned.ProviderMetadata[key] = append(json.RawMessage(nil), value...)
+		}
+	}
+	return &cloned
+}
+
+func streamContextError(event Event) error {
+	if event.ErrorInfo != nil && event.ErrorInfo.Kind == llm.ErrKindTimeout {
+		return context.DeadlineExceeded
+	}
+	return context.Canceled
 }

@@ -145,6 +145,50 @@ func TestDeploymentRouterReportsActualRouteAndAttempts(t *testing.T) {
 	}
 }
 
+func TestDeploymentRouterStreamReportsRouteEvents(t *testing.T) {
+	t.Parallel()
+	primary := &deploymentMockProvider{name: "direct", streamErr: fmt.Errorf("HTTP 503")}
+	fallback := &deploymentMockProvider{name: "vertex"}
+	r, err := NewDeploymentRouter(DeploymentRouterOptions{
+		Catalog: testCompiledCatalog(t),
+		Deployments: map[string]DeploymentAdapter{
+			"anthropic-direct": {Provider: primary},
+			"anthropic-vertex": {Provider: fallback},
+		},
+		Routing: RoutingPolicy{Providers: map[string][]RoutingStage{"anthropic": {
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-direct", Weight: 100}}},
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-vertex", Weight: 100}}},
+		}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream, err := r.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stream.Close()
+	var routes []string
+	var finalRoute string
+	for event := range stream.Events {
+		if event.Route != nil {
+			routes = append(routes, event.Route.DeploymentID)
+		}
+		if event.Type == "done" {
+			finalRoute = event.Route.DeploymentID
+		}
+		if event.Type == "error" {
+			t.Fatalf("unexpected stream error: %s", event.Error)
+		}
+	}
+	if len(routes) < 2 || routes[0] != "anthropic-direct" || routes[1] != "anthropic-vertex" {
+		t.Fatalf("route events = %v, want direct then vertex", routes)
+	}
+	if finalRoute != "anthropic-vertex" {
+		t.Fatalf("terminal route = %q, want vertex", finalRoute)
+	}
+}
+
 func TestShouldTryNextDeploymentCredits(t *testing.T) {
 	t.Parallel()
 	err := fmt.Errorf("requires more credits, or fewer max_tokens; can only afford 5705")

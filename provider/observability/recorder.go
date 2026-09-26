@@ -6,6 +6,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // RecorderMode controls whether the recorder records new interactions or replays existing ones.
@@ -150,7 +152,7 @@ func (r *RecorderProvider) StreamChat(ctx context.Context, messages []FluxMessag
 		return nil, err
 	}
 	if replayResult != nil {
-		return replayResult, nil
+		return core.CoordinateStreamResult(ctx, replayResult), nil
 	}
 
 	// Record mode: call the inner provider's StreamChat
@@ -173,7 +175,8 @@ func (r *RecorderProvider) StreamChat(ctx context.Context, messages []FluxMessag
 	}
 
 	// Drain events from the real stream and accumulate the response
-	return r.recordStream(ctx, result, messages, opts, hash), nil
+	recorded := r.recordStream(ctx, result, messages, opts, hash)
+	return core.CoordinateStreamResult(ctx, recorded), nil
 }
 
 // checkReplay checks if we're in replay mode and returns the replay result.
