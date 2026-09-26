@@ -96,6 +96,13 @@ func (s *Stream) forward() {
 	defer close(s.events)
 	defer s.Close()
 	if !s.emit(Event{Type: EventRouteSelected, Route: cloneRoute(&s.route)}) {
+		// The context ended before the first event; the stream must still
+		// finish with the cancelled terminal instead of closing silently.
+		if !s.isClosed() && s.ctx.Err() != nil {
+			err := s.ctx.Err()
+			s.setError(classify("stream", s.route, err))
+			s.emitCancellation(err)
+		}
 		return
 	}
 	for {

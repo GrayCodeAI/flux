@@ -290,6 +290,27 @@ func TestStreamContextCancellationEmitsTerminalAndErr(t *testing.T) {
 	_ = stream.Close()
 }
 
+func TestStreamCancelledBeforeFirstEventStillTerminates(t *testing.T) {
+	// forward races the route_selected emit against the already-cancelled
+	// context; every run must still end with the cancelled terminal.
+	for i := 0; i < 200; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		stream := newStream(ctx, cancel, llm.NewStreamResult(make(chan core.FluxStreamEvent), "request-early", nil), Route{Provider: "mock", Model: "mock/model"})
+		var last Event
+		for stream.Next() {
+			last = stream.Event()
+		}
+		if last.Type != EventCancelled {
+			t.Fatalf("run %d: last event = %+v, want cancelled terminal", i, last)
+		}
+		if err := stream.Err(); !IsCode(err, ErrorCancelled) {
+			t.Fatalf("run %d: error = %v, want cancelled", i, err)
+		}
+		_ = stream.Close()
+	}
+}
+
 func TestSnapshotPublishesCapabilities(t *testing.T) {
 	compiled := &catalog.CompiledCatalog{
 		ModelsByID: map[string]catalog.Model{
