@@ -1066,3 +1066,51 @@ func TestEnsureStreamErrorInfo(t *testing.T) {
 		})
 	}
 }
+
+// endlessReader repeats line forever, like a hostile peer that never ends an
+// SSE event.
+type endlessReader struct {
+	line   []byte
+	offset int
+}
+
+func (r *endlessReader) Read(p []byte) (int, error) {
+	n := 0
+	for n < len(p) {
+		copied := copy(p[n:], r.line[r.offset:])
+		n += copied
+		r.offset = (r.offset + copied) % len(r.line)
+	}
+	return n, nil
+}
+
+func (r *endlessReader) Close() error { return nil }
+
+func TestParseSSEStreamRejectsOversizedEvent(t *testing.T) {
+	t.Parallel()
+
+	line := []byte("data: " + strings.Repeat("x", 64*1024) + "\n")
+	ch := ParseSSEStream(context.Background(), &endlessReader{line: line}, testLogger())
+
+	deadline := time.After(10 * time.Second)
+	for {
+		select {
+		case event, ok := <-ch:
+			if !ok {
+				t.Fatal("stream closed without reporting the oversized event")
+			}
+			if event.Event != "error" {
+				t.Fatalf("event = %+v, want only the size error", event)
+			}
+			if !strings.Contains(event.Data, "exceeds") {
+				t.Fatalf("error = %q, want size limit error", event.Data)
+			}
+			if _, ok := <-ch; ok {
+				t.Fatal("stream kept going after the size error")
+			}
+			return
+		case <-deadline:
+			t.Fatal("parser kept accumulating an unbounded event")
+		}
+	}
+}

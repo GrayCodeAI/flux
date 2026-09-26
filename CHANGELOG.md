@@ -60,6 +60,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
 - `DeploymentRouter` treats warning-marked diagnostic `error` events (for
   example a reasoning-only response) as non-fatal, like `provider/core` and
   the engine already did, instead of ending the stream or failing over.
+- SSE parsing is bounded per event. `core.ParseSSEStream` capped each line at
+  2 MiB but accumulated an event's `data:` lines without limit, and the
+  Concentrate Responses reader bounded neither lines nor events, so a hostile
+  or broken endpoint could grow client memory indefinitely. Both now stop
+  with a stream error once one event exceeds `core.SSEMaxEventBytes`
+  (16 MiB).
 - A `provider/core` stream cancelled while its consumer was behind (the
   forwarder blocked delivering an event) now still ends with the terminal
   `cancelled` event instead of closing silently.

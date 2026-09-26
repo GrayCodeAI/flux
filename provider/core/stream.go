@@ -29,7 +29,14 @@ const (
 	sseScannerMaxBuf  = 2 * 1024 * 1024
 	// StreamChannelBuffer is the default buffer size for provider event channels.
 	StreamChannelBuffer = 256
+	// SSEMaxEventBytes caps the accumulated fields of a single SSE event.
+	// Each line is already capped at 2 MiB; without this cap a peer could
+	// stream an unbounded run of data lines into one event and exhaust memory.
+	SSEMaxEventBytes = 16 * 1024 * 1024
 )
+
+// errSSEEventTooLarge reports an SSE event over SSEMaxEventBytes.
+var errSSEEventTooLarge = fmt.Errorf("SSE event exceeds %d bytes", SSEMaxEventBytes)
 
 type closeOnceReadCloser struct {
 	io.ReadCloser
@@ -449,7 +456,8 @@ func usageIsZero(usage *FluxUsage) bool {
 
 // ParseSSEStream reads an SSE stream and sends events to a channel.
 // The goroutine closes the channel and body when done or context is cancelled.
-// Scanner errors are emitted as SSEEvent with Event="error" so callers can detect truncation.
+// Scanner errors, and an event larger than SSEMaxEventBytes, are emitted as
+// SSEEvent with Event="error" so callers can detect truncation.
 func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger) <-chan SSEEvent {
 	ch := make(chan SSEEvent, sseChannelBuffer)
 	go func() {
@@ -476,6 +484,11 @@ func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger
 			}
 		}
 
+		fits := func(field string) bool {
+			return event.Len()+data.Len()+len(field)+1 <= SSEMaxEventBytes
+		}
+
+		var readErr error
 		for scanner.Scan() {
 			if ctx.Err() != nil {
 				return
@@ -488,16 +501,27 @@ func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger
 				}
 				continue
 			}
-			if strings.HasPrefix(line, "event:") {
-				event.WriteString(strings.TrimPrefix(line, "event:"))
-			} else if strings.HasPrefix(line, "data:") {
+			if field, ok := strings.CutPrefix(line, "event:"); ok {
+				if !fits(field) {
+					readErr = errSSEEventTooLarge
+					break
+				}
+				event.WriteString(field)
+			} else if field, ok := strings.CutPrefix(line, "data:"); ok {
+				if !fits(field) {
+					readErr = errSSEEventTooLarge
+					break
+				}
 				if data.Len() > 0 {
 					data.WriteByte('\n')
 				}
-				data.WriteString(strings.TrimPrefix(line, "data:"))
+				data.WriteString(field)
 			}
 		}
-		if err := scanner.Err(); err != nil {
+		if readErr == nil {
+			readErr = scanner.Err()
+		}
+		if err := readErr; err != nil {
 			if ctxErr := ctx.Err(); ctxErr != nil || errors.Is(err, context.Canceled) {
 				return
 			}
