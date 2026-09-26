@@ -214,3 +214,54 @@ func TestStreamCancelReleasesProviderBeforeTerminalDelivery(t *testing.T) {
 	_ = stream.Close()
 	drainEngineStream(t, stream)
 }
+
+func TestStreamNoEventsAfterDone(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := streamOf(
+		ctx, cancel,
+		core.FluxStreamEvent{Type: "content", Content: "hi"},
+		core.FluxStreamEvent{Type: "done", StopReason: "end_turn"},
+		core.FluxStreamEvent{Type: "content", Content: "late"},
+		core.FluxStreamEvent{Type: "error", Error: "late failure"},
+	)
+	defer stream.Close()
+
+	events := drainEngineStream(t, stream)
+	if got := engineEventTypes(events); len(got) != 3 || got[2] != EventDone {
+		t.Fatalf("events = %v, want route_selected, content_delta, done", got)
+	}
+	if err := stream.Err(); err != nil {
+		t.Fatalf("error = %v, want nil after done", err)
+	}
+}
+
+func TestStreamCloseTwiceIsNoop(t *testing.T) {
+	var closes, cancels int
+	var mu sync.Mutex
+	source := llm.NewStreamResult(make(chan core.FluxStreamEvent), "", func() {
+		mu.Lock()
+		closes++
+		mu.Unlock()
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := newStream(ctx, func() {
+		mu.Lock()
+		cancels++
+		mu.Unlock()
+		cancel()
+	}, source, lifecycleRoute)
+
+	_ = stream.Close()
+	_ = stream.Close()
+	drainEngineStream(t, stream)
+	_ = stream.Close()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if closes != 1 || cancels != 1 {
+		t.Fatalf("source closes = %d, cancels = %d, want 1 each", closes, cancels)
+	}
+	if err := stream.Err(); err != nil {
+		t.Fatalf("error = %v, want nil after Close", err)
+	}
+}

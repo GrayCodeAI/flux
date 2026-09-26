@@ -307,3 +307,56 @@ func TestDeploymentRouterWarningDiagnosticsAreNotFatal(t *testing.T) {
 		})
 	}
 }
+
+func TestDeploymentRouterErrorEventsCarryErrorInfo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		primary  []core.FluxStreamEvent
+		fallback []core.FluxStreamEvent
+		wantKind string
+	}{
+		{
+			name:     "error after output keeps the adapter's kind",
+			primary:  []core.FluxStreamEvent{{Type: "content", Content: "a"}, {Type: "error", Error: "429 Too Many Requests: rate limit exceeded"}},
+			wantKind: llm.ErrKindRateLimited,
+		},
+		{
+			name:     "non-transient error before output",
+			primary:  []core.FluxStreamEvent{{Type: "error", Error: "invalid_api_key: unauthorized"}},
+			wantKind: llm.ErrKindAuth,
+		},
+		{
+			name:     "every deployment failed",
+			primary:  []core.FluxStreamEvent{{Type: "error", Error: "503 service unavailable"}},
+			fallback: []core.FluxStreamEvent{{Type: "error", Error: "503 service unavailable"}},
+			wantKind: llm.ErrKindUnavailable,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			primary := &scriptedStreamProvider{name: "direct", events: tt.primary}
+			fallback := &scriptedStreamProvider{name: "vertex", events: tt.fallback}
+			r := newTwoStageRouter(t, primary, fallback)
+
+			events := drainStream(t, startRouterStream(t, context.Background(), r))
+			var terminals []core.FluxStreamEvent
+			for _, event := range events {
+				if event.Type == "error" || event.Type == "cancelled" || event.Type == "done" {
+					terminals = append(terminals, event)
+				}
+			}
+			if len(terminals) != 1 || terminals[0].Type != "error" {
+				t.Fatalf("events = %v, want exactly one error terminal", eventTypes(events))
+			}
+			terminal := terminals[0]
+			if terminal.ErrorInfo == nil || terminal.ErrorInfo.Kind != tt.wantKind {
+				t.Fatalf("terminal = %+v (info %+v), want kind %s", terminal, terminal.ErrorInfo, tt.wantKind)
+			}
+			if terminal.Route == nil || terminal.Route.DeploymentID == "" {
+				t.Fatalf("terminal route = %+v, want the deployment that failed", terminal.Route)
+			}
+		})
+	}
+}
