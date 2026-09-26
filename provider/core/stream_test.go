@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -319,6 +320,74 @@ func TestTransformStreamResultCancelWhileForwardingEmitsTerminal(t *testing.T) {
 			t.Fatalf("run %d: last event = %+v, want cancelled terminal", run, last)
 		}
 		result.Close()
+	}
+}
+
+func TestTransformStreamResultCancelReleasesSourceBeforeTerminalDelivery(t *testing.T) {
+	t.Parallel()
+
+	source := make(chan FluxStreamEvent, 1)
+	released := make(chan struct{})
+	var releaseOnce sync.Once
+	ctx, cancel := context.WithCancel(context.Background())
+	result := CoordinateStreamResult(ctx, llm.NewStreamResult(source, "request-idle", func() {
+		releaseOnce.Do(func() { close(released) })
+	}))
+
+	// Fill the one-slot output buffer, then park the forwarder on the next
+	// event: the consumer never reads.
+	source <- FluxStreamEvent{Type: "content", Content: "one"}
+	waitFor(t, func() bool { return len(result.Events) == cap(result.Events) })
+	source <- FluxStreamEvent{Type: "content", Content: "two"}
+	cancel()
+
+	select {
+	case <-released:
+	case <-time.After(time.Second):
+		t.Fatal("source was not released while the terminal waited for the consumer")
+	}
+
+	// Close unblocks the parked forwarder, which then closes the channel.
+	result.Close()
+	deadline := time.After(time.Second)
+	for {
+		select {
+		case _, ok := <-result.Events:
+			if !ok {
+				return
+			}
+		case <-deadline:
+			t.Fatal("Close did not unblock the forwarder")
+		}
+	}
+}
+
+func TestStreamResultCloseTwiceIsNoop(t *testing.T) {
+	t.Parallel()
+
+	var closes int32
+	source := make(chan FluxStreamEvent)
+	result := CoordinateStreamResult(context.Background(), llm.NewStreamResult(source, "", func() {
+		atomic.AddInt32(&closes, 1)
+	}))
+	result.Close()
+	result.Close()
+	if _, ok := <-result.Events; ok {
+		t.Fatal("expected no events after Close")
+	}
+	if got := atomic.LoadInt32(&closes); got != 1 {
+		t.Fatalf("source closed %d times, want 1", got)
+	}
+}
+
+func waitFor(t *testing.T, condition func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for !condition() {
+		if time.Now().After(deadline) {
+			t.Fatal("condition not reached")
+		}
+		time.Sleep(time.Millisecond)
 	}
 }
 

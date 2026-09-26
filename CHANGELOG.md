@@ -19,7 +19,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   cancelled or its deadline passes, `provider/core` stream wrappers emit a
   terminal `cancelled` event and the engine emits `engine.EventCancelled`
   (with `ErrorInfo` and the route) before `Err()` reports `ErrorCancelled`.
-  Hosts that switch on event types should handle `cancelled`.
+  Hosts that switch on event types should handle `cancelled`. Cancelling
+  the context releases the provider request immediately, but the terminal is
+  delivered like any other event, so callers must still read the stream to
+  the end or call `Close` (as `StreamResult`, `EventStreamer` and
+  `engine.Stream` now document).
 - Terminal `error`/`cancelled` stream events leaving `provider/core` always
   carry a `StreamErrorInfo` (`Kind`/`Retryable`), inferred from the provider
   message when the adapter set none. Existing `ErrorInfo` is never

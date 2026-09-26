@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -175,4 +176,41 @@ func TestStreamErrorKindsMapToEngineCodes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStreamCancelReleasesProviderBeforeTerminalDelivery(t *testing.T) {
+	source := make(chan core.FluxStreamEvent, 64)
+	for i := 0; i < cap(source); i++ {
+		source <- core.FluxStreamEvent{Type: "content", Content: "x"}
+	}
+	released := make(chan struct{})
+	var releaseOnce sync.Once
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := newStream(ctx, cancel, llm.NewStreamResult(source, "request-idle", func() {
+		releaseOnce.Do(func() { close(released) })
+	}), lifecycleRoute)
+
+	// The consumer never calls Next: forward fills the event buffer and parks.
+	deadline := time.Now().Add(time.Second)
+	for len(stream.events) < cap(stream.events) {
+		if time.Now().After(deadline) {
+			t.Fatal("forward did not fill the event buffer")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	cancel()
+
+	select {
+	case <-released:
+	case <-time.After(time.Second):
+		t.Fatal("provider stream was not released while the terminal waited for the consumer")
+	}
+	if err := stream.Err(); !IsCode(err, ErrorCancelled) {
+		t.Fatalf("error = %v, want cancelled before the terminal is read", err)
+	}
+
+	// Close unblocks forward, which then closes the event channel.
+	_ = stream.Close()
+	_ = stream.Close()
+	drainEngineStream(t, stream)
 }

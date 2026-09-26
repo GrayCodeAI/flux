@@ -60,6 +60,16 @@ var ErrStreamTruncated = errors.New("stream ended before terminal event")
 
 type StreamEventHandler func(context.Context, FluxStreamEvent) (FluxStreamEvent, error)
 
+// TransformStreamResult forwards source through handler (nil forwards events
+// unchanged) and enforces the stream lifecycle: exactly one terminal event
+// (done, error or cancelled), a terminal cancelled event carrying
+// StreamErrorInfo when ctx ends, a truncated error when the source closes
+// without a terminal, and StreamErrorInfo on every terminal error.
+//
+// Cancelling ctx releases the source immediately, but the terminal event is
+// delivered like any other: the forwarding goroutine exits once the consumer
+// reads it or calls Close. Consumers must therefore read Events until it is
+// closed or call Close; Close is idempotent.
 func TransformStreamResult(ctx context.Context, source *StreamResult, handler StreamEventHandler) *StreamResult {
 	if source == nil {
 		return nil
@@ -71,22 +81,31 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 	streamCtx, cancel := context.WithCancel(ctx)
 	out := make(chan FluxStreamEvent, cap(source.Events))
 	closed := make(chan struct{})
-	var closeOnce sync.Once
+	var releaseOnce, closeOnce sync.Once
+	// releaseSource stops the upstream request and its connection.
+	releaseSource := func() {
+		releaseOnce.Do(func() {
+			cancel()
+			source.Close()
+		})
+	}
 	closeSource := func() {
 		closeOnce.Do(func() {
 			close(closed)
-			cancel()
-			source.Close()
+			releaseSource()
 		})
 	}
 
 	// emitCancellation delivers the terminal cancelled event when the
 	// caller's context ended. Close (closed) suppresses it: the consumer has
-	// stopped listening.
+	// stopped listening. The upstream is released before the terminal is
+	// handed over, so a consumer that cancels but neither drains nor closes
+	// the stream strands this goroutine only, not the provider connection.
 	emitCancellation := func() {
 		if channelClosed(closed) || ctx.Err() == nil {
 			return
 		}
+		releaseSource()
 		_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
 	}
 
@@ -148,6 +167,8 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 	return llm.NewStreamResult(out, source.RequestID, closeSource)
 }
 
+// CoordinateStreamResult applies the TransformStreamResult lifecycle to source
+// without transforming events.
 func CoordinateStreamResult(ctx context.Context, source *StreamResult) *StreamResult {
 	return TransformStreamResult(ctx, source, nil)
 }

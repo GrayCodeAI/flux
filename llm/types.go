@@ -289,8 +289,11 @@ type FluxStreamEvent struct {
 	Route  *ResolvedRoute `json:"route,omitempty"`
 }
 
-// StreamResult wraps a streaming response with cleanup. Callers must call Close()
-// when done reading events, or cancel the context.
+// StreamResult wraps a streaming response with cleanup. Callers must read
+// Events until it is closed or call Close. Cancelling the request context is
+// not enough on its own: streams coordinated by provider/core then end with a
+// terminal "cancelled" event, and the goroutine delivering it waits until that
+// event is read or Close is called. Close is idempotent.
 type StreamResult struct {
 	Events    <-chan FluxStreamEvent
 	RequestID string

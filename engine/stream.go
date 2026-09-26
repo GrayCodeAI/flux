@@ -12,6 +12,11 @@ import (
 
 // Stream is a normalized, pull-based event stream. Next must not be called
 // concurrently. Close is idempotent and may be called from another goroutine.
+//
+// Callers must call Close, or read until Next returns false. Cancelling the
+// request context ends the stream with an EventCancelled terminal and releases
+// the provider request at once, but the goroutine delivering that terminal
+// waits until it is read or Close is called.
 type Stream struct {
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -20,10 +25,11 @@ type Stream struct {
 	events chan Event
 	closed chan struct{}
 
-	mu      sync.Mutex
-	current Event
-	err     error
-	once    sync.Once
+	mu          sync.Mutex
+	current     Event
+	err         error
+	once        sync.Once
+	releaseOnce sync.Once
 }
 
 func newStream(ctx context.Context, cancel context.CancelFunc, source *core.StreamResult, route Route) *Stream {
@@ -82,6 +88,15 @@ func (s *Stream) Close() error {
 		if s.closed != nil {
 			close(s.closed)
 		}
+		s.release()
+	})
+	return nil
+}
+
+// release cancels the request and closes the provider stream without
+// closing the consumer side.
+func (s *Stream) release() {
+	s.releaseOnce.Do(func() {
 		if s.cancel != nil {
 			s.cancel()
 		}
@@ -89,7 +104,6 @@ func (s *Stream) Close() error {
 			s.source.Close()
 		}
 	})
-	return nil
 }
 
 func (s *Stream) forward() {
@@ -160,13 +174,16 @@ func (s *Stream) emit(event Event) bool {
 }
 
 // finishCancelled records the caller's cancellation as the terminal error and
-// emits the terminal cancelled event.
+// emits the terminal cancelled event. The provider request is released first,
+// so a host that cancels without draining or closing the stream strands only
+// this goroutine, not the upstream connection.
 func (s *Stream) finishCancelled(requestID string) {
 	err := s.ctx.Err()
 	if err == nil {
 		return
 	}
 	s.setError(classify("stream", s.route, err))
+	s.release()
 	s.emitCancellation(err, requestID)
 }
 

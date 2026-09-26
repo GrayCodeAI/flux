@@ -34,7 +34,10 @@ type Generator interface {
 }
 
 // EventStreamer is the pull-based host stream contract used by the engine facade.
-// Next must not be called concurrently. Close is idempotent.
+// Next must not be called concurrently. Close is idempotent. Callers must call
+// Close (or read until Next returns false): cancelling the request context ends
+// the stream with a terminal "cancelled" event, whose delivery waits for the
+// consumer.
 type EventStreamer interface {
 	Next() bool
 	Event() FluxStreamEvent
