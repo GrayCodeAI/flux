@@ -445,3 +445,82 @@ func TestBuildCacheKeyDeterministic(t *testing.T) {
 		t.Error("different system prompts should produce different keys")
 	}
 }
+
+func TestBuildCacheKeyCoversRequestShape(t *testing.T) {
+	t.Parallel()
+	msgs := []FluxMessage{{Role: "user", Content: "list files"}}
+	base := ChatOptions{Model: "gpt-4"}
+	baseKey := buildCacheKey(msgs, base)
+	if baseKey == "" {
+		t.Fatal("base key is empty")
+	}
+
+	topP := 0.5
+	topK := 40
+	thinking := true
+	variants := map[string]ChatOptions{
+		"tools":           {Model: "gpt-4", Tools: []llm.FluxTool{{Name: "read_file"}}},
+		"tool choice":     {Model: "gpt-4", ToolChoice: &llm.ToolChoiceOption{Type: "required"}},
+		"max tokens":      {Model: "gpt-4", MaxTokens: 16},
+		"stop sequences":  {Model: "gpt-4", StopSequences: []string{"\n"}},
+		"top p":           {Model: "gpt-4", TopP: &topP},
+		"top k":           {Model: "gpt-4", TopK: &topK},
+		"thinking":        {Model: "gpt-4", ThinkingEnabled: &thinking, ThinkingBudgetTokens: 1024},
+		"reasoning":       {Model: "gpt-4", ReasoningEffort: "high"},
+		"response format": {Model: "gpt-4", ResponseFormat: &llm.ResponseFormat{Type: "json_object"}},
+		"provider":        {Model: "gpt-4", Provider: "azure"},
+		"caller identity": {Model: "gpt-4", MetadataUserID: "user-2"},
+	}
+	for name, opts := range variants {
+		if key := buildCacheKey(msgs, opts); key == baseKey {
+			t.Errorf("%s: key unchanged, a cached reply would be served for a different request", name)
+		}
+	}
+
+	messageVariants := map[string][]FluxMessage{
+		"image":           {{Role: "user", Content: "list files", Images: []string{"data:image/png;base64,AAAA"}}},
+		"content parts":   {{Role: "user", Content: "list files", ContentParts: []llm.ContentPart{{Type: "text", Text: "extra"}}}},
+		"thinking":        {{Role: "user", Content: "list files", Thinking: "plan"}},
+		"provider blocks": {{Role: "user", Content: "list files", ProviderBlocks: []llm.ProviderBlock{{Provider: "anthropic", Type: "thinking", Data: []byte(`{}`)}}}},
+	}
+	for name, variant := range messageVariants {
+		if key := buildCacheKey(variant, base); key == baseKey {
+			t.Errorf("message %s: key unchanged", name)
+		}
+	}
+}
+
+func TestCachedProviderDoesNotShareRepliesAcrossToolSets(t *testing.T) {
+	t.Parallel()
+	inner := newCacheMock("fixed")
+	inner.Response = "tool reply"
+	cp := NewCachedProvider(inner, CacheConfig{Enabled: true})
+	msgs := []FluxMessage{{Role: "user", Content: "list files"}}
+
+	_, _ = cp.Chat(context.Background(), msgs, ChatOptions{Model: "gpt-4", Tools: []llm.FluxTool{{Name: "read_file"}}})
+	_, _ = cp.Chat(context.Background(), msgs, ChatOptions{Model: "gpt-4", Tools: []llm.FluxTool{{Name: "delete_file"}}})
+	if got := inner.CallCount(); got != 2 {
+		t.Fatalf("inner calls = %d, want 2: different tool sets must not share a cached reply", got)
+	}
+}
+
+func TestCachedProviderBypassesUnencodableRequests(t *testing.T) {
+	t.Parallel()
+	inner := newCacheMock("fixed")
+	inner.Response = "fresh"
+	cp := NewCachedProvider(inner, CacheConfig{Enabled: true})
+	msgs := []FluxMessage{{Role: "user", Content: "hi"}}
+	opts := ChatOptions{Model: "gpt-4", Conversation: func() {}}
+
+	if key := buildCacheKey(msgs, opts); key != "" {
+		t.Fatalf("key = %q, want empty for an unencodable request", key)
+	}
+	_, _ = cp.Chat(context.Background(), msgs, opts)
+	_, _ = cp.Chat(context.Background(), msgs, opts)
+	if got := inner.CallCount(); got != 2 {
+		t.Fatalf("inner calls = %d, want 2: unencodable requests must bypass the cache", got)
+	}
+	if got := cp.CacheStats().Size; got != 0 {
+		t.Fatalf("cache entries = %d, want 0", got)
+	}
+}

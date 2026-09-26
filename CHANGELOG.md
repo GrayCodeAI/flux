@@ -66,6 +66,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   or broken endpoint could grow client memory indefinitely. Both now stop
   with a stream error once one event exceeds `core.SSEMaxEventBytes`
   (16 MiB).
+- The response cache key now covers the whole request. It hashed only the
+  model, system prompt, temperature and message text/tool data, so with
+  caching enabled a reply produced for one tool set, `max_tokens`, stop
+  sequence, sampling or thinking setting, response format, image or caller
+  was served to a different request. Keys now hash every `ChatOptions` and
+  message field under a versioned prefix, and requests that cannot be
+  encoded bypass the cache.
 - A `provider/core` stream cancelled while its consumer was behind (the
   forwarder blocked delivering an event) now still ends with the terminal
   `cancelled` event instead of closing silently.
