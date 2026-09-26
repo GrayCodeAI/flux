@@ -65,6 +65,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   `cancelled` event instead of closing silently.
 
 ### Changed
+- `core.CoordinateStreamResult` returns a stream unchanged when it is already
+  coordinated under the same context and request ID, so layers that re-wrap
+  an adapter's stream with the caller's context (`Router`, `ProtocolRouter`)
+  no longer add a goroutine and buffer per layer.
 - Removed process-global custom gateway and dynamic provider registration,
   the ambient `OPENAI_API_BASE` auto-registration path, and no-op API-key
   prefix inference. Custom gateways and endpoints now require explicit,

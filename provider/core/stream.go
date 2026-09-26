@@ -58,6 +58,17 @@ func BindStreamBody(ctx context.Context, body io.ReadCloser, cancel context.Canc
 
 var ErrStreamTruncated = errors.New("stream ended before terminal event")
 
+// coordinatedStreams records, for the Events channel of every live stream
+// produced by TransformStreamResult, the context and request ID coordinating
+// it. CoordinateStreamResult uses it to avoid stacking an identical lifecycle
+// wrapper (and its goroutine and buffer) on every layer a stream crosses.
+var coordinatedStreams sync.Map // map[<-chan FluxStreamEvent]streamCoordination
+
+type streamCoordination struct {
+	done      <-chan struct{}
+	requestID string
+}
+
 type StreamEventHandler func(context.Context, FluxStreamEvent) (FluxStreamEvent, error)
 
 // TransformStreamResult forwards source through handler (nil forwards events
@@ -109,8 +120,12 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 		_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
 	}
 
+	var events <-chan FluxStreamEvent = out
+	coordinatedStreams.Store(events, streamCoordination{done: ctx.Done(), requestID: source.RequestID})
+
 	go func() {
 		defer close(out)
+		defer coordinatedStreams.Delete(events)
 		defer closeSource()
 
 		for {
@@ -168,8 +183,21 @@ func TransformStreamResult(ctx context.Context, source *StreamResult, handler St
 }
 
 // CoordinateStreamResult applies the TransformStreamResult lifecycle to source
-// without transforming events.
+// without transforming events. A source that TransformStreamResult already
+// coordinates under a context with the same Done channel (the same context,
+// or one derived only by adding values) and the same request ID is returned
+// unchanged: another wrapper would behave identically.
 func CoordinateStreamResult(ctx context.Context, source *StreamResult) *StreamResult {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if source != nil {
+		if value, ok := coordinatedStreams.Load(source.Events); ok {
+			if c, _ := value.(streamCoordination); c.done == ctx.Done() && c.requestID == source.RequestID {
+				return source
+			}
+		}
+	}
 	return TransformStreamResult(ctx, source, nil)
 }
 

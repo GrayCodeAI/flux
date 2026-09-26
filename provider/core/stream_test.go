@@ -391,6 +391,55 @@ func waitFor(t *testing.T, condition func() bool) {
 	}
 }
 
+func TestCoordinateStreamResultSkipsIdenticalCoordination(t *testing.T) {
+	t.Parallel()
+
+	type ctxKey struct{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	source := make(chan FluxStreamEvent, 1)
+	inner := CoordinateStreamResult(ctx, llm.NewStreamResult(source, "request-1", nil))
+	defer inner.Close()
+
+	if got := CoordinateStreamResult(ctx, inner); got != inner {
+		t.Fatal("same context: want the coordinated stream returned unchanged")
+	}
+	if got := CoordinateStreamResult(context.WithValue(ctx, ctxKey{}, "v"), inner); got != inner {
+		t.Fatal("value-only derived context: want the coordinated stream returned unchanged")
+	}
+	child, cancelChild := context.WithCancel(ctx)
+	defer cancelChild()
+	wrapped := []*StreamResult{
+		CoordinateStreamResult(child, inner),
+		CoordinateStreamResult(ctx, llm.NewStreamResult(inner.Events, "other-request", nil)),
+		TransformStreamResult(ctx, inner, func(_ context.Context, e FluxStreamEvent) (FluxStreamEvent, error) { return e, nil }),
+	}
+	for i, got := range wrapped {
+		if got.Events == inner.Events {
+			t.Fatalf("case %d (cancellable child, other request ID, handler): want a new lifecycle wrapper", i)
+		}
+		got.Close()
+	}
+}
+
+func TestCoordinatedStreamRegistryIsReleased(t *testing.T) {
+	t.Parallel()
+
+	source := make(chan FluxStreamEvent, 1)
+	result := CoordinateStreamResult(context.Background(), llm.NewStreamResult(source, "", nil))
+	source <- FluxStreamEvent{Type: "done"}
+	if event := <-result.Events; event.Type != "done" {
+		t.Fatalf("event = %+v, want done", event)
+	}
+	if _, ok := <-result.Events; ok {
+		t.Fatal("stream did not close after done")
+	}
+	waitFor(t, func() bool {
+		_, ok := coordinatedStreams.Load(result.Events)
+		return !ok
+	})
+}
+
 func TestUsageDeltaHandlesCumulativeAndSplitUsage(t *testing.T) {
 	t.Parallel()
 
