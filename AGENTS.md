@@ -8,7 +8,8 @@ When starting any new work (feature, fix, refactor, chore), always create a feat
 
 ## Design Principles
 
-- **Model-agnostic** — single interface for 75+ LLM providers
+- **Model-agnostic** — single interface for the 28 provider gateways in
+  `catalog/registry/providers.go` (see README "Supported Providers")
 - **Host-neutral engine** — Flux owns provider routing, transport, caching,
   retry/fallback, and normalized telemetry; hosts own product UX and semantics
 - **Streaming-first** — all responses are streamed; blocking is opt-in

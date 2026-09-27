@@ -199,40 +199,40 @@ ANTHROPIC_API_KEY=sk-... go run ./examples/basic/
 
 ## Supported Providers
 
-28 provider gateways in `catalog/registry/providers.go` (rho `/config` uses the same list), listed in registry `SortOrder`:
+28 provider gateways in `catalog/registry/providers.go` (rho `/config` uses the same list), listed in registry `SortOrder`. `catalog/registry/docs_test.go` fails when this table, the count, or `.env.example` drift from the registry.
 
 | Provider | ID | Env variable |
 |---|---|---|
-| **Anthropic** | `anthropic` | `ANTHROPIC_API_KEY` |
-| **OpenAI** | `openai` | `OPENAI_API_KEY` |
-| **Google Gemini** | `gemini` | `GEMINI_API_KEY` |
-| **DeepSeek** | `deepseek` | `DEEPSEEK_API_KEY` |
-| **xAI (Grok)** | `grok` | `XAI_API_KEY` |
-| **Kimi (Moonshot)** | `kimi` | `MOONSHOT_API_KEY` |
-| **Z.AI — Coding Plan** | `zai_coding` | `ZAI_CODING_API_KEY` |
-| **Z.AI — Pay-as-you-go** | `zai_payg` | `ZAI_API_KEY` |
-| **Xiaomi (MiMo) Token Plan** | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (+ region `cn` / `sgp` / `ams`) |
-| **Xiaomi (MiMo) Pay-as-you-go** | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` |
-| **MiniMax — Token Plan** | `minimax_token_plan` | `MINIMAX_TOKEN_PLAN_API_KEY` |
-| **MiniMax — Pay-as-you-go** | `minimax_payg` | `MINIMAX_PAYG_API_KEY` |
-| **Azure OpenAI** | `azure` | `AZURE_OPENAI_API_KEY` (+ `AZURE_OPENAI_ENDPOINT`) |
+| **Agnes** | `agnes` | `AGNES_API_KEY` |
 | **Amazon Bedrock** | `bedrock` | `AWS_SECRET_ACCESS_KEY` (+ `AWS_ACCESS_KEY_ID`, `AWS_SESSION_TOKEN`) |
-| **Vertex AI** | `vertex` | `VERTEX_ACCESS_TOKEN` (or `GOOGLE_OAUTH_ACCESS_TOKEN`) |
-| **OpenRouter** | `openrouter` | `OPENROUTER_API_KEY` |
+| **Anthropic** | `anthropic` | `ANTHROPIC_API_KEY` |
+| **Azure OpenAI** | `azure` | `AZURE_OPENAI_API_KEY` (+ `AZURE_OPENAI_ENDPOINT`) |
 | **CanopyWave** | `canopywave` | `CANOPYWAVE_API_KEY` |
-| **Poolside** | `poolside` | `POOLSIDE_API_KEY` |
-| **Groq** | `groq` | `GROQ_API_KEY` |
 | **ClinePass** | `clinepass` | `CLINE_API_KEY` |
 | **Concentrate** | `concentrate` | `CONCENTRATE_API_KEY` |
-| **OpenGateway** | `opengateway` | `OPENGATEWAY_API_KEY` |
-| **StepFun** | `stepfun` | `STEPFUN_API_KEY` |
-| **Agnes** | `agnes` | `AGNES_API_KEY` |
+| **DeepSeek** | `deepseek` | `DEEPSEEK_API_KEY` |
+| **Google Gemini** | `gemini` | `GEMINI_API_KEY` |
+| **Groq** | `groq` | `GROQ_API_KEY` |
+| **Kimi (Moonshot)** | `kimi` | `MOONSHOT_API_KEY` |
 | **LongCat** | `longcat` | `LONGCAT_API_KEY` |
-| **Fireworks AI** | `fireworks` | `FIREWORKS_API_KEY` |
+| **MiniMax — Pay-as-you-go** | `minimax_payg` | `MINIMAX_PAYG_API_KEY` |
+| **MiniMax — Token Plan** | `minimax_token_plan` | `MINIMAX_TOKEN_PLAN_API_KEY` |
+| **OpenAI** | `openai` | `OPENAI_API_KEY` |
 | **OpenCode Go** | `opencodego` | `OPENCODEGO_API_KEY` |
+| **OpenRouter** | `openrouter` | `OPENROUTER_API_KEY` |
 | **Ollama** | `ollama` | `OLLAMA_BASE_URL` (local; no API key) |
+| **Poolside** | `poolside` | `POOLSIDE_API_KEY` |
+| **Vertex AI** | `vertex` | `VERTEX_ACCESS_TOKEN` (or `GOOGLE_OAUTH_ACCESS_TOKEN`) |
+| **xAI (Grok)** | `grok` | `XAI_API_KEY` |
+| **Xiaomi (MiMo) Pay-as-you-go** | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` |
+| **Xiaomi (MiMo) Token Plan** | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (+ region `cn` / `sgp` / `ams`) |
+| **Z.AI — Coding Plan** | `zai_coding` | `ZAI_CODING_API_KEY` (+ region `international` / `cn`) |
+| **Z.AI — Pay-as-you-go** | `zai_payg` | `ZAI_API_KEY` (+ region `international` / `cn`) |
+| **StepFun** | `stepfun` | `STEP_API_KEY` (+ region `global` / `cn`) |
+| **OpenGateway** | `opengateway` | `OPENGATEWAY_API_KEY` |
+| **Fireworks AI** | `fireworks` | `FIREWORKS_API_KEY` |
 
-Runtime auto-detection uses a separate priority order for chat when no deployment is pinned; see `config` profiles.
+Runtime auto-detection uses a separate priority order (`config.APIProviderDetectionOrder`) when no deployment is pinned.
 
 ## Usage
 
