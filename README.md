@@ -297,38 +297,54 @@ config.SaveProviderConfig(cfg, "")               // save changes
 
 ```
 flux/
-├── engine/                 # Stable host-facing facade and provider-neutral DTOs
-├── provider/               # Provider runtime and feature packages
+├── engine/                 # Stable host-facing facade (hosts import engine, llm, graph, tools)
+├── llm/                    # Host-facing DTOs and the Provider port that engine re-exports
+├── graph/                  # Portable execution-graph vocabulary
+├── tools/                  # Tool-call and tool-result contracts
+├── provider/               # Provider runtime composition root (FluxClient)
 │   ├── core/               # Provider-neutral wire, stream, retry, and transport primitives
 │   ├── adapters/           # Provider protocol adapters and construction registry
-│   └── embeddings/         # Embedding clients, cache, and defaults
+│   ├── resilience/         # Rate limits, continuation, guardrails, and error policy
+│   ├── cache/              # Response and semantic caches
+│   ├── batch/              # Batch execution
+│   ├── embeddings/         # Embedding clients, cache, and defaults
+│   ├── media/              # Image and audio clients, structured prompts
+│   ├── extraction/         # Structured extraction
+│   ├── observability/      # Usage, cost, metrics, tracing, and recording
+│   └── testkit/            # Mock provider for tests
+├── catalog/                # Model catalog & tier system
+│   ├── registry/           # Provider registry (single source of truth for providers)
+│   ├── discover/           # Model discovery
+│   ├── live/               # Live model listing per provider
+│   ├── capabilities/       # Capability and deprecation data
+│   └── concentrate/ opencodego/ opengateway/ xiaomi/ zai/  # Gateway-specific helpers
 ├── config/                 # Provider configuration & routing
 │   └── credential/         # Credential file management
-├── catalog/                # Model catalog & tier system
-│   ├── discover/           # Model discovery
-│   ├── legacy/             # Legacy model support
-│   ├── live/               # Live model data
-│   └── registry/           # Model registry
-├── codeagent/              # Code agent retry & fallback strategies
-├── conversation/           # Conversation engine with branching
-├── credentials/            # Credential management
-├── docs/                   # Documentation & guides
-├── examples/               # Runnable code examples
-├── router/                 # Provider routing strategies
+├── credentials/            # Keyring/env credential stores and OIDC keyless auth
+├── router/                 # Routing strategies, deployment router, circuit breakers
+│   └── controlplane/       # Versioned, signed peer manifests and replicas
+├── runtime/                # Engine-internal provider/model/credential resolution
+├── setup/                  # Catalog-backed deployment wiring
 ├── operationsgraph/        # Privacy-safe route and generation telemetry projection
-├── runtime/                # Runtime manifest & routing policies
-├── storage/                # SQLite conversation DAG store
-├── types/                  # Branded types & API errors
-├── errors/                 # Error message constants
+├── conversation/           # Conversation engine with branching
+├── storage/                # SQLite conversation DAG store, virtual keys, budgets
+├── codeagent/              # Code agent retry & fallback strategies
+├── verify/                 # Provider conformance harness
+├── types/                  # Shared message types & API errors
 ├── constants/              # API limits
 ├── utils/                  # Error utilities
+├── api/                    # OpenAPI spec for internal/api
 ├── internal/
-│   ├── api/                # HTTP API handlers
-│   ├── cache/              # Response cache warmer
+│   ├── api/                # HTTP API server (library code; no flux binary starts it)
+│   ├── cache/              # Cache backends and response cache warmer
+│   ├── grpc/               # Optional gRPC transport (build tag grpc)
 │   ├── health/             # Provider health checker
-│   ├── observability/      # OpenTelemetry spans & metrics
-│   ├── sdk/                # Go, Python, TypeScript client SDKs
-│   └── version/            # Version information
+│   ├── httputil/ probehttp/ shrink/  # HTTP, probe, and tool-description helpers
+│   ├── observability/      # OpenTelemetry spans, metrics, and audit sinks
+│   └── sdk/                # Go, Python, TypeScript clients for the internal/api HTTP surface
+├── docs/                   # Documentation & guides
+├── examples/               # Runnable code examples
+├── scripts/                # CI guards and helper scripts
 └── assets/                 # Logo and branding
 ```
 
