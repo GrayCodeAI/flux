@@ -70,8 +70,9 @@ and two Go AST tests in `rho/internal/testaudit/`.
 go get github.com/GrayCodeAI/flux
 ```
 
-Requires Go 1.26+ and a configured provider credential. Minimal dependencies
-(UUID, OpenTelemetry, SQLite, keyring).
+Requires Go 1.26+ and a configured provider credential. Direct dependencies:
+UUID, tiktoken tokenizer, OS keyring, OpenTelemetry, pure-Go SQLite, and gRPC
+(linked only into `-tags grpc` builds of `internal/grpc`).
 
 ```go
 import (
@@ -171,9 +172,9 @@ Named `primary` / `weak` / `editor` model slots with fallback to primary, plus a
 
 `POST /rerank` endpoint (provider-backed with lexical fallback) and a `GET /ready` readiness probe alongside the existing health check.
 
-### gRPC Skeleton
+### gRPC Transport (opt-in, internal)
 
-Dependency-free gRPC API skeleton behind the `grpc` build tag — wired when generated stubs are available.
+`internal/grpc` holds an optional gRPC transport behind the `grpc` build tag. It serves `flux.v1.ChatService/Chat` with a registered `json` content subtype (no `.proto` files or generated stubs; clients call with `grpc.CallContentSubtype("json")`), backed by `EngineChatService` over `conversation.Engine`. The package is internal, so hosts cannot import it, and nothing in flux starts it. `google.golang.org/grpc` is a direct requirement in `go.mod`, so it appears in consumers' module graphs, but only `-tags grpc` builds link it.
 
 ## Documentation
 
