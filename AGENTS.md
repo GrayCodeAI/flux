@@ -56,6 +56,12 @@ make ci                          # Full CI suite
   `StreamResult`, `ResponseFormat`, `ImageURLPart`, `InputAudioPart`) live in
   `llm` with no `engine` alias; widening the facade to cover them is a
   deliberate API change, not an incidental one.
+- The facade already exposes a frozen set of engine-internal symbols
+  (`credentials.Store`/`MapStore`, `operationsgraph.Input`/`Export`, the
+  `provider/resilience` rate-limit config and `provider/cache.CacheConfig`),
+  listed in `docs/architecture/HOST-ENGINE-BOUNDARY.md`. Changing them breaks
+  hosts. `engine/host_surface_test.go` fails whenever that reachable set
+  changes; update its list and the doc together, deliberately.
 - `provider/core.Provider` is the lower-level provider contract; keep its
   method set stable and use it across feature packages
 - Streaming tests need careful goroutine management

@@ -61,6 +61,13 @@ Everything else is engine-internal: `provider`, `catalog`, `config`,
 contracts. Enforced by `rho/scripts/check-flux-engine-boundary.sh`
 and two Go AST tests in `rho/internal/testaudit/`.
 
+Exception: a fixed set of engine-internal symbols is reachable through the
+facade (for example `credentials.Store` behind `engine.Options.SecretStore`
+and `operationsgraph.Input` behind `engine.OperationsGraphInput`). Those
+symbols are frozen as part of the contract; see
+[Frozen engine-internal types](docs/architecture/HOST-ENGINE-BOUNDARY.md#frozen-engine-internal-types).
+`engine/host_surface_test.go` fails when that set changes.
+
 - do not import `rho/internal/*`
 - do not import the removed legacy path `rho/shared/types`
 
