@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // ErrBudgetExceeded is returned when a virtual key has exhausted its budget.
@@ -109,28 +111,22 @@ func (bp *BudgetProvider) StreamChat(ctx context.Context, messages []FluxMessage
 		return nil, err
 	}
 
-	// Wrap the events channel to record actual spend from the final usage
-	// event. Without this, streamed calls under a virtual key never debit the
-	// budget (unlike the non-streaming Chat path), so streaming-heavy clients
-	// would underreport spend. Mirrors UsageLimitProvider.StreamChat.
-	wrappedCh := make(chan FluxStreamEvent, cap(result.Events))
-	go func() {
-		defer close(wrappedCh)
-		for evt := range result.Events {
-			if evt.Type == "usage" && evt.Usage != nil {
-				cost := ActualCostUSD(opts.Model, evt.Usage)
-				_ = bp.store.RecordUsage(ctx, vk, cost, evt.Usage.PromptTokens, evt.Usage.CompletionTokens)
-			}
-			select {
-			case wrappedCh <- evt:
-			case <-ctx.Done():
-				result.Close()
-				return
+	var previousUsage *core.FluxUsage
+	return core.TransformStreamResult(ctx, result, func(streamCtx context.Context, evt FluxStreamEvent) (FluxStreamEvent, error) {
+		if evt.Type == "continuation" {
+			previousUsage = nil
+			return evt, nil
+		}
+		if (evt.Type == "usage" || evt.Type == "done") && evt.Usage != nil {
+			delta := core.UsageDelta(previousUsage, evt.Usage)
+			previousUsage = core.MergeUsage(previousUsage, evt.Usage)
+			if delta != nil {
+				cost := ActualCostUSD(opts.Model, delta)
+				_ = bp.store.RecordUsage(streamCtx, vk, cost, delta.PromptTokens, delta.CompletionTokens)
 			}
 		}
-	}()
-
-	return NewStreamResult(wrappedCh, result.Close), nil
+		return evt, nil
+	}), nil
 }
 
 func (bp *BudgetProvider) recordUsage(ctx context.Context, vk, model string, resp *FluxResponse) {

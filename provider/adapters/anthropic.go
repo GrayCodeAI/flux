@@ -603,13 +603,16 @@ func (c *AnthropicClient) Chat(ctx context.Context, messages []core.FluxMessage,
 
 // StreamChat sends a streaming message to Anthropic.
 func (c *AnthropicClient) StreamChat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
-	req, body, err := c.buildAnthropicRequest(ctx, messages, opts, true)
+	streamCtx, cancel := context.WithCancel(ctx)
+	req, body, err := c.buildAnthropicRequest(streamCtx, messages, opts, true)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
-	resp, err := c.doRequestWithMimoAuthRetry(ctx, req, body)
+	resp, err := c.doRequestWithMimoAuthRetry(streamCtx, req, body)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: anthropic stream request failed: %w", err)
 	}
 
@@ -618,14 +621,16 @@ func (c *AnthropicClient) StreamChat(ctx context.Context, messages []core.FluxMe
 	if resp.StatusCode != 200 {
 		detail, readErr := core.ParseProviderError(resp.Body)
 		_ = resp.Body.Close()
+		cancel()
 		return nil, core.FormatAPIError("anthropic", "stream", resp.StatusCode, requestID, detail, readErr)
 	}
 
-	streamCtx, cancel := context.WithCancel(ctx)
-	sseEvents := core.ParseSSEStream(streamCtx, resp.Body, c.logger)
+	streamBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	sseEvents := core.ParseSSEStream(streamCtx, streamBody, c.logger)
 	events := core.ProcessAnthropicStream(streamCtx, sseEvents, c.logger)
+	result := llm.NewStreamResult(events, requestID, cleanup)
 
-	return llm.NewStreamResult(events, requestID, cancel), nil
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 func (c *AnthropicClient) doRequestWithMimoAuthRetry(ctx context.Context, req *http.Request, body []byte) (*http.Response, error) {

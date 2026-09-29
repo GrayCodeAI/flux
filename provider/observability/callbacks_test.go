@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 // --- test helpers ---
@@ -597,6 +599,130 @@ func TestCallbackErrorInNewCallbackProvider(t *testing.T) {
 	t.Parallel()
 	if _, err := NewCallbackProvider(nil); err == nil {
 		t.Error("NewCallbackProvider(nil) should return an error")
+	}
+}
+
+type truncatedStreamProvider struct{}
+
+func (*truncatedStreamProvider) Name() string               { return "truncated-stream" }
+func (*truncatedStreamProvider) Ping(context.Context) error { return nil }
+func (*truncatedStreamProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return nil, nil
+}
+
+func (*truncatedStreamProvider) StreamChat(context.Context, []FluxMessage, ChatOptions) (*StreamResult, error) {
+	events := make(chan FluxStreamEvent)
+	close(events)
+	return NewStreamResult(events, func() {}), nil
+}
+
+func TestCallbackStreamChatObservesTruncation(t *testing.T) {
+	t.Parallel()
+	callback := &recordingCallback{}
+	provider := mustCallbackProvider(t, &truncatedStreamProvider{})
+	provider.AddCallback(callback)
+	result, err := provider.StreamChat(context.Background(), []FluxMessage{{Role: "user", Content: "hello"}}, ChatOptions{Model: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Close()
+	for range result.Events {
+	}
+
+	waitUntil(t, 2*time.Second, func() bool {
+		callback.mu.Lock()
+		defer callback.mu.Unlock()
+		for _, event := range callback.streamEvents {
+			if event.event.ErrorInfo != nil && event.event.ErrorInfo.Kind == llm.ErrKindTruncated {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+type continuationUsageProvider struct{}
+
+func (*continuationUsageProvider) Name() string               { return "continuation-usage" }
+func (*continuationUsageProvider) Ping(context.Context) error { return nil }
+func (*continuationUsageProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return nil, nil
+}
+
+func (*continuationUsageProvider) StreamChat(context.Context, []FluxMessage, ChatOptions) (*StreamResult, error) {
+	events := make(chan FluxStreamEvent, 4)
+	usage := &FluxUsage{PromptTokens: 3, CompletionTokens: 5, TotalTokens: 8}
+	events <- FluxStreamEvent{Type: "usage", Usage: usage}
+	events <- FluxStreamEvent{Type: "continuation"}
+	events <- FluxStreamEvent{Type: "usage", Usage: usage}
+	events <- FluxStreamEvent{Type: "done", Usage: usage}
+	close(events)
+	return NewStreamResultWithRequestID(events, "continuation", func() {}), nil
+}
+
+func TestUsageLimitResetsUsageAtContinuation(t *testing.T) {
+	t.Parallel()
+	tracker := NewUsageTracker()
+	provider, err := NewUsageLimitProvider(&continuationUsageProvider{}, tracker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.StreamChat(context.Background(), []FluxMessage{{Role: "user", Content: "hello"}}, ChatOptions{Model: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Close()
+	for range result.Events {
+	}
+	if got := tracker.GetUsage().SessionTokens; got != 16 {
+		t.Fatalf("session tokens = %d, want 16", got)
+	}
+}
+
+type blockingTraceProvider struct {
+	closes atomic.Int32
+}
+
+func (*blockingTraceProvider) Name() string               { return "blocking-trace" }
+func (*blockingTraceProvider) Ping(context.Context) error { return nil }
+func (*blockingTraceProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return nil, nil
+}
+
+func (p *blockingTraceProvider) StreamChat(ctx context.Context, _ []FluxMessage, _ ChatOptions) (*StreamResult, error) {
+	streamCtx, cancel := context.WithCancel(ctx)
+	events := make(chan FluxStreamEvent)
+	go func() {
+		<-streamCtx.Done()
+		close(events)
+	}()
+	return NewStreamResultWithRequestID(events, "request-trace", func() {
+		p.closes.Add(1)
+		cancel()
+	}), nil
+}
+
+func TestTracingStreamClosePropagates(t *testing.T) {
+	t.Parallel()
+	inner := &blockingTraceProvider{}
+	tracing := NewTracingProvider(inner)
+	result, err := tracing.StreamChat(context.Background(), []FluxMessage{{Role: "user", Content: "hello"}}, ChatOptions{Model: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result.Close()
+	result.Close()
+
+	select {
+	case _, ok := <-result.Events:
+		if ok {
+			t.Fatal("unexpected event after close")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("tracing stream did not close")
+	}
+	if got := inner.closes.Load(); got != 1 {
+		t.Fatalf("inner close count = %d, want 1", got)
 	}
 }
 

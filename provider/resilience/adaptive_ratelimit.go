@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // RateLimitState holds the current rate limit tracking state for a provider.
@@ -276,45 +278,21 @@ func (a *AdaptiveRateLimitProvider) StreamChat(ctx context.Context, messages []F
 		return nil, err
 	}
 
-	// Wrap the events channel to intercept usage events for token tracking.
-	// Also observe ctx cancellation so that:
-	//   - we stop forwarding events promptly (the caller's wrappedCh is no
-	//     longer being drained on the consumer side);
-	//   - we release the inner stream's resources (body, goroutine) by
-	//     closing it; otherwise it hangs on a blocking send.
-	wrappedCh := make(chan FluxStreamEvent, cap(result.Events))
-	go func() {
-		defer close(wrappedCh)
-		for {
-			select {
-			case <-ctx.Done():
-				result.Close()
-				// Drain remaining events so the inner goroutine can complete
-				// and close its own body.
-				for range result.Events {
-				}
-				return
-			case evt, ok := <-result.Events:
-				if !ok {
-					return
-				}
-				if evt.Type == "usage" && evt.Usage != nil {
-					tokens := a.extractTokens(evt.Usage)
-					a.recordTokens(tokens)
-				}
-				select {
-				case wrappedCh <- evt:
-				case <-ctx.Done():
-					result.Close()
-					for range result.Events {
-					}
-					return
-				}
+	var previousUsage *core.FluxUsage
+	return core.TransformStreamResult(ctx, result, func(_ context.Context, evt FluxStreamEvent) (FluxStreamEvent, error) {
+		if evt.Type == "continuation" {
+			previousUsage = nil
+			return evt, nil
+		}
+		if (evt.Type == "usage" || evt.Type == "done") && evt.Usage != nil {
+			delta := core.UsageDelta(previousUsage, evt.Usage)
+			previousUsage = core.MergeUsage(previousUsage, evt.Usage)
+			if delta != nil {
+				a.recordTokens(a.extractTokens(delta))
 			}
 		}
-	}()
-
-	return NewStreamResult(wrappedCh, result.RequestID, result.Close), nil
+		return evt, nil
+	}), nil
 }
 
 // UpdateFromHeaders updates the rate limit state from HTTP response headers.

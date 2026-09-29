@@ -58,10 +58,19 @@ make ci                          # Full CI suite
 - `provider/core.Provider` is the lower-level provider contract; keep its
   method set stable and use it across feature packages
 - Streaming tests need careful goroutine management
-- `go.work` here should stay minimal; the parent `graycode-eco/go.work`
-  connects this independent `flux` checkout beside Rho for local development.
+- `go.work` here should stay minimal; the `graycode-eco` workspace connects
+  this independent `flux` checkout beside Rho for local development.
   Do not add extra local `replace` directives here without coordinating with
   the parent workspace.
+- There is usually **no** `go.work` in the parent folder, and that is expected.
+  A parent `go.work` breaks every sibling it does not list, and exporting
+  `GOWORK` is worse: it is inherited by child `go` processes, so rho's own
+  tests that shell out to `go test` in temporary projects fail. To exercise
+  rho against this checkout, use a gitignored module overlay in rho instead —
+  `go test -modfile=go.local.mod ./...`. See rho/AGENTS.md
+  "Workspace workflow" for the setup. Without that overlay, rho compiles
+  against the *published* flux from the module cache, so a green rho suite
+  does not exercise local flux changes at all.
 
 ## Naming Conventions
 

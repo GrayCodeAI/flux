@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -243,7 +244,10 @@ func (c *ConcentrateResponsesClient) StreamChat(ctx context.Context, messages []
 		return nil, core.FormatAPIError("concentrate", "stream", resp.StatusCode, requestID, detail, readErr)
 	}
 
-	return c.handleStream(streamCtx, cancel, resp, requestID), nil
+	streamBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	resp.Body = streamBody
+	result := c.handleStream(streamCtx, cleanup, resp, requestID)
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 // Ping checks the health of the Concentrate API.
@@ -675,11 +679,20 @@ func newSSEReader(r io.Reader) *sseReader {
 	return &sseReader{reader: bufio.NewReader(r)}
 }
 
+// errConcentrateEventTooLarge reports an SSE event over core.SSEMaxEventBytes.
+var errConcentrateEventTooLarge = fmt.Errorf("concentrate: SSE event exceeds %d bytes", core.SSEMaxEventBytes)
+
+// Read returns the next event. Lines and the accumulated data of one event are
+// bounded by core.SSEMaxEventBytes so a peer cannot grow memory without limit.
 func (s *sseReader) Read() (streamEvent, error) {
 	var event streamEvent
 	var data []string
+	size := 0
 	for {
-		line, err := s.reader.ReadString('\n')
+		line, err := s.readLine(core.SSEMaxEventBytes - size)
+		if errors.Is(err, errConcentrateEventTooLarge) {
+			return event, err
+		}
 		if err != nil {
 			if err != io.EOF {
 				return event, err
@@ -702,8 +715,28 @@ func (s *sseReader) Read() (streamEvent, error) {
 			return decodeConcentrateSSEData(data)
 		}
 		if strings.HasPrefix(line, "data:") {
-			data = append(data, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+			field := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+			size += len(field) + 1
+			data = append(data, field)
 		}
+	}
+}
+
+// readLine reads one line including its newline, failing once it would exceed
+// limit bytes. At EOF it returns the partial line with io.EOF, like
+// bufio.Reader.ReadString.
+func (s *sseReader) readLine(limit int) (string, error) {
+	var line []byte
+	for {
+		chunk, err := s.reader.ReadSlice('\n')
+		if len(line)+len(chunk) > limit {
+			return "", errConcentrateEventTooLarge
+		}
+		line = append(line, chunk...)
+		if errors.Is(err, bufio.ErrBufferFull) {
+			continue
+		}
+		return string(line), err
 	}
 }
 

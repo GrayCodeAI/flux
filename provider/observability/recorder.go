@@ -6,6 +6,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/flux/provider/core"
 )
 
 // RecorderMode controls whether the recorder records new interactions or replays existing ones.
@@ -150,7 +152,7 @@ func (r *RecorderProvider) StreamChat(ctx context.Context, messages []FluxMessag
 		return nil, err
 	}
 	if replayResult != nil {
-		return replayResult, nil
+		return core.CoordinateStreamResult(ctx, replayResult), nil
 	}
 
 	// Record mode: call the inner provider's StreamChat
@@ -173,7 +175,8 @@ func (r *RecorderProvider) StreamChat(ctx context.Context, messages []FluxMessag
 	}
 
 	// Drain events from the real stream and accumulate the response
-	return r.recordStream(ctx, result, messages, opts, hash), nil
+	recorded := r.recordStream(ctx, result, messages, opts, hash)
+	return core.CoordinateStreamResult(ctx, recorded), nil
 }
 
 // checkReplay checks if we're in replay mode and returns the replay result.
@@ -278,6 +281,10 @@ func (r *RecorderProvider) syntheticStream(ctx context.Context, resp *FluxRespon
 
 // recordStream drains the real stream, accumulates data, saves the interaction, and
 // returns a synthetic stream with the accumulated response.
+//
+// The interaction is saved before the terminal event is forwarded: the
+// caller's stream is coordinated and ends at that terminal, so a caller that
+// saves the cassette right after draining must already see the interaction.
 func (r *RecorderProvider) recordStream(ctx context.Context, result *StreamResult, messages []FluxMessage, opts ChatOptions, hash string) *StreamResult {
 	streamCtx, cancel := context.WithCancel(ctx)
 	ch := make(chan FluxStreamEvent, 64)
@@ -290,6 +297,27 @@ func (r *RecorderProvider) recordStream(ctx context.Context, result *StreamResul
 		var toolCalls []ToolCall
 		var usage *FluxUsage
 		var finishReason string
+		var saveOnce sync.Once
+		save := func() {
+			saveOnce.Do(func() {
+				r.mu.Lock()
+				defer r.mu.Unlock()
+				r.cassette.Interactions = append(r.cassette.Interactions, Interaction{
+					Request: RecordedRequest{
+						Messages: messages,
+						Model:    opts.Model,
+						System:   opts.System,
+						Hash:     hash,
+					},
+					Response: RecordedResponse{
+						Content:      r.redact(content),
+						ToolCalls:    toolCalls,
+						Usage:        usage,
+						FinishReason: finishReason,
+					},
+				})
+			})
+		}
 
 		// Drain the real stream, forwarding events to the caller
 		for evt := range result.Events {
@@ -307,37 +335,35 @@ func (r *RecorderProvider) recordStream(ctx context.Context, result *StreamResul
 			case "done":
 				finishReason = evt.StopReason
 			}
+			if isTerminalRecordedEvent(evt) {
+				save()
+			}
 
 			// Forward the event to the caller
 			select {
 			case ch <- evt:
 			case <-streamCtx.Done():
+				// The caller stopped early: do not record a partial response.
 				result.Close()
 				return
 			}
 		}
-
-		// Save the accumulated interaction
-		r.mu.Lock()
-		interaction := Interaction{
-			Request: RecordedRequest{
-				Messages: messages,
-				Model:    opts.Model,
-				System:   opts.System,
-				Hash:     hash,
-			},
-			Response: RecordedResponse{
-				Content:      r.redact(content),
-				ToolCalls:    toolCalls,
-				Usage:        usage,
-				FinishReason: finishReason,
-			},
-		}
-		r.cassette.Interactions = append(r.cassette.Interactions, interaction)
-		r.mu.Unlock()
+		save()
 	}()
 
 	return NewStreamResult(ch, cancel)
+}
+
+// isTerminalRecordedEvent reports whether evt ends a stream: done, a
+// cancellation, or an error that is not a warning-marked diagnostic.
+func isTerminalRecordedEvent(evt FluxStreamEvent) bool {
+	switch evt.Type {
+	case "done", "cancelled", "canceled":
+		return true
+	case "error":
+		return evt.Warning == ""
+	}
+	return false
 }
 
 // redact applies the redactor function if set.

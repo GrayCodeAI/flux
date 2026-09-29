@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GrayCodeAI/flux/llm"
 	"github.com/GrayCodeAI/flux/provider/core"
 	"github.com/GrayCodeAI/flux/types"
 )
@@ -363,7 +364,7 @@ func TestProcessGeminiStream_ToolCallWithUsage(t *testing.T) {
 				t.Errorf("tool call id = %q", evt.ToolCall.ID)
 			}
 		}
-		if evt.Type == "done" && evt.Usage != nil {
+		if evt.Type == "usage" && evt.Usage != nil {
 			usage = evt.Usage
 		}
 	}
@@ -668,14 +669,12 @@ func TestGeminiClient_StreamChat_Legacy_InvalidJSON(t *testing.T) {
 		t.Fatalf("StreamChat: %v", err)
 	}
 	defer result.Close()
-	var gotDone bool
+	var terminal core.FluxStreamEvent
 	for evt := range result.Events {
-		if evt.Type == "done" {
-			gotDone = true
-		}
+		terminal = evt
 	}
-	if !gotDone {
-		t.Error("expected done event")
+	if terminal.Type != "error" || terminal.ErrorInfo == nil || terminal.ErrorInfo.Kind != llm.ErrKindTruncated {
+		t.Fatalf("terminal = %+v, want truncated error", terminal)
 	}
 }
 
@@ -699,14 +698,12 @@ func TestGeminiClient_StreamChat_Legacy_NoCandidates(t *testing.T) {
 		t.Fatalf("StreamChat: %v", err)
 	}
 	defer result.Close()
-	var gotDone bool
+	var terminal core.FluxStreamEvent
 	for evt := range result.Events {
-		if evt.Type == "done" {
-			gotDone = true
-		}
+		terminal = evt
 	}
-	if !gotDone {
-		t.Error("expected done event")
+	if terminal.Type != "error" || terminal.ErrorInfo == nil || terminal.ErrorInfo.Kind != llm.ErrKindTruncated {
+		t.Fatalf("terminal = %+v, want truncated error", terminal)
 	}
 }
 
@@ -764,20 +761,19 @@ func TestGeminiClient_StreamChat_Legacy_NoUsage(t *testing.T) {
 		t.Fatalf("StreamChat: %v", err)
 	}
 	defer result.Close()
-	var gotContent, gotDone bool
+	var gotContent bool
+	var terminal core.FluxStreamEvent
 	for evt := range result.Events {
 		if evt.Type == "content" {
 			gotContent = true
 		}
-		if evt.Type == "done" {
-			gotDone = true
-		}
+		terminal = evt
 	}
 	if !gotContent {
 		t.Error("expected content event")
 	}
-	if !gotDone {
-		t.Error("expected done event (from streamLoop fallback)")
+	if terminal.Type != "error" || terminal.ErrorInfo == nil || terminal.ErrorInfo.Kind != llm.ErrKindTruncated {
+		t.Fatalf("terminal = %+v, want truncated error", terminal)
 	}
 }
 
@@ -1013,7 +1009,7 @@ func TestProcessStreamChunk_UsageDone(t *testing.T) {
 	t.Parallel()
 	c := NewGeminiClient("key", "https://gemini.example")
 	events := make(chan core.FluxStreamEvent, 2)
-	data := `{"candidates":[{"content":{"parts":[{"text":"Hi"}],"finishReason":"STOP"}}],"usageMetadata":{"promptTokenCount":2,"candidatesTokenCount":5,"totalTokenCount":7}}`
+	data := `{"candidates":[{"content":{"parts":[{"text":"Hi"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":2,"candidatesTokenCount":5,"totalTokenCount":7}}`
 	cont := c.processStreamChunk(context.Background(), data, events)
 	if !cont {
 		t.Fatal("processStreamChunk returned false, expected true (done)")

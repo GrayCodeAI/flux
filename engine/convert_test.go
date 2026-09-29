@@ -264,6 +264,23 @@ func TestFromClientResponse_AttachesRoute(t *testing.T) {
 	}
 }
 
+func TestFromClientResponse_PreservesActualRoute(t *testing.T) {
+	resp := &core.FluxResponse{
+		Content: "hello",
+		Route: &Route{
+			Provider: "router", Model: "planned/model", DeploymentID: "deployment-2", Attempts: 2,
+		},
+	}
+	planned := Route{Provider: "planned", Model: "planned/model", DeploymentRouting: true}
+	out := fromClientResponse(resp, planned)
+	if out.Route == nil || out.Route.DeploymentID != "deployment-2" || out.Route.Attempts != 2 || !out.Route.DeploymentRouting {
+		t.Fatalf("route = %+v, want actual route preserved", out.Route)
+	}
+	if out.Route.Provider != "router" || out.Route.Model != "planned/model" {
+		t.Fatalf("route identity = %+v, want provider route preserved", out.Route)
+	}
+}
+
 func TestFromClientResponse_NilResponse(t *testing.T) {
 	route := Route{Provider: "test", Model: "test/model"}
 	out := fromClientResponse(nil, route)

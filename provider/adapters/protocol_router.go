@@ -75,22 +75,27 @@ func (r ProtocolRouter) StreamChat(ctx context.Context, messages []core.FluxMess
 	result, err := primaryClient.StreamChat(ctx, messages, opts)
 	if err != nil {
 		if cfg.FallbackOnError != nil && cfg.FallbackOnError(err) {
-			return fallbackClient.StreamChat(ctx, messages, opts)
+			fallbackResult, fallbackErr := fallbackClient.StreamChat(ctx, messages, opts)
+			if fallbackErr != nil {
+				return fallbackResult, fallbackErr
+			}
+			return core.CoordinateStreamResult(ctx, fallbackResult), nil
 		}
 		return result, err
 	}
 	if cfg.ReasoningOnlyFallback && cfg.Primary == ChatProtocolMessages {
 		fallback := fallbackClient
-		return newStreamWithReasoningFallback(ctx, messages, opts, result, protocolStreamFallback{
+		fallbackStream := newStreamWithReasoningFallback(ctx, messages, opts, result, protocolStreamFallback{
 			chat: func(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.FluxResponse, error) {
 				return fallback.Chat(ctx, messages, opts)
 			},
 			stream: func(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
 				return fallback.StreamChat(ctx, messages, opts)
 			},
-		}), nil
+		})
+		return core.CoordinateStreamResult(ctx, fallbackStream), nil
 	}
-	return result, nil
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 func (r ProtocolRouter) providers(primary ChatProtocol) (core.Provider, core.Provider) {

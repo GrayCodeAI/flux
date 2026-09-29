@@ -244,7 +244,7 @@ the safe credential/gateway reports without reading either file directly.
 | catalog cache missing/corrupt | report unavailable; do not claim bootstrap readiness |
 | live list fails or selected model is absent | fail live preflight |
 | custom gateway URL contains embedded data | reject configuration |
-| stream caller exits | close/cancel the Engine stream |
+| stream caller exits | close the Engine stream (cancelling its context alone leaves the terminal event waiting for a reader) |
 
 Provider-specific friendly error formatting remains Flux-owned; Rho decides
 where and how to display it.

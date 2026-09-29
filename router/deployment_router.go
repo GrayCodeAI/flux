@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"sort"
@@ -137,6 +138,7 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []core.FluxMessage
 		return nil, err
 	}
 	var lastErr error
+	attemptsMade := 0
 	for stageIndex, stage := range r.routeFor(target.canonicalModelID) {
 		choices := r.eligibleChoices(target, stage, opts)
 		if len(choices) == 0 {
@@ -157,13 +159,20 @@ func (r *DeploymentRouter) Chat(ctx context.Context, messages []core.FluxMessage
 				lastErr = fmt.Errorf("stage %d has no available deployments", stageIndex)
 				break
 			}
+			attemptsMade++
 			resp, err := r.chatWithDeployment(ctx, messages, opts, target, choice.DeploymentID)
 			if err == nil {
 				r.recordSuccess(choice.DeploymentID)
+				attachResponseRoute(resp, deploymentRoute(opts, target, choice.DeploymentID, attemptsMade))
 				return resp, nil
 			}
 			lastErr = err
-			r.recordFailure(choice.DeploymentID)
+			if ctx.Err() != nil {
+				// The caller cancelled or its deadline passed: stop, and do not
+				// count the failure against the deployment.
+				return nil, err
+			}
+			r.recordFailure(choice.DeploymentID, err)
 			if !IsTransient(err) {
 				if ShouldTryNextDeployment(err) {
 					break
@@ -189,6 +198,8 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 	go func() {
 		defer close(out)
 		var lastErr error
+		var lastRoute *llm.ResolvedRoute
+		attemptsMade := 0
 		for stageIndex, stage := range r.routeFor(target.canonicalModelID) {
 			choices := r.eligibleChoices(target, stage, opts)
 			if len(choices) == 0 {
@@ -209,28 +220,38 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 					lastErr = fmt.Errorf("stage %d has no available deployments", stageIndex)
 					break
 				}
-				fallback, err := r.streamWithDeployment(streamCtx, out, messages, opts, target, choice.DeploymentID)
+				attemptsMade++
+				route := deploymentRoute(opts, target, choice.DeploymentID, attemptsMade)
+				lastRoute = route
+				if !sendRouterEvent(streamCtx, out, core.FluxStreamEvent{Type: "route_changed", Route: route}) {
+					return
+				}
+				fallback, err := r.streamWithDeployment(streamCtx, out, messages, opts, target, choice.DeploymentID, *route)
 				if err == nil {
 					r.recordSuccess(choice.DeploymentID)
 					return
 				}
+				if streamCtx.Err() != nil {
+					// The caller cancelled or its deadline passed. Only the
+					// caller's context decides this: an upstream timeout also
+					// matches context.DeadlineExceeded but must fail over. No
+					// failover and no breaker failure; the coordinated wrapper
+					// around this stream emits the terminal cancelled event.
+					return
+				}
 				lastErr = err
-				r.recordFailure(choice.DeploymentID)
+				r.recordFailure(choice.DeploymentID, err)
 				if !fallback {
-					select {
-					case out <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
-					case <-streamCtx.Done():
+					if !streamFailureForwarded(err) {
+						sendRouterEvent(streamCtx, out, routerErrorEvent(err, route))
 					}
 					return
 				}
-				if !IsTransient(err) {
+				if !isRetryableStreamFailure(err) {
 					if ShouldTryNextDeployment(err) {
 						break
 					}
-					select {
-					case out <- core.FluxStreamEvent{Type: "error", Error: err.Error()}:
-					case <-streamCtx.Done():
-					}
+					sendRouterEvent(streamCtx, out, routerErrorEvent(err, route))
 					return
 				}
 				recentlyFailed = choice.DeploymentID
@@ -239,12 +260,11 @@ func (r *DeploymentRouter) StreamChat(ctx context.Context, messages []core.FluxM
 		if lastErr == nil {
 			lastErr = fmt.Errorf("no route configured")
 		}
-		select {
-		case out <- core.FluxStreamEvent{Type: "error", Error: fmt.Sprintf("deployment router: all deployments failed for %q: %v", target.canonicalModelID, lastErr)}:
-		case <-streamCtx.Done():
-		}
+		sendRouterEvent(streamCtx, out, routerErrorEvent(
+			fmt.Errorf("deployment router: all deployments failed for %q: %w", target.canonicalModelID, lastErr), lastRoute,
+		))
 	}()
-	return llm.NewStreamResult(out, "", cancel), nil
+	return core.CoordinateStreamResult(ctx, llm.NewStreamResult(out, "", cancel)), nil
 }
 
 func (r *DeploymentRouter) Stats() map[string]int64 {
@@ -438,7 +458,152 @@ func (r *DeploymentRouter) chatWithDeployment(ctx context.Context, messages []co
 	return adapter.Provider.Chat(ctx, messages, nativeOpts)
 }
 
-func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- core.FluxStreamEvent, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string) (fallback bool, err error) {
+// deploymentRoute describes the deployment that served (or is serving) a
+// request, so hosts can attribute usage and price to the actual backend.
+func deploymentRoute(opts core.ChatOptions, target deploymentTarget, deploymentID string, attempts int) *llm.ResolvedRoute {
+	provider := strings.TrimSpace(opts.Provider)
+	if provider == "" {
+		provider = ownerProviderID(target.canonicalModelID)
+	}
+	model := strings.TrimSpace(opts.Model)
+	if model == "" {
+		model = target.canonicalModelID
+	}
+	return &llm.ResolvedRoute{
+		Provider: provider, Model: model, DeploymentRouting: true,
+		DeploymentID: deploymentID, Attempts: attempts,
+	}
+}
+
+// attachResponseRoute fills the response route from the router's view without
+// overwriting anything the deployment already reported.
+func attachResponseRoute(resp *core.FluxResponse, route *llm.ResolvedRoute) {
+	if resp == nil || route == nil {
+		return
+	}
+	if resp.Route == nil {
+		resp.Route = route
+		return
+	}
+	merged := *resp.Route
+	if merged.Provider == "" {
+		merged.Provider = route.Provider
+	}
+	if merged.Model == "" {
+		merged.Model = route.Model
+	}
+	if !merged.DeploymentRouting {
+		merged.DeploymentRouting = route.DeploymentRouting
+	}
+	if merged.DeploymentID == "" {
+		merged.DeploymentID = route.DeploymentID
+	}
+	if merged.Attempts < route.Attempts {
+		merged.Attempts = route.Attempts
+	}
+	resp.Route = &merged
+}
+
+func sendRouterEvent(ctx context.Context, out chan<- core.FluxStreamEvent, event core.FluxStreamEvent) bool {
+	select {
+	case out <- event:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+// deploymentStreamError is a stream failure a deployment reported. It keeps
+// the event's ErrorInfo so breaker accounting and the router's own terminal
+// event do not have to re-parse the message.
+type deploymentStreamError struct {
+	message string
+	info    *llm.StreamErrorInfo
+	// forwarded is set when the failing event was already sent downstream.
+	forwarded bool
+}
+
+func (e *deploymentStreamError) Error() string { return e.message }
+
+func streamFailureForwarded(err error) bool {
+	var streamErr *deploymentStreamError
+	return errors.As(err, &streamErr) && streamErr.forwarded
+}
+
+// isRetryableStreamFailure extends IsTransient with the kinds a deployment
+// reported in-band: an upstream timeout or an unavailable deployment is worth
+// trying elsewhere even when its message matches no transient pattern.
+func isRetryableStreamFailure(err error) bool {
+	var streamErr *deploymentStreamError
+	if errors.As(err, &streamErr) && streamErr.info != nil {
+		switch streamErr.info.Kind {
+		case llm.ErrKindTimeout, llm.ErrKindUnavailable:
+			return true
+		}
+	}
+	return IsTransient(err)
+}
+
+// routerErrorEvent builds the router's terminal error event. It is only used
+// while the caller's context is live, so it never reports a cancellation.
+func routerErrorEvent(err error, route *llm.ResolvedRoute) core.FluxStreamEvent {
+	event := core.FluxStreamEvent{Type: "error", Route: cloneResolvedRoute(route)}
+	if err != nil {
+		event.Error = err.Error()
+	}
+	var streamErr *deploymentStreamError
+	if errors.As(err, &streamErr) && streamErr.info != nil {
+		info := *streamErr.info
+		event.ErrorInfo = &info
+	}
+	return event
+}
+
+// isStreamFailureEvent reports whether a deployment event ends its stream
+// with a failure. Warning-marked "error" events are non-fatal diagnostics
+// (for example a reasoning-only response) that precede the real terminal,
+// matching provider/core and the engine.
+func isStreamFailureEvent(event core.FluxStreamEvent) bool {
+	return event.Type == "error" && event.Warning == "" || event.Type == "cancelled" || event.Type == "canceled"
+}
+
+// providerFailureEvent normalizes a failure a deployment reported while the
+// caller's context is still live. A "cancelled" event or a canceled kind here
+// comes from a context the deployment owns (for example an adapter-side
+// timeout), so it is an upstream failure the router may fail over from, not
+// the caller's cancellation.
+func providerFailureEvent(event core.FluxStreamEvent, deploymentID string) core.FluxStreamEvent {
+	cancelled := event.Type == "cancelled" || event.Type == "canceled"
+	event.Type = "error"
+	if event.Error == "" {
+		event.Error = fmt.Sprintf("deployment %q stream failed", deploymentID)
+	}
+	if event.ErrorInfo == nil && !cancelled {
+		return event
+	}
+	info := llm.StreamErrorInfo{Kind: llm.ErrKindCanceled}
+	if event.ErrorInfo != nil {
+		info = *event.ErrorInfo
+	}
+	switch info.Kind {
+	case llm.ErrKindCanceled:
+		info.Kind, info.Retryable = llm.ErrKindUnavailable, true
+	case llm.ErrKindTimeout:
+		info.Retryable = true
+	}
+	event.ErrorInfo = &info
+	return event
+}
+
+func cloneResolvedRoute(route *llm.ResolvedRoute) *llm.ResolvedRoute {
+	if route == nil {
+		return nil
+	}
+	cloned := *route
+	return &cloned
+}
+
+func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- core.FluxStreamEvent, messages []core.FluxMessage, opts core.ChatOptions, target deploymentTarget, deploymentID string, route llm.ResolvedRoute) (fallback bool, err error) {
 	offering, adapter, err := r.resolveOffering(target, deploymentID)
 	if err != nil {
 		return true, err
@@ -448,58 +613,81 @@ func (r *DeploymentRouter) streamWithDeployment(ctx context.Context, out chan<- 
 	if err != nil {
 		return true, err
 	}
+	if stream == nil {
+		return true, fmt.Errorf("deployment %q returned a nil stream", deploymentID)
+	}
 	defer stream.Close()
 	emitted := false
 	var buffered []core.FluxStreamEvent
-	flush := func() {
+	annotate := func(event core.FluxStreamEvent) core.FluxStreamEvent {
+		if event.Route == nil {
+			event.Route = cloneResolvedRoute(&route)
+		}
+		return event
+	}
+	flush := func() bool {
 		for _, event := range buffered {
-			select {
-			case out <- event:
-			case <-ctx.Done():
-				return
+			if !sendRouterEvent(ctx, out, event) {
+				return false
 			}
 		}
 		buffered = nil
+		return true
 	}
 	for event := range stream.Events {
-		if event.Type == "error" {
+		event = annotate(event)
+		if isStreamFailureEvent(event) {
+			if ctx.Err() != nil {
+				// The caller cancelled or its deadline passed; the deployment
+				// is only reporting the consequence.
+				return false, ctx.Err()
+			}
+			event = providerFailureEvent(event, deploymentID)
+			failure := &deploymentStreamError{message: event.Error, info: event.ErrorInfo}
 			if emitted {
-				select {
-				case out <- event:
-				case <-ctx.Done():
-				}
-				return false, fmt.Errorf("%s", event.Error)
+				failure.forwarded = sendRouterEvent(ctx, out, event)
+				return false, failure
 			}
-			if event.Error == "" {
-				return true, fmt.Errorf("deployment %q stream failed before output", deploymentID)
-			}
-			return true, fmt.Errorf("%s", event.Error)
+			return true, failure
 		}
 		if isOutputEvent(event) {
 			emitted = true
-			flush()
-			select {
-			case out <- event:
-			case <-ctx.Done():
+			if !flush() || !sendRouterEvent(ctx, out, event) {
 				return false, ctx.Err()
 			}
 			continue
 		}
-		if emitted || event.Type == "done" {
-			flush()
-			select {
-			case out <- event:
-			case <-ctx.Done():
+		if event.Type == "done" {
+			if !flush() || !sendRouterEvent(ctx, out, event) {
 				return false, ctx.Err()
 			}
 			return false, nil
 		}
+		if emitted {
+			// Usage, TTFT and provider-block events arrive between output
+			// events; only done ends a successful stream.
+			if !sendRouterEvent(ctx, out, event) {
+				return false, ctx.Err()
+			}
+			continue
+		}
+		// Before output, hold non-output events so a failover leaves no
+		// trace of the failed deployment.
 		buffered = append(buffered, event)
 	}
-	if emitted {
-		return false, fmt.Errorf("deployment %q stream ended after output without done", deploymentID)
+	if ctx.Err() != nil {
+		return false, ctx.Err()
 	}
-	return true, fmt.Errorf("deployment %q stream ended before output", deploymentID)
+	if emitted {
+		return false, &deploymentStreamError{
+			message: fmt.Sprintf("deployment %q stream ended after output without done", deploymentID),
+			info:    &llm.StreamErrorInfo{Kind: llm.ErrKindTruncated, Retryable: true},
+		}
+	}
+	return true, &deploymentStreamError{
+		message: fmt.Sprintf("deployment %q stream ended before output", deploymentID),
+		info:    &llm.StreamErrorInfo{Kind: llm.ErrKindUnavailable, Retryable: true},
+	}
 }
 
 func (r *DeploymentRouter) resolveOffering(target deploymentTarget, deploymentID string) (catalog.ModelOffering, DeploymentAdapter, error) {
@@ -760,9 +948,60 @@ func (r *DeploymentRouter) recordSuccess(deploymentID string) {
 	}
 }
 
-// recordFailure records a deployment failure on its circuit breaker.
-func (r *DeploymentRouter) recordFailure(deploymentID string) {
+// recordFailure records a deployment failure on its circuit breaker when the
+// error says something about the deployment's health. Callers must not pass a
+// failure caused by the caller's own cancellation or deadline.
+func (r *DeploymentRouter) recordFailure(deploymentID string, err error) {
+	if !shouldRecordBreakerFailure(err) {
+		return
+	}
 	if cb := r.getCircuitBreaker(deploymentID); cb != nil {
 		cb.Failure()
 	}
+}
+
+// shouldRecordBreakerFailure reports whether err describes the deployment's
+// health. A deadline that reaches it is the deployment timing out (net/http's
+// Client.Timeout matches context.DeadlineExceeded), because callers filter out
+// their own cancellation first.
+func shouldRecordBreakerFailure(err error) bool {
+	if err == nil || errors.Is(err, context.Canceled) {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var streamErr *deploymentStreamError
+	if errors.As(err, &streamErr) && streamErr.info != nil {
+		switch streamErr.info.Kind {
+		case llm.ErrKindTimeout, llm.ErrKindUnavailable, llm.ErrKindTruncated:
+			return true
+		case llm.ErrKindRateLimited, llm.ErrKindAuth, llm.ErrKindContextExceeded,
+			llm.ErrKindContentFiltered, llm.ErrKindInvalidRequest, llm.ErrKindCanceled:
+			return false
+		}
+		// Internal or unknown kinds fall through to the message checks.
+	}
+	var providerErr *core.FluxError
+	if errors.As(err, &providerErr) {
+		if providerErr.StatusCode == 0 {
+			return true
+		}
+		switch providerErr.StatusCode {
+		case 500, 502, 503, 504, 529:
+			return true
+		default:
+			return false
+		}
+	}
+	message := strings.ToLower(err.Error())
+	for _, code := range []string{"500", "502", "503", "504", "529"} {
+		if strings.Contains(message, "http "+code) || strings.Contains(message, "http/"+code) || strings.Contains(message, "status "+code) || strings.Contains(message, "code "+code) {
+			return true
+		}
+	}
+	if strings.Contains(message, "429") || strings.Contains(message, "rate limit") {
+		return false
+	}
+	return strings.Contains(message, "connection") || strings.Contains(message, "transport") || strings.Contains(message, "unavailable") || strings.Contains(message, "bad gateway") || strings.Contains(message, "service unavailable")
 }

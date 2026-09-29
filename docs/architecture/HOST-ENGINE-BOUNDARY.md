@@ -153,6 +153,24 @@ additive and must be ignored safely. Flux emits tool requests; Rho authorizes
 and executes tools, appends results to its history, and begins the next model
 turn.
 
+Every stream ends exactly once:
+
+- `done` — success; `Err()` stays nil.
+- `cancelled` — the request context was cancelled or its deadline passed. The
+  event carries `ErrorInfo` (`canceled` or `timeout`) and the route, and
+  `Err()` then reports `ErrorCancelled` wrapping the context's error. Hosts
+  should treat it as the user's cancellation, not as a failure, and must not
+  emit a second terminal for it.
+- no terminal event — `Next` returns false and `Err()` reports the provider
+  failure with the code from its `ErrorInfo` (`rate_limited`,
+  `authentication_failed`, `context_exceeded`, `invalid_request`, or
+  `provider_unavailable`) and `Retryable`. An upstream timeout is such a
+  retryable failure, never `cancelled`.
+
+Cancelling the context releases the provider request at once, but the
+terminal event waits for the host to read it, so hosts must still read to the
+end or call `Close`.
+
 ## Readiness
 
 Preflight has two explicit modes:

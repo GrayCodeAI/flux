@@ -6,8 +6,12 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 func testLogger() *slog.Logger {
@@ -36,6 +40,20 @@ func TestSSEParseBasicEvents(t *testing.T) {
 	}
 	if events[1].Event != "done" || events[1].Data != "bye" {
 		t.Errorf("event[1] = %+v, want event=done data=bye", events[1])
+	}
+}
+
+func TestSSEParseFlushesUnterminatedFinalEvent(t *testing.T) {
+	t.Parallel()
+	body := io.NopCloser(strings.NewReader("data: [DONE]"))
+	ch := ParseSSEStream(context.Background(), body, testLogger())
+
+	var events []SSEEvent
+	for event := range ch {
+		events = append(events, event)
+	}
+	if len(events) != 1 || events[0].Data != "[DONE]" {
+		t.Fatalf("events = %+v, want one [DONE] event", events)
 	}
 }
 
@@ -110,6 +128,387 @@ func TestSSEParseContextCancellation(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("channel did not close after context cancellation")
 	}
+}
+
+func TestCoordinateStreamResultTerminalContract(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		events      []FluxStreamEvent
+		wantTypes   []string
+		wantErrKind string
+	}{
+		{
+			name:        "truncated",
+			events:      []FluxStreamEvent{{Type: "content", Content: "partial"}},
+			wantTypes:   []string{"content", "error"},
+			wantErrKind: llm.ErrKindTruncated,
+		},
+		{
+			name: "fatal before done",
+			events: []FluxStreamEvent{
+				{Type: "error", Error: "connection reset"},
+				{Type: "done"},
+			},
+			wantTypes: []string{"error"},
+		},
+		{
+			name: "terminal before late usage",
+			events: []FluxStreamEvent{
+				{Type: "done", StopReason: "stop"},
+				{Type: "usage", Usage: &FluxUsage{TotalTokens: 1}},
+			},
+			wantTypes: []string{"done"},
+		},
+		{
+			name: "warning before done",
+			events: []FluxStreamEvent{
+				{Type: "error", Error: "empty response", Warning: "empty response"},
+				{Type: "done", StopReason: "stop"},
+			},
+			wantTypes: []string{"error", "done"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			events := make(chan FluxStreamEvent, len(tt.events))
+			for _, event := range tt.events {
+				events <- event
+			}
+			close(events)
+
+			var closes atomic.Int32
+			source := llm.NewStreamResult(events, "request-1", func() { closes.Add(1) })
+			result := CoordinateStreamResult(context.Background(), source)
+			var got []FluxStreamEvent
+			for event := range result.Events {
+				got = append(got, event)
+			}
+			result.Close()
+
+			if len(got) != len(tt.wantTypes) {
+				t.Fatalf("events = %+v, want types %v", got, tt.wantTypes)
+			}
+			for i, wantType := range tt.wantTypes {
+				if got[i].Type != wantType {
+					t.Fatalf("event[%d].Type = %q, want %q", i, got[i].Type, wantType)
+				}
+				if got[i].RequestID != "request-1" {
+					t.Fatalf("event[%d].RequestID = %q, want request-1", i, got[i].RequestID)
+				}
+			}
+			if tt.wantErrKind != "" {
+				last := got[len(got)-1]
+				if last.ErrorInfo == nil || last.ErrorInfo.Kind != tt.wantErrKind || !last.ErrorInfo.Retryable {
+					t.Fatalf("terminal error info = %+v, want retryable kind %q", last.ErrorInfo, tt.wantErrKind)
+				}
+			}
+			if count := closes.Load(); count != 1 {
+				t.Fatalf("source close count = %d, want 1", count)
+			}
+		})
+	}
+}
+
+func TestTransformStreamResultCloseUnblocksForwarder(t *testing.T) {
+	t.Parallel()
+
+	events := make(chan FluxStreamEvent)
+	streamCtx, cancel := context.WithCancel(context.Background())
+	producerDone := make(chan struct{})
+	go func() {
+		defer close(events)
+		defer close(producerDone)
+		<-streamCtx.Done()
+	}()
+
+	var closes atomic.Int32
+	source := llm.NewStreamResult(events, "request-2", func() {
+		closes.Add(1)
+		cancel()
+	})
+	result := TransformStreamResult(context.Background(), source, func(_ context.Context, event FluxStreamEvent) (FluxStreamEvent, error) {
+		return event, nil
+	})
+	result.Close()
+
+	select {
+	case <-producerDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("producer did not stop after stream close")
+	}
+	select {
+	case _, ok := <-result.Events:
+		if ok {
+			t.Fatal("unexpected event after close")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("transformed event channel did not close")
+	}
+	result.Close()
+	if got := closes.Load(); got != 1 {
+		t.Fatalf("source close count = %d, want 1", got)
+	}
+}
+
+func TestCoordinateStreamResultCancellationEmitsTerminal(t *testing.T) {
+	t.Parallel()
+
+	events := make(chan FluxStreamEvent)
+	ctx, cancel := context.WithCancel(context.Background())
+	result := CoordinateStreamResult(ctx, llm.NewStreamResult(events, "request-cancel", nil))
+	cancel()
+
+	select {
+	case event, ok := <-result.Events:
+		if !ok {
+			t.Fatal("stream closed without cancellation terminal")
+		}
+		if event.Type != "cancelled" || event.ErrorInfo == nil || event.ErrorInfo.Kind != llm.ErrKindCanceled {
+			t.Fatalf("event = %+v, want canceled terminal", event)
+		}
+		if event.RequestID != "request-cancel" {
+			t.Fatalf("request ID = %q, want request-cancel", event.RequestID)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("cancellation terminal was not emitted")
+	}
+
+	select {
+	case _, ok := <-result.Events:
+		if ok {
+			t.Fatal("unexpected event after cancellation terminal")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("stream did not close after cancellation terminal")
+	}
+	result.Close()
+}
+
+func TestTransformStreamResultCancelWhileForwardingEmitsTerminal(t *testing.T) {
+	t.Parallel()
+
+	for run := 0; run < 100; run++ {
+		source := make(chan FluxStreamEvent)
+		ctx, cancel := context.WithCancel(context.Background())
+		result := CoordinateStreamResult(ctx, llm.NewStreamResult(source, "request-busy", nil))
+
+		// The unbuffered wrapper takes the event and parks delivering it,
+		// because nobody is reading yet; then the caller cancels.
+		source <- FluxStreamEvent{Type: "content", Content: "pending"}
+		cancel()
+
+		var last FluxStreamEvent
+		deadline := time.After(time.Second)
+	drain:
+		for {
+			select {
+			case event, ok := <-result.Events:
+				if !ok {
+					break drain
+				}
+				last = event
+			case <-deadline:
+				t.Fatalf("run %d: stream did not close", run)
+			}
+		}
+		if last.Type != "cancelled" || last.ErrorInfo == nil || last.ErrorInfo.Kind != llm.ErrKindCanceled {
+			t.Fatalf("run %d: last event = %+v, want cancelled terminal", run, last)
+		}
+		result.Close()
+	}
+}
+
+func TestTransformStreamResultCancelReleasesSourceBeforeTerminalDelivery(t *testing.T) {
+	t.Parallel()
+
+	source := make(chan FluxStreamEvent, 1)
+	released := make(chan struct{})
+	var releaseOnce sync.Once
+	ctx, cancel := context.WithCancel(context.Background())
+	result := CoordinateStreamResult(ctx, llm.NewStreamResult(source, "request-idle", func() {
+		releaseOnce.Do(func() { close(released) })
+	}))
+
+	// Fill the one-slot output buffer, then park the forwarder on the next
+	// event: the consumer never reads.
+	source <- FluxStreamEvent{Type: "content", Content: "one"}
+	waitFor(t, func() bool { return len(result.Events) == cap(result.Events) })
+	source <- FluxStreamEvent{Type: "content", Content: "two"}
+	cancel()
+
+	select {
+	case <-released:
+	case <-time.After(time.Second):
+		t.Fatal("source was not released while the terminal waited for the consumer")
+	}
+
+	// Close unblocks the parked forwarder, which then closes the channel.
+	result.Close()
+	deadline := time.After(time.Second)
+	for {
+		select {
+		case _, ok := <-result.Events:
+			if !ok {
+				return
+			}
+		case <-deadline:
+			t.Fatal("Close did not unblock the forwarder")
+		}
+	}
+}
+
+func TestStreamResultCloseTwiceIsNoop(t *testing.T) {
+	t.Parallel()
+
+	var closes int32
+	source := make(chan FluxStreamEvent)
+	result := CoordinateStreamResult(context.Background(), llm.NewStreamResult(source, "", func() {
+		atomic.AddInt32(&closes, 1)
+	}))
+	result.Close()
+	result.Close()
+	if _, ok := <-result.Events; ok {
+		t.Fatal("expected no events after Close")
+	}
+	if got := atomic.LoadInt32(&closes); got != 1 {
+		t.Fatalf("source closed %d times, want 1", got)
+	}
+}
+
+func waitFor(t *testing.T, condition func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for !condition() {
+		if time.Now().After(deadline) {
+			t.Fatal("condition not reached")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func TestCoordinateStreamResultSkipsIdenticalCoordination(t *testing.T) {
+	t.Parallel()
+
+	type ctxKey struct{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	source := make(chan FluxStreamEvent, 1)
+	inner := CoordinateStreamResult(ctx, llm.NewStreamResult(source, "request-1", nil))
+	defer inner.Close()
+
+	if got := CoordinateStreamResult(ctx, inner); got != inner {
+		t.Fatal("same context: want the coordinated stream returned unchanged")
+	}
+	if got := CoordinateStreamResult(context.WithValue(ctx, ctxKey{}, "v"), inner); got != inner {
+		t.Fatal("value-only derived context: want the coordinated stream returned unchanged")
+	}
+	child, cancelChild := context.WithCancel(ctx)
+	defer cancelChild()
+	wrapped := []*StreamResult{
+		CoordinateStreamResult(child, inner),
+		CoordinateStreamResult(ctx, llm.NewStreamResult(inner.Events, "other-request", nil)),
+		TransformStreamResult(ctx, inner, func(_ context.Context, e FluxStreamEvent) (FluxStreamEvent, error) { return e, nil }),
+	}
+	for i, got := range wrapped {
+		if got.Events == inner.Events {
+			t.Fatalf("case %d (cancellable child, other request ID, handler): want a new lifecycle wrapper", i)
+		}
+		got.Close()
+	}
+}
+
+func TestCoordinatedStreamRegistryIsReleased(t *testing.T) {
+	t.Parallel()
+
+	source := make(chan FluxStreamEvent, 1)
+	result := CoordinateStreamResult(context.Background(), llm.NewStreamResult(source, "", nil))
+	source <- FluxStreamEvent{Type: "done"}
+	if event := <-result.Events; event.Type != "done" {
+		t.Fatalf("event = %+v, want done", event)
+	}
+	if _, ok := <-result.Events; ok {
+		t.Fatal("stream did not close after done")
+	}
+	waitFor(t, func() bool {
+		_, ok := coordinatedStreams.Load(result.Events)
+		return !ok
+	})
+}
+
+func TestUsageDeltaHandlesCumulativeAndSplitUsage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("cumulative", func(t *testing.T) {
+		var state *FluxUsage
+		var prompt, completion int
+		for _, usage := range []*FluxUsage{
+			{PromptTokens: 1, CompletionTokens: 1, TotalTokens: 2},
+			{PromptTokens: 1, CompletionTokens: 2, TotalTokens: 3},
+		} {
+			delta := UsageDelta(state, usage)
+			state = MergeUsage(state, usage)
+			if delta != nil {
+				prompt += delta.PromptTokens
+				completion += delta.CompletionTokens
+			}
+		}
+		if prompt != 1 || completion != 2 {
+			t.Fatalf("prompt=%d completion=%d, want 1/2", prompt, completion)
+		}
+	})
+
+	t.Run("split then aggregate", func(t *testing.T) {
+		var state *FluxUsage
+		var prompt, completion int
+		for _, usage := range []*FluxUsage{
+			{PromptTokens: 10},
+			{CompletionTokens: 5},
+			{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
+		} {
+			delta := UsageDelta(state, usage)
+			state = MergeUsage(state, usage)
+			if delta != nil {
+				prompt += delta.PromptTokens
+				completion += delta.CompletionTokens
+			}
+		}
+		if prompt != 10 || completion != 5 {
+			t.Fatalf("prompt=%d completion=%d, want 10/5", prompt, completion)
+		}
+	})
+
+	t.Run("reverse split then aggregate", func(t *testing.T) {
+		var state *FluxUsage
+		var prompt, completion int
+		for _, usage := range []*FluxUsage{
+			{CompletionTokens: 5},
+			{PromptTokens: 10},
+			{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
+		} {
+			delta := UsageDelta(state, usage)
+			state = MergeUsage(state, usage)
+			if delta != nil {
+				prompt += delta.PromptTokens
+				completion += delta.CompletionTokens
+			}
+		}
+		if prompt != 10 || completion != 5 {
+			t.Fatalf("prompt=%d completion=%d, want 10/5", prompt, completion)
+		}
+	})
+
+	t.Run("duplicate aggregate", func(t *testing.T) {
+		usage := &FluxUsage{PromptTokens: 3, CompletionTokens: 5, TotalTokens: 8}
+		state := MergeUsage(nil, usage)
+		if delta := UsageDelta(state, usage); delta != nil {
+			t.Fatalf("delta = %+v, want nil", delta)
+		}
+	})
 }
 
 // --- ProcessAnthropicStream tests ---
@@ -433,6 +832,26 @@ func TestSSEOpenAIUsage(t *testing.T) {
 	}
 }
 
+func TestSSEOpenAIChannelCloseDoesNotSynthesizeDone(t *testing.T) {
+	t.Parallel()
+	events := make(chan SSEEvent, 1)
+	events <- SSEEvent{Data: `{"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}`}
+	close(events)
+
+	var results []FluxStreamEvent
+	for event := range ProcessOpenAIStream(context.Background(), events, testLogger()) {
+		results = append(results, event)
+	}
+	if len(results) == 0 {
+		t.Fatal("expected content event")
+	}
+	for _, event := range results {
+		if event.Type == "done" {
+			t.Fatalf("unexpected done event: %+v", event)
+		}
+	}
+}
+
 // --- ParseInlineToolCalls tests ---
 
 func TestSSEParseInlineToolCallsCanopywave(t *testing.T) {
@@ -513,5 +932,185 @@ functions.read_file:1
 	path, _ := toolCalls[1].Arguments["path"].(string)
 	if path != "/tmp/test.go" {
 		t.Errorf("second tool args[path] = %q, want /tmp/test.go", path)
+	}
+}
+
+// --- ensureStreamErrorInfo / inferStreamErrorKind tests ---
+
+func TestInferStreamErrorKind(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		message     string
+		wantKind    string
+		wantRetries bool
+	}{
+		{"empty message defaults to internal", "", llm.ErrKindInternal, true},
+		{"unrecognized defaults to internal", "something went sideways", llm.ErrKindInternal, true},
+		{"rate limit", "Rate limit exceeded for gpt-4o", llm.ErrKindRateLimited, true},
+		{"too many requests", "429 Too Many Requests", llm.ErrKindRateLimited, true},
+		{"quota", "You exceeded your current quota", llm.ErrKindRateLimited, true},
+		{"overloaded is unavailable not rate limited", "overloaded_error", llm.ErrKindUnavailable, true},
+		{"invalid api key", "invalid_api_key", llm.ErrKindAuth, false},
+		{"unauthorized", "Unauthorized", llm.ErrKindAuth, false},
+		{"forbidden", "Forbidden", llm.ErrKindAuth, false},
+		{"context length", "maximum context length is 8192 tokens", llm.ErrKindContextExceeded, false},
+		{"too many tokens", "too many tokens for this model", llm.ErrKindContextExceeded, false},
+		{"content filter", "blocked by content_filter", llm.ErrKindContentFiltered, false},
+		{"deadline", "context deadline exceeded", llm.ErrKindTimeout, true},
+		{"timed out", "request timed out", llm.ErrKindTimeout, true},
+		{"canceled", "context canceled", llm.ErrKindCanceled, false},
+		{"cancelled spelling", "context cancelled", llm.ErrKindCanceled, false},
+		// Provider prose that merely contains "cancelled" is not a
+		// cancellation; only the consumer's own context can say that.
+		{"provider prose is not a cancellation", "request was cancelled upstream", llm.ErrKindInternal, true},
+		{"client timeout is a timeout", "context deadline exceeded (Client.Timeout exceeded while reading body)", llm.ErrKindTimeout, true},
+		{"unavailable", "503 service unavailable", llm.ErrKindUnavailable, true},
+		{"bad gateway", "502 bad gateway", llm.ErrKindUnavailable, true},
+		{"invalid request", "invalid_request_error: bad param", llm.ErrKindInvalidRequest, false},
+		// Status digits alone are intentionally not matched: they false-positive
+		// against ordinary content such as model ids and token counts.
+		{"bare digits are not matched", "model gpt-4o-2501 returned 500 tokens", llm.ErrKindInternal, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			kind, retryable := inferStreamErrorKind(tt.message)
+			if kind != tt.wantKind {
+				t.Errorf("kind = %q, want %q", kind, tt.wantKind)
+			}
+			if retryable != tt.wantRetries {
+				t.Errorf("retryable = %v, want %v", retryable, tt.wantRetries)
+			}
+		})
+	}
+}
+
+func TestEnsureStreamErrorInfo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		event       FluxStreamEvent
+		wantNil     bool
+		wantKind    string
+		wantRetries bool
+	}{
+		{
+			name:    "content event untouched",
+			event:   FluxStreamEvent{Type: "content", Content: "hi"},
+			wantNil: true,
+		},
+		{
+			name:    "done event untouched",
+			event:   FluxStreamEvent{Type: "done"},
+			wantNil: true,
+		},
+		{
+			name:     "error gains inferred info",
+			event:    FluxStreamEvent{Type: "error", Error: "rate limit exceeded"},
+			wantKind: llm.ErrKindRateLimited, wantRetries: true,
+		},
+		{
+			name:     "bare error gains internal",
+			event:    FluxStreamEvent{Type: "error", Error: "boom"},
+			wantKind: llm.ErrKindInternal, wantRetries: true,
+		},
+		{
+			name:     "cancelled with unknown message stays canceled",
+			event:    FluxStreamEvent{Type: "cancelled", Error: "stopped"},
+			wantKind: llm.ErrKindCanceled, wantRetries: false,
+		},
+		{
+			name:     "cancelled with deadline is timeout",
+			event:    FluxStreamEvent{Type: "cancelled", Error: "context deadline exceeded"},
+			wantKind: llm.ErrKindTimeout, wantRetries: false,
+		},
+		{
+			name:     "cancelled with provider wording stays canceled",
+			event:    FluxStreamEvent{Type: "cancelled", Error: "rate limit"},
+			wantKind: llm.ErrKindCanceled, wantRetries: false,
+		},
+		{
+			name: "existing ErrorInfo is preserved",
+			event: FluxStreamEvent{
+				Type:      "error",
+				Error:     "rate limit exceeded",
+				ErrorInfo: &llm.StreamErrorInfo{Kind: llm.ErrKindAuth, StatusCode: 401},
+			},
+			wantKind: llm.ErrKindAuth, wantRetries: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := ensureStreamErrorInfo(tt.event)
+			if tt.wantNil {
+				if got.ErrorInfo != nil {
+					t.Fatalf("ErrorInfo = %+v, want nil", got.ErrorInfo)
+				}
+				return
+			}
+			if got.ErrorInfo == nil {
+				t.Fatal("ErrorInfo = nil, want populated")
+			}
+			if got.ErrorInfo.Kind != tt.wantKind {
+				t.Errorf("Kind = %q, want %q", got.ErrorInfo.Kind, tt.wantKind)
+			}
+			if got.ErrorInfo.Retryable != tt.wantRetries {
+				t.Errorf("Retryable = %v, want %v", got.ErrorInfo.Retryable, tt.wantRetries)
+			}
+			// A preserved StatusCode must survive the pass-through.
+			if tt.event.ErrorInfo != nil && got.ErrorInfo.StatusCode != tt.event.ErrorInfo.StatusCode {
+				t.Errorf("StatusCode = %d, want %d", got.ErrorInfo.StatusCode, tt.event.ErrorInfo.StatusCode)
+			}
+		})
+	}
+}
+
+// endlessReader repeats line forever, like a hostile peer that never ends an
+// SSE event.
+type endlessReader struct {
+	line   []byte
+	offset int
+}
+
+func (r *endlessReader) Read(p []byte) (int, error) {
+	n := 0
+	for n < len(p) {
+		copied := copy(p[n:], r.line[r.offset:])
+		n += copied
+		r.offset = (r.offset + copied) % len(r.line)
+	}
+	return n, nil
+}
+
+func (r *endlessReader) Close() error { return nil }
+
+func TestParseSSEStreamRejectsOversizedEvent(t *testing.T) {
+	t.Parallel()
+
+	line := []byte("data: " + strings.Repeat("x", 64*1024) + "\n")
+	ch := ParseSSEStream(context.Background(), &endlessReader{line: line}, testLogger())
+
+	deadline := time.After(10 * time.Second)
+	for {
+		select {
+		case event, ok := <-ch:
+			if !ok {
+				t.Fatal("stream closed without reporting the oversized event")
+			}
+			if event.Event != "error" {
+				t.Fatalf("event = %+v, want only the size error", event)
+			}
+			if !strings.Contains(event.Data, "exceeds") {
+				t.Fatalf("error = %q, want size limit error", event.Data)
+			}
+			if _, ok := <-ch; ok {
+				t.Fatal("stream kept going after the size error")
+			}
+			return
+		case <-deadline:
+			t.Fatal("parser kept accumulating an unbounded event")
+		}
 	}
 }
