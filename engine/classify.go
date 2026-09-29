@@ -21,6 +21,9 @@ func classify(operation string, route Route, err error) error {
 	switch {
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 		code = ErrorCancelled
+	case errors.Is(err, core.ErrStreamTruncated):
+		code = ErrorProviderUnavailable
+		retryable = true
 	default:
 		var providerErr *core.FluxError
 		if errors.As(err, &providerErr) {

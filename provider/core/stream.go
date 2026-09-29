@@ -10,7 +10,10 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/flux/llm"
 )
 
 // SSEEvent represents a single Server-Sent Event.
@@ -26,11 +29,435 @@ const (
 	sseScannerMaxBuf  = 2 * 1024 * 1024
 	// StreamChannelBuffer is the default buffer size for provider event channels.
 	StreamChannelBuffer = 256
+	// SSEMaxEventBytes caps the accumulated fields of a single SSE event.
+	// Each line is already capped at 2 MiB; without this cap a peer could
+	// stream an unbounded run of data lines into one event and exhaust memory.
+	SSEMaxEventBytes = 16 * 1024 * 1024
 )
+
+// errSSEEventTooLarge reports an SSE event over SSEMaxEventBytes.
+var errSSEEventTooLarge = fmt.Errorf("SSE event exceeds %d bytes", SSEMaxEventBytes)
+
+type closeOnceReadCloser struct {
+	io.ReadCloser
+	once sync.Once
+	err  error
+}
+
+func (r *closeOnceReadCloser) Close() error {
+	r.once.Do(func() { r.err = r.ReadCloser.Close() })
+	return r.err
+}
+
+func BindStreamBody(ctx context.Context, body io.ReadCloser, cancel context.CancelFunc) (io.ReadCloser, context.CancelFunc) {
+	wrapped := &closeOnceReadCloser{ReadCloser: body}
+	stop := context.AfterFunc(ctx, func() { _ = wrapped.Close() })
+	var once sync.Once
+	cleanup := func() {
+		once.Do(func() {
+			cancel()
+			stop()
+			_ = wrapped.Close()
+		})
+	}
+	return wrapped, cleanup
+}
+
+var ErrStreamTruncated = errors.New("stream ended before terminal event")
+
+// coordinatedStreams records, for the Events channel of every live stream
+// produced by TransformStreamResult, the context and request ID coordinating
+// it. CoordinateStreamResult uses it to avoid stacking an identical lifecycle
+// wrapper (and its goroutine and buffer) on every layer a stream crosses.
+var coordinatedStreams sync.Map // map[<-chan FluxStreamEvent]streamCoordination
+
+type streamCoordination struct {
+	done      <-chan struct{}
+	requestID string
+}
+
+type StreamEventHandler func(context.Context, FluxStreamEvent) (FluxStreamEvent, error)
+
+// TransformStreamResult forwards source through handler (nil forwards events
+// unchanged) and enforces the stream lifecycle: exactly one terminal event
+// (done, error or cancelled), a terminal cancelled event carrying
+// StreamErrorInfo when ctx ends, a truncated error when the source closes
+// without a terminal, and StreamErrorInfo on every terminal error.
+//
+// Cancelling ctx releases the source immediately, but the terminal event is
+// delivered like any other: the forwarding goroutine exits once the consumer
+// reads it or calls Close. Consumers must therefore read Events until it is
+// closed or call Close; Close is idempotent.
+func TransformStreamResult(ctx context.Context, source *StreamResult, handler StreamEventHandler) *StreamResult {
+	if source == nil {
+		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	streamCtx, cancel := context.WithCancel(ctx)
+	out := make(chan FluxStreamEvent, cap(source.Events))
+	closed := make(chan struct{})
+	var releaseOnce, closeOnce sync.Once
+	// releaseSource stops the upstream request and its connection.
+	releaseSource := func() {
+		releaseOnce.Do(func() {
+			cancel()
+			source.Close()
+		})
+	}
+	closeSource := func() {
+		closeOnce.Do(func() {
+			close(closed)
+			releaseSource()
+		})
+	}
+
+	// emitCancellation delivers the terminal cancelled event when the
+	// caller's context ended. Close (closed) suppresses it: the consumer has
+	// stopped listening. The upstream is released before the terminal is
+	// handed over, so a consumer that cancels but neither drains nor closes
+	// the stream strands this goroutine only, not the provider connection.
+	emitCancellation := func() {
+		if channelClosed(closed) || ctx.Err() == nil {
+			return
+		}
+		releaseSource()
+		_ = sendTerminalEvent(out, cancellationEvent(source.RequestID, ctx.Err()), closed)
+	}
+
+	var events <-chan FluxStreamEvent = out
+	coordinatedStreams.Store(events, streamCoordination{done: ctx.Done(), requestID: source.RequestID})
+
+	go func() {
+		defer close(out)
+		defer coordinatedStreams.Delete(events)
+		defer closeSource()
+
+		for {
+			select {
+			case <-streamCtx.Done():
+				emitCancellation()
+				return
+			case event, ok := <-source.Events:
+				if streamCtx.Err() != nil {
+					emitCancellation()
+					return
+				}
+				sourceEnded := !ok
+				if sourceEnded {
+					if ctx.Err() != nil {
+						emitCancellation()
+						return
+					}
+					event = FluxStreamEvent{
+						Type:      "error",
+						Error:     ErrStreamTruncated.Error(),
+						RequestID: source.RequestID,
+						ErrorInfo: &llm.StreamErrorInfo{Kind: llm.ErrKindTruncated, Retryable: true},
+					}
+				}
+				if handler != nil {
+					var err error
+					event, err = handler(streamCtx, event)
+					if err != nil {
+						if streamCtx.Err() != nil {
+							emitCancellation()
+							return
+						}
+						event = streamErrorEvent(source.RequestID, err)
+					}
+				}
+				if event.RequestID == "" {
+					event.RequestID = source.RequestID
+				}
+				event = ensureStreamErrorInfo(event)
+				if !sendLifecycleEvent(streamCtx, out, event) {
+					// Cancelled while the consumer was behind: the pending
+					// event is dropped, but the terminal still follows.
+					emitCancellation()
+					return
+				}
+				if sourceEnded || isTerminalStreamEvent(event) {
+					return
+				}
+			}
+		}
+	}()
+
+	return llm.NewStreamResult(out, source.RequestID, closeSource)
+}
+
+// CoordinateStreamResult applies the TransformStreamResult lifecycle to source
+// without transforming events. A source that TransformStreamResult already
+// coordinates under a context with the same Done channel (the same context,
+// or one derived only by adding values) and the same request ID is returned
+// unchanged: another wrapper would behave identically.
+func CoordinateStreamResult(ctx context.Context, source *StreamResult) *StreamResult {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if source != nil {
+		if value, ok := coordinatedStreams.Load(source.Events); ok {
+			if c, _ := value.(streamCoordination); c.done == ctx.Done() && c.requestID == source.RequestID {
+				return source
+			}
+		}
+	}
+	return TransformStreamResult(ctx, source, nil)
+}
+
+func cancellationEvent(requestID string, err error) FluxStreamEvent {
+	kind := llm.ErrKindCanceled
+	if errors.Is(err, context.DeadlineExceeded) {
+		kind = llm.ErrKindTimeout
+	}
+	message := "context canceled"
+	if err != nil {
+		message = err.Error()
+	}
+	return FluxStreamEvent{
+		Type:      "cancelled",
+		Error:     message,
+		RequestID: requestID,
+		ErrorInfo: &llm.StreamErrorInfo{Kind: kind},
+	}
+}
+
+func streamErrorEvent(requestID string, err error) FluxStreamEvent {
+	kind := llm.ErrKindInternal
+	retryable := false
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		kind = llm.ErrKindTimeout
+		retryable = true
+	case errors.Is(err, context.Canceled):
+		kind = llm.ErrKindCanceled
+	default:
+		retryable = true
+	}
+	message := "stream transform failed"
+	if err != nil {
+		message = err.Error()
+	}
+	return FluxStreamEvent{
+		Type:      "error",
+		Error:     message,
+		RequestID: requestID,
+		ErrorInfo: &llm.StreamErrorInfo{Kind: kind, Retryable: retryable},
+	}
+}
+
+// ensureStreamErrorInfo guarantees that every terminal error-ish event leaving
+// this package carries a populated ErrorInfo, so consumers can dispatch on
+// Kind/Retryable instead of re-parsing the human-readable Error string.
+//
+// Events that already carry ErrorInfo are returned untouched — the producer or
+// a handler knows more than can be inferred from the message alone. Non-error
+// events are returned untouched.
+func ensureStreamErrorInfo(event FluxStreamEvent) FluxStreamEvent {
+	if event.ErrorInfo != nil {
+		return event
+	}
+	switch event.Type {
+	case "error":
+		kind, retryable := inferStreamErrorKind(event.Error)
+		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind, Retryable: retryable}
+	case "cancelled", "canceled":
+		// A cancellation is never an internal fault and never retryable; only
+		// a deadline distinguishes it from a plain cancel.
+		kind := llm.ErrKindCanceled
+		if inferred, _ := inferStreamErrorKind(event.Error); inferred == llm.ErrKindTimeout {
+			kind = llm.ErrKindTimeout
+		}
+		event.ErrorInfo = &llm.StreamErrorInfo{Kind: kind}
+	}
+	return event
+}
+
+// inferStreamErrorKind maps a provider error message onto a portable
+// StreamErrorInfo kind and retryability.
+//
+// Like classifyProviderError, it keys on common cross-provider substrings
+// rather than a per-provider table, so it does not become a maintenance sink
+// across flux's many providers. Matching is deliberately textual only: bare
+// HTTP status digits are not matched, because they false-positive against
+// ordinary content such as model ids and token counts. Only Go's own
+// "context canceled" text maps to the canceled kind: a bare "cancelled" is as
+// likely to be provider prose ("subscription cancelled") as a cancellation.
+// Whether a canceled or timeout kind is the caller's cancellation is decided
+// by the consumer from its own context, never from this inference.
+// Unrecognized messages fall back to internal/retryable, matching
+// streamErrorEvent.
+func inferStreamErrorKind(message string) (kind string, retryable bool) {
+	msg := strings.ToLower(message)
+	switch {
+	case msg == "":
+		return llm.ErrKindInternal, true
+	case containsAny(msg, "rate limit", "too many requests", "rate_limit",
+		"quota exceeded", "exceeded your current quota", "insufficient_quota",
+		"insufficient credits", "billing"):
+		return llm.ErrKindRateLimited, true
+	case containsAny(msg, "api key", "api_key", "unauthorized", "unauthenticated",
+		"authentication", "invalid_api_key", "forbidden", "permission denied"):
+		return llm.ErrKindAuth, false
+	case containsAny(msg, "context length", "context window", "maximum context",
+		"too many tokens", "context_length_exceeded", "context_exceeded"):
+		return llm.ErrKindContextExceeded, false
+	case containsAny(msg, "content filter", "content_filter", "content_policy",
+		"responsible_ai", "content_filtered"):
+		return llm.ErrKindContentFiltered, false
+	case containsAny(msg, "deadline exceeded", "timeout", "timed out", "etimedout"):
+		return llm.ErrKindTimeout, true
+	case containsAny(msg, "context canceled", "context cancelled"):
+		return llm.ErrKindCanceled, false
+	case containsAny(msg, "service unavailable", "bad gateway", "temporarily unavailable",
+		"upstream error", "overloaded_error", "overloaded"):
+		return llm.ErrKindUnavailable, true
+	case containsAny(msg, "invalid request", "invalid_request", "invalid_request_error",
+		"unsupported parameter", "unprocessable"):
+		return llm.ErrKindInvalidRequest, false
+	default:
+		return llm.ErrKindInternal, true
+	}
+}
+
+func containsAny(haystack string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(haystack, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func isTerminalStreamEvent(event FluxStreamEvent) bool {
+	return event.Type == "done" || event.Type == "cancelled" || event.Type == "canceled" || event.Type == "error" && event.Warning == ""
+}
+
+func sendLifecycleEvent(ctx context.Context, out chan<- FluxStreamEvent, event FluxStreamEvent) bool {
+	select {
+	case out <- event:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func sendTerminalEvent(out chan<- FluxStreamEvent, event FluxStreamEvent, closed <-chan struct{}) bool {
+	select {
+	case out <- event:
+		return true
+	case <-closed:
+		return false
+	}
+}
+
+func channelClosed(closed <-chan struct{}) bool {
+	select {
+	case <-closed:
+		return true
+	default:
+		return false
+	}
+}
+
+func CloneUsage(usage *FluxUsage) *FluxUsage {
+	if usage == nil {
+		return nil
+	}
+	cloned := *usage
+	return &cloned
+}
+
+func MergeUsage(previous, current *FluxUsage) *FluxUsage {
+	if previous == nil {
+		merged := CloneUsage(current)
+		if merged != nil && merged.TotalTokens == 0 {
+			merged.TotalTokens = merged.PromptTokens + merged.CompletionTokens
+		}
+		return merged
+	}
+	if current == nil {
+		return CloneUsage(previous)
+	}
+	merged := &FluxUsage{
+		PromptTokens:        max(previous.PromptTokens, current.PromptTokens),
+		CompletionTokens:    max(previous.CompletionTokens, current.CompletionTokens),
+		CacheCreationTokens: max(previous.CacheCreationTokens, current.CacheCreationTokens),
+		CacheReadTokens:     max(previous.CacheReadTokens, current.CacheReadTokens),
+		ThinkingTokens:      max(previous.ThinkingTokens, current.ThinkingTokens),
+	}
+	merged.TotalTokens = max(usageTotal(previous), usageTotal(current), merged.PromptTokens+merged.CompletionTokens)
+	return merged
+}
+
+func UsageDelta(previous, current *FluxUsage) *FluxUsage {
+	if current == nil {
+		return nil
+	}
+	if previous == nil {
+		delta := CloneUsage(current)
+		if delta.TotalTokens == 0 {
+			delta.TotalTokens = delta.PromptTokens + delta.CompletionTokens
+		}
+		if usageIsZero(delta) {
+			return nil
+		}
+		return delta
+	}
+
+	delta := &FluxUsage{
+		PromptTokens:        positiveUsageDelta(current.PromptTokens, previous.PromptTokens),
+		CompletionTokens:    positiveUsageDelta(current.CompletionTokens, previous.CompletionTokens),
+		CacheCreationTokens: positiveUsageDelta(current.CacheCreationTokens, previous.CacheCreationTokens),
+		CacheReadTokens:     positiveUsageDelta(current.CacheReadTokens, previous.CacheReadTokens),
+		ThinkingTokens:      positiveUsageDelta(current.ThinkingTokens, previous.ThinkingTokens),
+	}
+	currentTotal := usageTotal(current)
+	previousTotal := usageTotal(previous)
+	switch {
+	case current.TotalTokens == 0:
+		delta.TotalTokens = delta.PromptTokens + delta.CompletionTokens
+	case currentTotal > previousTotal:
+		delta.TotalTokens = currentTotal - previousTotal
+	case delta.PromptTokens > 0 || delta.CompletionTokens > 0:
+		delta.TotalTokens = delta.PromptTokens + delta.CompletionTokens
+	}
+	if usageIsZero(delta) {
+		return nil
+	}
+	return delta
+}
+
+func positiveUsageDelta(current, previous int) int {
+	if current <= previous {
+		return 0
+	}
+	return current - previous
+}
+
+func usageTotal(usage *FluxUsage) int {
+	if usage.TotalTokens > 0 {
+		return usage.TotalTokens
+	}
+	return usage.PromptTokens + usage.CompletionTokens
+}
+
+func usageIsZero(usage *FluxUsage) bool {
+	return usage.PromptTokens == 0 &&
+		usage.CompletionTokens == 0 &&
+		usage.CacheCreationTokens == 0 &&
+		usage.CacheReadTokens == 0 &&
+		usage.ThinkingTokens == 0 &&
+		usage.TotalTokens == 0
+}
 
 // ParseSSEStream reads an SSE stream and sends events to a channel.
 // The goroutine closes the channel and body when done or context is cancelled.
-// Scanner errors are emitted as SSEEvent with Event="error" so callers can detect truncation.
+// Scanner errors, and an event larger than SSEMaxEventBytes, are emitted as
+// SSEEvent with Event="error" so callers can detect truncation.
 func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger) <-chan SSEEvent {
 	ch := make(chan SSEEvent, sseChannelBuffer)
 	go func() {
@@ -41,41 +468,60 @@ func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger
 		scanner.Buffer(make([]byte, 0, sseScannerInitBuf), sseScannerMaxBuf)
 
 		var event, data strings.Builder
-		for scanner.Scan() {
+		dispatch := func() bool {
+			if data.Len() == 0 {
+				event.Reset()
+				data.Reset()
+				return true
+			}
 			select {
+			case ch <- SSEEvent{Event: strings.TrimSpace(event.String()), Data: strings.TrimSpace(data.String())}:
+				event.Reset()
+				data.Reset()
+				return true
 			case <-ctx.Done():
+				return false
+			}
+		}
+
+		fits := func(field string) bool {
+			return event.Len()+data.Len()+len(field)+1 <= SSEMaxEventBytes
+		}
+
+		var readErr error
+		for scanner.Scan() {
+			if ctx.Err() != nil {
 				return
-			default:
 			}
 
 			line := scanner.Text()
 			if line == "" {
-				if data.Len() > 0 {
-					select {
-					case ch <- SSEEvent{Event: strings.TrimSpace(event.String()), Data: strings.TrimSpace(data.String())}:
-					case <-ctx.Done():
-						return
-					}
+				if !dispatch() {
+					return
 				}
-				event.Reset()
-				data.Reset()
 				continue
 			}
-			if strings.HasPrefix(line, "event:") {
-				event.WriteString(strings.TrimPrefix(line, "event:"))
-			} else if strings.HasPrefix(line, "data:") {
+			if field, ok := strings.CutPrefix(line, "event:"); ok {
+				if !fits(field) {
+					readErr = errSSEEventTooLarge
+					break
+				}
+				event.WriteString(field)
+			} else if field, ok := strings.CutPrefix(line, "data:"); ok {
+				if !fits(field) {
+					readErr = errSSEEventTooLarge
+					break
+				}
 				if data.Len() > 0 {
 					data.WriteByte('\n')
 				}
-				data.WriteString(strings.TrimPrefix(line, "data:"))
+				data.WriteString(field)
 			}
 		}
-		if err := scanner.Err(); err != nil {
-			// Context cancellation produces "context canceled" from the
-			// scanner when the body is closed; that is the expected
-			// shutdown path, not a stream error. Skip the warning and
-			// the synthetic error event so callers (and operators) don't
-			// see noise for every normal cancel/close.
+		if readErr == nil {
+			readErr = scanner.Err()
+		}
+		if err := readErr; err != nil {
 			if ctxErr := ctx.Err(); ctxErr != nil || errors.Is(err, context.Canceled) {
 				return
 			}
@@ -84,7 +530,9 @@ func ParseSSEStream(ctx context.Context, body io.ReadCloser, logger *slog.Logger
 			case ch <- SSEEvent{Event: "error", Data: fmt.Sprintf("stream read error: %v", err)}:
 			case <-ctx.Done():
 			}
+			return
 		}
+		dispatch()
 	}()
 	return ch
 }
@@ -479,7 +927,6 @@ func ProcessOpenAIStreamWithOpts(ctx context.Context, sseEvents <-chan SSEEvent,
 				return
 			case evt, ok := <-sseEvents:
 				if !ok {
-					finish("")
 					return
 				}
 				// Propagate SSE-level errors

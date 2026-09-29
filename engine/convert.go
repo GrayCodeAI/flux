@@ -85,14 +85,42 @@ func cloneStringMap(in map[string]string) map[string]string {
 	return out
 }
 
+func cloneRoute(route *Route) *Route {
+	if route == nil {
+		return nil
+	}
+	cloned := *route
+	return &cloned
+}
+
+// mergeRoute keeps the route the provider reported and fills any blank
+// identity fields from the route the engine planned.
+func mergeRoute(actual *Route, planned Route) *Route {
+	if actual == nil {
+		return cloneRoute(&planned)
+	}
+	merged := *actual
+	if merged.Provider == "" {
+		merged.Provider = planned.Provider
+	}
+	if merged.Model == "" {
+		merged.Model = planned.Model
+	}
+	if !merged.DeploymentRouting {
+		merged.DeploymentRouting = planned.DeploymentRouting
+	}
+	return &merged
+}
+
 // fromClientResponse attaches the resolved route to a client response. The
-// engine and the client both speak the canonical contract response type, so
-// this only sets the route the engine selected.
+// engine and the client both speak the canonical contract response type. A
+// route the provider already reported (for example the deployment that served
+// the request after a failover) wins; the planned route only fills blanks.
 func fromClientResponse(resp *core.FluxResponse, route Route) *GenerateResponse {
 	if resp == nil {
-		return &GenerateResponse{Route: &route}
+		return &GenerateResponse{Route: cloneRoute(&route)}
 	}
-	resp.Route = &route
+	resp.Route = mergeRoute(resp.Route, route)
 	return resp
 }
 

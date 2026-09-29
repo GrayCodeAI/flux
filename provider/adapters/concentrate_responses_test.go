@@ -518,3 +518,59 @@ func TestNormalizeToolParamsDoesNotMutateCallerMap(t *testing.T) {
 		t.Fatalf("explicit additionalProperties = %#v, want preserved true", got["additionalProperties"])
 	}
 }
+
+type endlessSSEReader struct{ line []byte }
+
+func (r endlessSSEReader) Read(p []byte) (int, error) {
+	n := 0
+	for n < len(p) {
+		n += copy(p[n:], r.line)
+	}
+	return n, nil
+}
+
+func TestConcentrateSSEReaderBoundsEventSize(t *testing.T) {
+	t.Parallel()
+	tests := map[string][]byte{
+		"many data lines":           []byte("data: " + strings.Repeat("x", 64*1024) + "\n"),
+		"one line without newlines": []byte(strings.Repeat("y", 64*1024)),
+	}
+	for name, line := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			done := make(chan error, 1)
+			go func() {
+				_, err := newSSEReader(endlessSSEReader{line: line}).Read()
+				done <- err
+			}()
+			select {
+			case err := <-done:
+				if !errors.Is(err, errConcentrateEventTooLarge) {
+					t.Fatalf("error = %v, want size limit error", err)
+				}
+			case <-time.After(10 * time.Second):
+				t.Fatal("reader kept accumulating an unbounded event")
+			}
+		})
+	}
+}
+
+func TestConcentrateSSEReaderParsesEvents(t *testing.T) {
+	t.Parallel()
+	body := "event: response.output_text.delta\r\n" +
+		"data: {\"type\":\"response.output_text.delta\",\n" +
+		"data: \"delta\":\"hi\"}\n\n" +
+		"data: [DONE]\n"
+	reader := newSSEReader(strings.NewReader(body))
+	event, err := reader.Read()
+	if err != nil || event.Type != "response.output_text.delta" || event.Delta != "hi" {
+		t.Fatalf("event = %+v, err = %v, want the delta event", event, err)
+	}
+	event, err = reader.Read()
+	if err != nil || event.Type != "response.completed" {
+		t.Fatalf("event = %+v, err = %v, want completion", event, err)
+	}
+	if _, err := reader.Read(); !errors.Is(err, io.EOF) {
+		t.Fatalf("err = %v, want EOF", err)
+	}
+}

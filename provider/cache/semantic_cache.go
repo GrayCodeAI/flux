@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -115,6 +114,9 @@ func (cp *CachedProvider) Chat(ctx context.Context, messages []FluxMessage, opts
 	}
 
 	key := buildCacheKey(messages, opts)
+	if key == "" {
+		return cp.inner.Chat(ctx, messages, opts)
+	}
 
 	// Fast path: read lock lookup.
 	if resp, ok := cp.get(key); ok {
@@ -293,53 +295,36 @@ func (cp *CachedProvider) evictExpiredLocked() {
 	}
 }
 
-// buildCacheKey produces a deterministic hash of the request parameters that
-// affect the response: system prompt, messages, model, and temperature.
+// cacheKeyVersion is part of every key so a change to the key derivation can
+// never serve an entry written under the old one.
+const cacheKeyVersion = "flux-response-cache/v2"
+
+// buildCacheKey hashes everything that can change a response: every
+// ChatOptions field (tools, tool choice, max tokens, stop sequences, sampling,
+// thinking, response format, identity and routing hints) and every message
+// field (content parts, images, tool calls and results, provider blocks). A
+// spurious miss only costs a provider call; a spurious hit serves a reply
+// produced for a different request.
+//
+// JSON is the request's wire form, so requests that encode identically are
+// identical to the provider. It returns "" when the request cannot be
+// encoded (for example an unsupported Conversation value or a NaN sampling
+// parameter); callers must then bypass the cache.
 func buildCacheKey(messages []FluxMessage, opts ChatOptions) string {
-	h := sha256.New()
-
-	// Model.
-	h.Write([]byte("model:"))
-	h.Write([]byte(opts.Model))
-	h.Write([]byte{0})
-
-	// System prompt.
-	h.Write([]byte("system:"))
-	h.Write([]byte(opts.System))
-	h.Write([]byte{0})
-
-	// Temperature (serialized as string for determinism).
-	h.Write([]byte("temp:"))
-	if opts.Temperature != nil {
-		_, _ = fmt.Fprintf(h, "%.6f", *opts.Temperature)
-	} else {
-		h.Write([]byte("nil"))
+	payload, err := json.Marshal(struct {
+		Version  string        `json:"version"`
+		Options  ChatOptions   `json:"options"`
+		Messages []FluxMessage `json:"messages"`
+	}{cacheKeyVersion, opts, messages})
+	if err != nil {
+		return ""
 	}
-	h.Write([]byte{0})
-
-	// Messages: serialize role + content for each message.
-	for _, m := range messages {
-		h.Write([]byte("msg:"))
-		h.Write([]byte(m.Role))
-		h.Write([]byte{0})
-		h.Write([]byte(m.Content))
-		h.Write([]byte{0})
-		// Include tool calls and results if present.
-		if len(m.ToolUse) > 0 {
-			b, _ := json.Marshal(m.ToolUse)
-			h.Write(b)
-		}
-		if len(m.ToolResults) > 0 {
-			b, _ := json.Marshal(m.ToolResults)
-			h.Write(b)
-		}
-		h.Write([]byte{0})
-	}
-
-	return hex.EncodeToString(h.Sum(nil))
+	sum := sha256.Sum256(payload)
+	return hex.EncodeToString(sum[:])
 }
 
-// BuildCacheKey returns the deterministic key used by the response cache.
+// BuildCacheKey returns the deterministic key used by the response cache, or
+// "" when the request cannot be cached.
 func BuildCacheKey(messages []FluxMessage, opts ChatOptions) string {
 	return buildCacheKey(messages, opts)
 }

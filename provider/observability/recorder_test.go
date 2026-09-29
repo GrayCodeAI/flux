@@ -438,3 +438,63 @@ func TestRecorderRedactor(t *testing.T) {
 		t.Errorf("recorded content = %q, want redacted", c.Interactions[0].Response.Content)
 	}
 }
+
+// lingeringStreamProvider sends content and done but closes its channel only
+// when release is closed, like a provider that finishes reading the body
+// after the terminal event.
+type lingeringStreamProvider struct {
+	release chan struct{}
+}
+
+func (p *lingeringStreamProvider) Chat(context.Context, []FluxMessage, ChatOptions) (*FluxResponse, error) {
+	return &FluxResponse{Content: "unused"}, nil
+}
+
+func (p *lingeringStreamProvider) StreamChat(context.Context, []FluxMessage, ChatOptions) (*StreamResult, error) {
+	ch := make(chan FluxStreamEvent, 2)
+	ch <- FluxStreamEvent{Type: "content", Content: "lingering content"}
+	ch <- FluxStreamEvent{Type: "done", StopReason: "stop"}
+	go func() {
+		<-p.release
+		close(ch)
+	}()
+	return NewStreamResult(ch, nil), nil
+}
+
+func (p *lingeringStreamProvider) Ping(context.Context) error { return nil }
+func (p *lingeringStreamProvider) Name() string               { return "lingering" }
+
+func TestRecorderStreamSavesInteractionBeforeTerminal(t *testing.T) {
+	t.Parallel()
+	inner := &lingeringStreamProvider{release: make(chan struct{})}
+	defer close(inner.release)
+	path := filepath.Join(t.TempDir(), "stream.json")
+	rec, err := NewRecorderProvider(inner, path, RecordModeRecord)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := rec.StreamChat(context.Background(), []FluxMessage{{Role: "user", Content: "stream me"}}, ChatOptions{Model: "m"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Close()
+	for evt := range result.Events {
+		if evt.Type == "done" {
+			break
+		}
+	}
+
+	// The consumer has the terminal event; the interaction must already be
+	// recorded even though the provider has not closed its channel yet.
+	if err := rec.Save(); err != nil {
+		t.Fatal(err)
+	}
+	c, err := LoadCassette(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Interactions) != 1 || c.Interactions[0].Response.Content != "lingering content" || c.Interactions[0].Response.FinishReason != "stop" {
+		t.Fatalf("interactions = %+v, want the streamed response recorded", c.Interactions)
+	}
+}

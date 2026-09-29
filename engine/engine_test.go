@@ -240,6 +240,77 @@ func TestStreamFatalErrorEventStillTerminal(t *testing.T) {
 	}
 }
 
+func TestStreamSilentSourceCloseIsTruncated(t *testing.T) {
+	sourceEvents := make(chan core.FluxStreamEvent)
+	close(sourceEvents)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := newStream(ctx, cancel, llm.NewStreamResult(sourceEvents, "", nil), Route{Provider: "mock", Model: "mock/model"})
+	defer stream.Close()
+
+	var events []Event
+	for stream.Next() {
+		events = append(events, stream.Event())
+	}
+	err := stream.Err()
+	if !IsCode(err, ErrorProviderUnavailable) {
+		t.Fatalf("error = %v, want provider_unavailable", err)
+	}
+	if !errors.Is(err, core.ErrStreamTruncated) {
+		t.Fatalf("error = %v, want stream truncation cause", err)
+	}
+	if len(events) != 1 || events[0].Type != EventRouteSelected {
+		t.Fatalf("events = %+v, want only route_selected", events)
+	}
+}
+
+func TestStreamContextCancellationEmitsTerminalAndErr(t *testing.T) {
+	sourceEvents := make(chan core.FluxStreamEvent)
+	ctx, cancel := context.WithCancel(context.Background())
+	stream := newStream(ctx, cancel, llm.NewStreamResult(sourceEvents, "request-cancel", nil), Route{Provider: "mock", Model: "mock/model"})
+
+	if !stream.Next() {
+		t.Fatal("expected route event")
+	}
+	cancel()
+
+	if !stream.Next() {
+		t.Fatal("expected cancellation event")
+	}
+	event := stream.Event()
+	if event.Type != EventCancelled || event.ErrorInfo == nil || event.ErrorInfo.Kind != llm.ErrKindCanceled {
+		t.Fatalf("event = %+v, want cancellation terminal", event)
+	}
+	if stream.Next() {
+		t.Fatal("unexpected event after cancellation terminal")
+	}
+	if err := stream.Err(); !IsCode(err, ErrorCancelled) {
+		t.Fatalf("error = %v, want cancelled", err)
+	}
+	_ = stream.Close()
+}
+
+func TestStreamCancelledBeforeFirstEventStillTerminates(t *testing.T) {
+	// forward races the route_selected emit against the already-cancelled
+	// context; every run must still end with the cancelled terminal.
+	for i := 0; i < 200; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		stream := newStream(ctx, cancel, llm.NewStreamResult(make(chan core.FluxStreamEvent), "request-early", nil), Route{Provider: "mock", Model: "mock/model"})
+		var last Event
+		for stream.Next() {
+			last = stream.Event()
+		}
+		if last.Type != EventCancelled {
+			t.Fatalf("run %d: last event = %+v, want cancelled terminal", i, last)
+		}
+		if err := stream.Err(); !IsCode(err, ErrorCancelled) {
+			t.Fatalf("run %d: error = %v, want cancelled", i, err)
+		}
+		_ = stream.Close()
+	}
+}
+
 func TestSnapshotPublishesCapabilities(t *testing.T) {
 	compiled := &catalog.CompiledCatalog{
 		ModelsByID: map[string]catalog.Model{

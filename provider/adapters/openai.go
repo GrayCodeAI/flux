@@ -553,13 +553,16 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []core.FluxMessage, op
 
 // StreamChat sends a streaming request.
 func (c *OpenAIClient) StreamChat(ctx context.Context, messages []core.FluxMessage, opts core.ChatOptions) (*core.StreamResult, error) {
-	req, body, err := c.buildOpenAIRequest(ctx, messages, opts, true)
+	streamCtx, cancel := context.WithCancel(ctx)
+	req, body, err := c.buildOpenAIRequest(streamCtx, messages, opts, true)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
-	resp, err := c.doRequestWithMimoAuthRetry(ctx, req, body)
+	resp, err := c.doRequestWithMimoAuthRetry(streamCtx, req, body)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("flux: %s stream request failed: %w", c.providerName, err)
 	}
 
@@ -568,14 +571,16 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messages []core.FluxMessa
 	if resp.StatusCode != 200 {
 		detail, readErr := core.ParseProviderError(resp.Body)
 		_ = resp.Body.Close()
+		cancel()
 		return nil, core.FormatAPIError(c.providerName, "stream", resp.StatusCode, requestID, detail, readErr)
 	}
 
-	streamCtx, cancel := context.WithCancel(ctx)
-	sseEvents := core.ParseSSEStream(streamCtx, resp.Body, c.logger)
+	streamBody, cleanup := core.BindStreamBody(streamCtx, resp.Body, cancel)
+	sseEvents := core.ParseSSEStream(streamCtx, streamBody, c.logger)
 	events := core.ProcessOpenAIStream(streamCtx, sseEvents, c.logger)
+	result := llm.NewStreamResult(events, requestID, cleanup)
 
-	return llm.NewStreamResult(events, requestID, cancel), nil
+	return core.CoordinateStreamResult(ctx, result), nil
 }
 
 // Ping checks connectivity.

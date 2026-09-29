@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/flux/catalog"
+	"github.com/GrayCodeAI/flux/llm"
 	"github.com/GrayCodeAI/flux/provider/core"
 )
 
@@ -115,6 +116,77 @@ func TestDeploymentRouterFallsBackAcrossStages(t *testing.T) {
 	}
 	if resp.Content != "from vertex" && resp.Content != "from bedrock" {
 		t.Fatalf("expected fallback deployment, got %q", resp.Content)
+	}
+}
+
+func TestDeploymentRouterReportsActualRouteAndAttempts(t *testing.T) {
+	t.Parallel()
+	primary := &deploymentMockProvider{name: "direct", err: fmt.Errorf("HTTP 503 unavailable")}
+	fallback := &deploymentMockProvider{name: "vertex"}
+	r, err := NewDeploymentRouter(DeploymentRouterOptions{
+		Catalog: testCompiledCatalog(t),
+		Deployments: map[string]DeploymentAdapter{
+			"anthropic-direct": {Provider: primary},
+			"anthropic-vertex": {Provider: fallback},
+		},
+		Routing: RoutingPolicy{Providers: map[string][]RoutingStage{"anthropic": {
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-direct", Weight: 100}}},
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-vertex", Weight: 100}}},
+		}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := r.Chat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Route == nil || resp.Route.DeploymentID != "anthropic-vertex" || resp.Route.Attempts != 2 {
+		t.Fatalf("route = %+v, want fallback deployment and two attempts", resp.Route)
+	}
+}
+
+func TestDeploymentRouterStreamReportsRouteEvents(t *testing.T) {
+	t.Parallel()
+	primary := &deploymentMockProvider{name: "direct", streamErr: fmt.Errorf("HTTP 503")}
+	fallback := &deploymentMockProvider{name: "vertex"}
+	r, err := NewDeploymentRouter(DeploymentRouterOptions{
+		Catalog: testCompiledCatalog(t),
+		Deployments: map[string]DeploymentAdapter{
+			"anthropic-direct": {Provider: primary},
+			"anthropic-vertex": {Provider: fallback},
+		},
+		Routing: RoutingPolicy{Providers: map[string][]RoutingStage{"anthropic": {
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-direct", Weight: 100}}},
+			{Deployments: []DeploymentChoice{{DeploymentID: "anthropic-vertex", Weight: 100}}},
+		}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream, err := r.StreamChat(context.Background(), []core.FluxMessage{{Role: "user", Content: "hi"}}, core.ChatOptions{Model: "anthropic/claude-sonnet-4-6"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stream.Close()
+	var routes []string
+	var finalRoute string
+	for event := range stream.Events {
+		if event.Route != nil {
+			routes = append(routes, event.Route.DeploymentID)
+		}
+		if event.Type == "done" {
+			finalRoute = event.Route.DeploymentID
+		}
+		if event.Type == "error" {
+			t.Fatalf("unexpected stream error: %s", event.Error)
+		}
+	}
+	if len(routes) < 2 || routes[0] != "anthropic-direct" || routes[1] != "anthropic-vertex" {
+		t.Fatalf("route events = %v, want direct then vertex", routes)
+	}
+	if finalRoute != "anthropic-vertex" {
+		t.Fatalf("terminal route = %q, want vertex", finalRoute)
 	}
 }
 
@@ -407,5 +479,38 @@ func TestDeploymentRouterRetriesPreferDifferentEndpoint(t *testing.T) {
 	}
 	if healthy.callCount != 1 {
 		t.Fatalf("healthy deployment called %d times; want 1", healthy.callCount)
+	}
+}
+
+func TestShouldRecordBreakerFailure(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"nil", nil, false},
+		{"caller canceled", context.Canceled, false},
+		{"upstream deadline", fmt.Errorf("post: %w", context.DeadlineExceeded), true},
+		{"stream timeout kind", &deploymentStreamError{message: "read timed out", info: &llm.StreamErrorInfo{Kind: llm.ErrKindTimeout}}, true},
+		{"stream auth kind", &deploymentStreamError{message: "HTTP 503 but auth", info: &llm.StreamErrorInfo{Kind: llm.ErrKindAuth}}, false},
+		{"stream internal kind uses message", &deploymentStreamError{message: "connection reset", info: &llm.StreamErrorInfo{Kind: llm.ErrKindInternal}}, true},
+		{"server error status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 503}, true},
+		{"overloaded status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 529}, true},
+		{"rate limited status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 429}, false},
+		{"bad request status", &core.FluxError{Provider: "p", Op: "chat", StatusCode: 400}, false},
+		{"transport error without status", &core.FluxError{Provider: "p", Op: "chat", Message: "dial tcp: connection refused"}, true},
+		{"http 502 in message", fmt.Errorf("upstream returned HTTP 502"), true},
+		{"rate limit message", fmt.Errorf("429 rate limit exceeded"), false},
+		{"connection reset", fmt.Errorf("read: connection reset by peer"), true},
+		{"invalid request message", fmt.Errorf("invalid_request_error: bad param"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := shouldRecordBreakerFailure(tt.err); got != tt.want {
+				t.Fatalf("shouldRecordBreakerFailure(%v) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
 	}
 }

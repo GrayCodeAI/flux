@@ -131,8 +131,10 @@ func StreamChatWithContinuation(ctx context.Context, p core.Provider, messages [
 				core.Emit(cancelCtx, outCh, core.FluxStreamEvent{Type: "error", Error: err.Error()})
 				return
 			}
+			stream = core.CoordinateStreamResult(cancelCtx, stream)
 
 			var stopReason string
+			sawDone := false
 			for evt := range stream.Events {
 				switch evt.Type {
 				case "content":
@@ -148,12 +150,11 @@ func StreamChatWithContinuation(ctx context.Context, p core.Provider, messages [
 					core.Emit(cancelCtx, outCh, evt)
 				case "done":
 					stopReason = evt.StopReason
+					sawDone = true
 				case "error":
 					core.Emit(cancelCtx, outCh, evt)
-					// Warning-marked error events are non-fatal health
-					// diagnostics emitted just before the terminal done;
-					// keep consuming so that done event is observed.
 					if evt.Warning == "" {
+						stream.Close()
 						return
 					}
 				default:
@@ -161,6 +162,9 @@ func StreamChatWithContinuation(ctx context.Context, p core.Provider, messages [
 				}
 			}
 			stream.Close()
+			if !sawDone {
+				return
+			}
 
 			// Don't continue if: not max_tokens, had tool calls, or hit token cap
 			if stopReason != "max_tokens" && stopReason != "length" {

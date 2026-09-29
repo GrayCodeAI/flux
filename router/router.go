@@ -144,7 +144,7 @@ func (r *Router) StreamChat(ctx context.Context, messages []core.FluxMessage, op
 	r.stratState.endInFlight(provider.Name())
 	if err == nil {
 		r.recordSuccess(provider.Name())
-		return sr, nil
+		return core.CoordinateStreamResult(ctx, sr), nil
 	}
 	if !IsTransient(err) {
 		return nil, err
@@ -156,7 +156,7 @@ func (r *Router) StreamChat(ctx context.Context, messages []core.FluxMessage, op
 		sr, err = fp.StreamChat(ctx, messages, opts)
 		if err == nil {
 			r.recordSuccess(fp.Name())
-			return sr, nil
+			return core.CoordinateStreamResult(ctx, sr), nil
 		}
 		if !IsTransient(err) {
 			return nil, err

@@ -15,12 +15,73 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Versioning: 
   credential lookup is required for the replicated route.
 - Client-owned OpenAI-compatible provider registration through
   `FluxClient.RegisterCustomProvider`.
+- Streams end with exactly one terminal event. When the caller's context is
+  cancelled or its deadline passes, `provider/core` stream wrappers emit a
+  terminal `cancelled` event and the engine emits `engine.EventCancelled`
+  (with `ErrorInfo` and the route) before `Err()` reports `ErrorCancelled`.
+  Hosts that switch on event types should handle `cancelled`. Cancelling
+  the context releases the provider request immediately, but the terminal is
+  delivered like any other event, so callers must still read the stream to
+  the end or call `Close` (as `StreamResult`, `EventStreamer` and
+  `engine.Stream` now document).
+- Terminal `error`/`cancelled` stream events leaving `provider/core` always
+  carry a `StreamErrorInfo` (`Kind`/`Retryable`), inferred from the provider
+  message when the adapter set none. Existing `ErrorInfo` is never
+  overwritten, and a cancellation never reports as an internal fault.
+- Responses and stream events report the route that actually served the
+  request: `ResolvedRoute.DeploymentID` and `Attempts` after a deployment
+  failover, a `route_changed` event per deployment attempt, and the route on
+  engine events.
 
 ### Fixed
 - Circuit breakers now admit at most one concurrent half-open probe and do
   not reserve probes during route filtering.
+- `DeploymentRouter` records a circuit-breaker failure only for errors that
+  describe the deployment's health (5xx, 529, transport failures). Caller
+  cancellation, rate limits and 4xx request errors no longer take a healthy
+  deployment out of rotation.
+- Upstream timeouts and provider messages that merely contain "cancelled" are
+  no longer mistaken for the caller's cancellation. Only the caller's own
+  context decides that: `DeploymentRouter` fails over from an upstream
+  timeout (including net/http `Client.Timeout`) and counts it against the
+  deployment, and the engine reports it as a retryable
+  `ErrorProviderUnavailable` instead of `ErrorCancelled`.
+- Engine stream errors keep the provider's classification: a stream error's
+  `ErrorInfo.Kind` now maps to `ErrorRateLimited`, `ErrorAuthentication`,
+  `ErrorContextExceeded` or `ErrorInvalidRequest` (content filtering
+  included), carries `Retryable`, and names the route's provider and model,
+  instead of every stream failure becoming a non-retryable
+  `ErrorProviderUnavailable`.
+- `DeploymentRouter` streams no longer end at the first non-output event
+  after output. A `usage`, `ttft` or `provider_block` event between content
+  events (Anthropic reports output usage before `message_stop`) used to end
+  the deployment stream, dropping the remaining content and `done` and
+  surfacing a truncation error.
+- `DeploymentRouter` treats warning-marked diagnostic `error` events (for
+  example a reasoning-only response) as non-fatal, like `provider/core` and
+  the engine already did, instead of ending the stream or failing over.
+- SSE parsing is bounded per event. `core.ParseSSEStream` capped each line at
+  2 MiB but accumulated an event's `data:` lines without limit, and the
+  Concentrate Responses reader bounded neither lines nor events, so a hostile
+  or broken endpoint could grow client memory indefinitely. Both now stop
+  with a stream error once one event exceeds `core.SSEMaxEventBytes`
+  (16 MiB).
+- The response cache key now covers the whole request. It hashed only the
+  model, system prompt, temperature and message text/tool data, so with
+  caching enabled a reply produced for one tool set, `max_tokens`, stop
+  sequence, sampling or thinking setting, response format, image or caller
+  was served to a different request. Keys now hash every `ChatOptions` and
+  message field under a versioned prefix, and requests that cannot be
+  encoded bypass the cache.
+- A `provider/core` stream cancelled while its consumer was behind (the
+  forwarder blocked delivering an event) now still ends with the terminal
+  `cancelled` event instead of closing silently.
 
 ### Changed
+- `core.CoordinateStreamResult` returns a stream unchanged when it is already
+  coordinated under the same context and request ID, so layers that re-wrap
+  an adapter's stream with the caller's context (`Router`, `ProtocolRouter`)
+  no longer add a goroutine and buffer per layer.
 - Removed process-global custom gateway and dynamic provider registration,
   the ambient `OPENAI_API_BASE` auto-registration path, and no-op API-key
   prefix inference. Custom gateways and endpoints now require explicit,

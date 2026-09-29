@@ -76,6 +76,7 @@ const (
 	EventWarning       = "warning"
 	EventProviderBlock = "provider_block"
 	EventTTFT          = "ttft"
+	EventCancelled     = "cancelled"
 	EventDone          = "done"
 )
 

@@ -228,6 +228,31 @@ func TestAdaptiveRateLimitProvider_StreamChat(t *testing.T) {
 	}
 }
 
+func TestAdaptiveRateLimitProvider_ResetsUsageAtContinuation(t *testing.T) {
+	t.Parallel()
+	inner := &mockProvider{name: "test", streamFn: func(context.Context, []FluxMessage, ChatOptions) (*StreamResult, error) {
+		events := make(chan FluxStreamEvent, 4)
+		usage := &FluxUsage{PromptTokens: 3, CompletionTokens: 5, TotalTokens: 8}
+		events <- FluxStreamEvent{Type: "usage", Usage: usage}
+		events <- FluxStreamEvent{Type: "continuation"}
+		events <- FluxStreamEvent{Type: "usage", Usage: usage}
+		events <- FluxStreamEvent{Type: "done", Usage: usage}
+		close(events)
+		return NewStreamResult(events, "", func() {}), nil
+	}}
+	provider := mustAdaptiveRateLimitProvider(t, inner, AdaptiveRateLimitConfig{})
+	result, err := provider.StreamChat(context.Background(), nil, ChatOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer result.Close()
+	for range result.Events {
+	}
+	if got := provider.Status().TotalTokens; got != 16 {
+		t.Fatalf("total tokens = %d, want 16", got)
+	}
+}
+
 func TestAdaptiveRateLimitProvider_UpdateFromHeaders(t *testing.T) {
 	t.Parallel()
 	inner := &mockProvider{name: "test"}
