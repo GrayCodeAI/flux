@@ -8,7 +8,8 @@ When starting any new work (feature, fix, refactor, chore), always create a feat
 
 ## Design Principles
 
-- **Model-agnostic** — single interface for 75+ LLM providers
+- **Model-agnostic** — single interface for the 28 provider gateways in
+  `catalog/registry/providers.go` (see README "Supported Providers")
 - **Host-neutral engine** — Flux owns provider routing, transport, caching,
   retry/fallback, and normalized telemetry; hosts own product UX and semantics
 - **Streaming-first** — all responses are streamed; blocking is opt-in
@@ -55,6 +56,12 @@ make ci                          # Full CI suite
   `StreamResult`, `ResponseFormat`, `ImageURLPart`, `InputAudioPart`) live in
   `llm` with no `engine` alias; widening the facade to cover them is a
   deliberate API change, not an incidental one.
+- The facade already exposes a frozen set of engine-internal symbols
+  (`credentials.Store`/`MapStore`, `operationsgraph.Input`/`Export`, the
+  `provider/resilience` rate-limit config and `provider/cache.CacheConfig`),
+  listed in `docs/architecture/HOST-ENGINE-BOUNDARY.md`. Changing them breaks
+  hosts. `engine/host_surface_test.go` fails whenever that reachable set
+  changes; update its list and the doc together, deliberately.
 - `provider/core.Provider` is the lower-level provider contract; keep its
   method set stable and use it across feature packages
 - Streaming tests need careful goroutine management
@@ -77,7 +84,7 @@ make ci                          # Full CI suite
 - **Provider interface**: `provider/core.Provider` with `Chat()`, `StreamChat()`, `Ping()`, `Name()`
 - **Core request types**: `provider/core.FluxMessage`, `FluxResponse`, `FluxTool`, `FluxUsage`
 - **Config struct**: `provider/core.FluxConfig` with `Provider`, `APIKey`, `BaseURL`, `Model`, `MaxRetries`
-- **Provider implementations**: `provider/adapters/AnthropicClient`, `OpenAIClient`, `GeminiClient`, etc.
+- **Provider implementations**: `provider/adapters/anthropic.go` (`AnthropicClient`), `openai.go` (`OpenAIClient`), `gemini.go` (`GeminiClient`), etc.
 - **Compatibility configs**: `provider/adapters.OpenAICompat`, `GrokCompat`, `OpenRouterCompat`
 - **Error type**: `FluxError` with `Provider`, `Op`, `StatusCode`, `RequestID`, `Message`, `Err` fields
 - **Stream types**: `StreamResult`, `SSEEvent`, `StreamEvent` — streaming is SSE-based
@@ -140,14 +147,14 @@ make ci                          # Full CI suite
 | Azure provider | `provider/adapters/azure.go` |
 | Provider registry | `provider/adapters/provider_registry.go` |
 | Provider compatibility | `provider/adapters/compat.go` (`OpenAICompat`, `GrokCompat`, etc.) |
-| SSE streaming | `provider/stream.go` (`parseSSEStream()`, `SSEEvent`) |
+| SSE streaming | `provider/core/stream.go` (`parseSSEStream()`, `SSEEvent`) |
 | Retry logic | `provider/core/retry.go` (`RetryConfig`, `backoffDelay()`, `shouldRetry()`) |
 | Rate limiting | `provider/resilience/ratelimit.go`, `provider/resilience/adaptive_ratelimit.go` |
 | Caching | `provider/cache/cache.go`, `provider/cache/semantic_cache.go` |
-| Fallback chains | `provider/resilience/fallback.go` |
+| Fallback chains | `router/router.go` (fallback providers), `router/deployment_router.go` (fallback deployment stages) |
 | Auto-continuation | `provider/resilience/continuation.go` |
-| Error types | `provider/errors.go` (`FluxError`, `IsRetriable()`, `IsAuthError()`) |
-| Error constants | `errors/errors.go` (API error messages, prompt-too-long parsing) |
+| Error types | `provider/core/errors.go` (`FluxError`, `IsRetriable()`, `IsAuthError()`) |
+| Error constants | `types/errors.go` (API error messages, prompt-too-long parsing) |
 | Model catalog | `catalog/` (pricing, context windows, capabilities per provider) |
 | Credentials | `credentials/` (key storage, env detection, scrubbing) — `HasSecret` is silent on miss (boolean predicate); `LookupSecret` logs `Debug` on `ErrNotFound` and `Warn` on real backend errors |
 | Mock provider | `provider/testkit/mock.go` |

@@ -11,7 +11,9 @@ Welcome to the Flux documentation. This directory contains detailed guides and r
 - **[Flux Enterprise](design/FLUX-ENTERPRISE.md)** — Enterprise surfaces
 - **[Provider Setup Guide](guides/CREDENTIAL-SETUP-FLOW.md)** — How to configure credentials and providers
 - **[Dynamic Model Discovery](guides/DYNAMIC-MODEL-DISCOVERY.md)** — Architecture and implementation details for live model discovery
-- **[OpenAPI](../api/openapi.yaml)** — HTTP surface (`/v1/chat/completions`, `/rerank`, `/ready`, `/health`)
+- **[Decentralized Flux routing](architecture/DECENTRALIZED-FLUX.md)** — Instance-local routing and signed peer manifests
+- **[Feature-oriented architecture](architecture/FEATURE-MONOREPO.md)** — Package layout and layering rules
+- **[OpenAPI](../api/openapi.yaml)** — Contract for the internal HTTP server in `internal/api` (health, prompt, nodes, aliases, analytics); `/v1/chat/completions`, `/rerank` and `/ready` are served but not yet in the spec. flux ships no binary that starts this server.
 
 ### Quick Links
 
@@ -34,16 +36,22 @@ The [`examples/`](../examples/) directory contains runnable code samples:
 docs/
 ├── README.md                          # This file
 ├── ARCHITECTURE.md                    # System architecture
-├── architecture/HOST-ENGINE-BOUNDARY.md
-├── design/FLUX-ENTERPRISE.md
-├── api/openapi.yaml                   # POST /v1/chat/completions, POST /rerank, GET /ready
-└── guides/
-    ├── CREDENTIAL-SETUP-FLOW.md
-    ├── DYNAMIC-MODEL-DISCOVERY.md
-    ├── RETRY-FALLBACK.md              # (planned) backoff, fallback chains, circuit breaker
-    ├── CACHING-AUDIT.md               # (planned) cache backends, audit sinks
-    └── ROUTING-STRATEGIES.md          # weighted, latency, cost-based
+├── architecture/
+│   ├── HOST-ENGINE-BOUNDARY.md        # Host contract, frozen engine-internal types
+│   ├── DECENTRALIZED-FLUX.md          # Instance-local routing, signed peer manifests
+│   └── FEATURE-MONOREPO.md            # Package layout and layering
+├── design/
+│   └── FLUX-ENTERPRISE.md             # Enterprise surfaces (design)
+├── guides/
+│   ├── CREDENTIAL-SETUP-FLOW.md
+│   └── DYNAMIC-MODEL-DISCOVERY.md
+└── plans/                             # Remediation plans and reviews
 ```
+
+The HTTP contract lives outside this directory, at
+[`../api/openapi.yaml`](../api/openapi.yaml). Retry/fallback, caching and
+routing strategies are described in [ARCHITECTURE.md](ARCHITECTURE.md); there
+are no separate guides for them yet.
 
 ## For Developers
 
@@ -72,5 +80,4 @@ API documentation is available at:
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/GrayCodeAI/flux/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/GrayCodeAI/flux/discussions)
 - **Security**: See [SECURITY.md](../SECURITY.md) for vulnerability reporting

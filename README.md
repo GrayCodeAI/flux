@@ -61,6 +61,13 @@ Everything else is engine-internal: `provider`, `catalog`, `config`,
 contracts. Enforced by `rho/scripts/check-flux-engine-boundary.sh`
 and two Go AST tests in `rho/internal/testaudit/`.
 
+Exception: a fixed set of engine-internal symbols is reachable through the
+facade (for example `credentials.Store` behind `engine.Options.SecretStore`
+and `operationsgraph.Input` behind `engine.OperationsGraphInput`). Those
+symbols are frozen as part of the contract; see
+[Frozen engine-internal types](docs/architecture/HOST-ENGINE-BOUNDARY.md#frozen-engine-internal-types).
+`engine/host_surface_test.go` fails when that set changes.
+
 - do not import `rho/internal/*`
 - do not import the removed legacy path `rho/shared/types`
 
@@ -70,8 +77,9 @@ and two Go AST tests in `rho/internal/testaudit/`.
 go get github.com/GrayCodeAI/flux
 ```
 
-Requires Go 1.26+ and a configured provider credential. Minimal dependencies
-(UUID, OpenTelemetry, SQLite, keyring).
+Requires Go 1.26+ and a configured provider credential. Direct dependencies:
+UUID, tiktoken tokenizer, OS keyring, OpenTelemetry, pure-Go SQLite, and gRPC
+(linked only into `-tags grpc` builds of `internal/grpc`).
 
 ```go
 import (
@@ -171,9 +179,9 @@ Named `primary` / `weak` / `editor` model slots with fallback to primary, plus a
 
 `POST /rerank` endpoint (provider-backed with lexical fallback) and a `GET /ready` readiness probe alongside the existing health check.
 
-### gRPC Skeleton
+### gRPC Transport (opt-in, internal)
 
-Dependency-free gRPC API skeleton behind the `grpc` build tag — wired when generated stubs are available.
+`internal/grpc` holds an optional gRPC transport behind the `grpc` build tag. It serves `flux.v1.ChatService/Chat` with a registered `json` content subtype (no `.proto` files or generated stubs; clients call with `grpc.CallContentSubtype("json")`), backed by `EngineChatService` over `conversation.Engine`. The package is internal, so hosts cannot import it, and nothing in flux starts it. `google.golang.org/grpc` is a direct requirement in `go.mod`, so it appears in consumers' module graphs, but only `-tags grpc` builds link it.
 
 ## Documentation
 
@@ -199,40 +207,40 @@ ANTHROPIC_API_KEY=sk-... go run ./examples/basic/
 
 ## Supported Providers
 
-28 provider gateways in `catalog/registry/providers.go` (rho `/config` uses the same list), listed in registry `SortOrder`:
+28 provider gateways in `catalog/registry/providers.go` (rho `/config` uses the same list), listed in registry `SortOrder`. `catalog/registry/docs_test.go` fails when this table, the count, or `.env.example` drift from the registry.
 
 | Provider | ID | Env variable |
 |---|---|---|
-| **Anthropic** | `anthropic` | `ANTHROPIC_API_KEY` |
-| **OpenAI** | `openai` | `OPENAI_API_KEY` |
-| **Google Gemini** | `gemini` | `GEMINI_API_KEY` |
-| **DeepSeek** | `deepseek` | `DEEPSEEK_API_KEY` |
-| **xAI (Grok)** | `grok` | `XAI_API_KEY` |
-| **Kimi (Moonshot)** | `kimi` | `MOONSHOT_API_KEY` |
-| **Z.AI — Coding Plan** | `zai_coding` | `ZAI_CODING_API_KEY` |
-| **Z.AI — Pay-as-you-go** | `zai_payg` | `ZAI_API_KEY` |
-| **Xiaomi (MiMo) Token Plan** | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (+ region `cn` / `sgp` / `ams`) |
-| **Xiaomi (MiMo) Pay-as-you-go** | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` |
-| **MiniMax — Token Plan** | `minimax_token_plan` | `MINIMAX_TOKEN_PLAN_API_KEY` |
-| **MiniMax — Pay-as-you-go** | `minimax_payg` | `MINIMAX_PAYG_API_KEY` |
-| **Azure OpenAI** | `azure` | `AZURE_OPENAI_API_KEY` (+ `AZURE_OPENAI_ENDPOINT`) |
+| **Agnes** | `agnes` | `AGNES_API_KEY` |
 | **Amazon Bedrock** | `bedrock` | `AWS_SECRET_ACCESS_KEY` (+ `AWS_ACCESS_KEY_ID`, `AWS_SESSION_TOKEN`) |
-| **Vertex AI** | `vertex` | `VERTEX_ACCESS_TOKEN` (or `GOOGLE_OAUTH_ACCESS_TOKEN`) |
-| **OpenRouter** | `openrouter` | `OPENROUTER_API_KEY` |
+| **Anthropic** | `anthropic` | `ANTHROPIC_API_KEY` |
+| **Azure OpenAI** | `azure` | `AZURE_OPENAI_API_KEY` (+ `AZURE_OPENAI_ENDPOINT`) |
 | **CanopyWave** | `canopywave` | `CANOPYWAVE_API_KEY` |
-| **Poolside** | `poolside` | `POOLSIDE_API_KEY` |
-| **Groq** | `groq` | `GROQ_API_KEY` |
 | **ClinePass** | `clinepass` | `CLINE_API_KEY` |
 | **Concentrate** | `concentrate` | `CONCENTRATE_API_KEY` |
-| **OpenGateway** | `opengateway` | `OPENGATEWAY_API_KEY` |
-| **StepFun** | `stepfun` | `STEPFUN_API_KEY` |
-| **Agnes** | `agnes` | `AGNES_API_KEY` |
+| **DeepSeek** | `deepseek` | `DEEPSEEK_API_KEY` |
+| **Google Gemini** | `gemini` | `GEMINI_API_KEY` |
+| **Groq** | `groq` | `GROQ_API_KEY` |
+| **Kimi (Moonshot)** | `kimi` | `MOONSHOT_API_KEY` |
 | **LongCat** | `longcat` | `LONGCAT_API_KEY` |
-| **Fireworks AI** | `fireworks` | `FIREWORKS_API_KEY` |
+| **MiniMax — Pay-as-you-go** | `minimax_payg` | `MINIMAX_PAYG_API_KEY` |
+| **MiniMax — Token Plan** | `minimax_token_plan` | `MINIMAX_TOKEN_PLAN_API_KEY` |
+| **OpenAI** | `openai` | `OPENAI_API_KEY` |
 | **OpenCode Go** | `opencodego` | `OPENCODEGO_API_KEY` |
+| **OpenRouter** | `openrouter` | `OPENROUTER_API_KEY` |
 | **Ollama** | `ollama` | `OLLAMA_BASE_URL` (local; no API key) |
+| **Poolside** | `poolside` | `POOLSIDE_API_KEY` |
+| **Vertex AI** | `vertex` | `VERTEX_ACCESS_TOKEN` (or `GOOGLE_OAUTH_ACCESS_TOKEN`) |
+| **xAI (Grok)** | `grok` | `XAI_API_KEY` |
+| **Xiaomi (MiMo) Pay-as-you-go** | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` |
+| **Xiaomi (MiMo) Token Plan** | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (+ region `cn` / `sgp` / `ams`) |
+| **Z.AI — Coding Plan** | `zai_coding` | `ZAI_CODING_API_KEY` (+ region `international` / `cn`) |
+| **Z.AI — Pay-as-you-go** | `zai_payg` | `ZAI_API_KEY` (+ region `international` / `cn`) |
+| **StepFun** | `stepfun` | `STEP_API_KEY` (+ region `global` / `cn`) |
+| **OpenGateway** | `opengateway` | `OPENGATEWAY_API_KEY` |
+| **Fireworks AI** | `fireworks` | `FIREWORKS_API_KEY` |
 
-Runtime auto-detection uses a separate priority order for chat when no deployment is pinned; see `config` profiles.
+Runtime auto-detection uses a separate priority order (`config.APIProviderDetectionOrder`) when no deployment is pinned.
 
 ## Usage
 
@@ -289,38 +297,54 @@ config.SaveProviderConfig(cfg, "")               // save changes
 
 ```
 flux/
-├── engine/                 # Stable host-facing facade and provider-neutral DTOs
-├── provider/               # Provider runtime and feature packages
+├── engine/                 # Stable host-facing facade (hosts import engine, llm, graph, tools)
+├── llm/                    # Host-facing DTOs and the Provider port that engine re-exports
+├── graph/                  # Portable execution-graph vocabulary
+├── tools/                  # Tool-call and tool-result contracts
+├── provider/               # Provider runtime composition root (FluxClient)
 │   ├── core/               # Provider-neutral wire, stream, retry, and transport primitives
 │   ├── adapters/           # Provider protocol adapters and construction registry
-│   └── embeddings/         # Embedding clients, cache, and defaults
+│   ├── resilience/         # Rate limits, continuation, guardrails, and error policy
+│   ├── cache/              # Response and semantic caches
+│   ├── batch/              # Batch execution
+│   ├── embeddings/         # Embedding clients, cache, and defaults
+│   ├── media/              # Image and audio clients, structured prompts
+│   ├── extraction/         # Structured extraction
+│   ├── observability/      # Usage, cost, metrics, tracing, and recording
+│   └── testkit/            # Mock provider for tests
+├── catalog/                # Model catalog & tier system
+│   ├── registry/           # Provider registry (single source of truth for providers)
+│   ├── discover/           # Model discovery
+│   ├── live/               # Live model listing per provider
+│   ├── capabilities/       # Capability and deprecation data
+│   └── concentrate/ opencodego/ opengateway/ xiaomi/ zai/  # Gateway-specific helpers
 ├── config/                 # Provider configuration & routing
 │   └── credential/         # Credential file management
-├── catalog/                # Model catalog & tier system
-│   ├── discover/           # Model discovery
-│   ├── legacy/             # Legacy model support
-│   ├── live/               # Live model data
-│   └── registry/           # Model registry
-├── codeagent/              # Code agent retry & fallback strategies
-├── conversation/           # Conversation engine with branching
-├── credentials/            # Credential management
-├── docs/                   # Documentation & guides
-├── examples/               # Runnable code examples
-├── router/                 # Provider routing strategies
+├── credentials/            # Keyring/env credential stores and OIDC keyless auth
+├── router/                 # Routing strategies, deployment router, circuit breakers
+│   └── controlplane/       # Versioned, signed peer manifests and replicas
+├── runtime/                # Engine-internal provider/model/credential resolution
+├── setup/                  # Catalog-backed deployment wiring
 ├── operationsgraph/        # Privacy-safe route and generation telemetry projection
-├── runtime/                # Runtime manifest & routing policies
-├── storage/                # SQLite conversation DAG store
-├── types/                  # Branded types & API errors
-├── errors/                 # Error message constants
+├── conversation/           # Conversation engine with branching
+├── storage/                # SQLite conversation DAG store, virtual keys, budgets
+├── codeagent/              # Code agent retry & fallback strategies
+├── verify/                 # Provider conformance harness
+├── types/                  # Shared message types & API errors
 ├── constants/              # API limits
 ├── utils/                  # Error utilities
+├── api/                    # OpenAPI spec for internal/api
 ├── internal/
-│   ├── api/                # HTTP API handlers
-│   ├── cache/              # Response cache warmer
+│   ├── api/                # HTTP API server (library code; no flux binary starts it)
+│   ├── cache/              # Cache backends and response cache warmer
+│   ├── grpc/               # Optional gRPC transport (build tag grpc)
 │   ├── health/             # Provider health checker
-│   ├── observability/      # OpenTelemetry spans & metrics
-│   ├── sdk/                # Go, Python, TypeScript client SDKs
-│   └── version/            # Version information
+│   ├── httputil/ probehttp/ shrink/  # HTTP, probe, and tool-description helpers
+│   ├── observability/      # OpenTelemetry spans, metrics, and audit sinks
+│   └── sdk/                # Go, Python, TypeScript clients for the internal/api HTTP surface
+├── docs/                   # Documentation & guides
+├── examples/               # Runnable code examples
+├── scripts/                # CI guards and helper scripts
 └── assets/                 # Logo and branding
 ```
 

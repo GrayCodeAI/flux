@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # E2E test: /config flow — hub → credential → discover → picker → chat
-# Run from flux root: bash scripts/test-config-flow.sh
+# Run from anywhere: bash scripts/test-config-flow.sh
+# Counts are derived from catalog/registry/providers.go, never hardcoded.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
 PASS=0
 FAIL=0
@@ -12,13 +14,13 @@ fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 echo "=== Config Flow E2E Test ==="
 echo
 
-# 1. Verify provider registry has all 11 providers
+# 1. Verify the provider registry is populated
 echo "--- provider registry ---"
-count=$(cd .. && grep -c "ProviderID:" flux/catalog/registry/providers.go 2>/dev/null || echo 0)
-if [ "$count" -ge 11 ]; then
+count=$(grep -c "ProviderID:" catalog/registry/providers.go || true)
+if [ "${count:-0}" -gt 0 ]; then
   pass "registry has $count provider specs"
 else
-  fail "expected >= 11 providers, got $count"
+  fail "no ProviderID entries found in catalog/registry/providers.go"
 fi
 
 # 2. Verify all providers have deployment env fallbacks
@@ -39,14 +41,13 @@ else
   fail "credential registry function not found"
 fi
 
-# 4. Verify all providers have live fetchers
+# 4. Verify every registry provider has a live fetcher
 echo "--- live fetchers ---"
-cd "$(dirname "$0")/.."
-fetchers=$(grep -c '".*":\s*Fetch' catalog/live/fetchers.go 2>/dev/null || echo 0)
-if [ "$fetchers" -ge 11 ]; then
-  pass "all 11 providers have live fetchers"
+fetchers=$(grep -cE '^[[:space:]]+"[a-z0-9_]+":[[:space:]]+Fetch' catalog/live/fetchers.go || true)
+if [ "${fetchers:-0}" -eq "${count:-0}" ]; then
+  pass "all $count registry providers have live fetchers"
 else
-  fail "expected >= 11 fetchers, got $fetchers"
+  fail "registry has ${count:-0} providers but catalog/live/fetchers.go registers ${fetchers:-0} fetchers"
 fi
 
 # 5. Verify build + tests pass

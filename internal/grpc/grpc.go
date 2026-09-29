@@ -1,11 +1,17 @@
-// Package grpc holds a dependency-free skeleton for an flux gRPC API.
+// Package grpc is Flux's optional gRPC transport for the conversation engine.
 //
-// flux does not currently import google.golang.org/grpc, and per repo policy
-// that dependency is not added speculatively. This file therefore defines only
-// the service contract and a no-op default implementation so the rest of the
-// codebase can reference the gRPC surface today. The real server wiring lives
-// in server_grpc.go behind the "grpc" build tag. See README.md for the design
-// note and codegen steps.
+// This untagged file holds the transport-independent ChatService contract,
+// its request/response structs, a no-op default (NewChatService) and
+// EngineChatService, which serves a unary Chat as one conversation.Engine
+// prompt. It does not import google.golang.org/grpc.
+//
+// server_grpc.go (build tag "grpc") imports google.golang.org/grpc, registers
+// a "json" codec and serves flux.v1.ChatService/Chat. There are no .proto
+// files or generated stubs: clients select grpc.CallContentSubtype("json").
+// Because of that tagged file, google.golang.org/grpc is a direct requirement
+// in go.mod and appears in consumers' module graphs, although untagged builds
+// do not link it. The package is internal, so hosts cannot import it, and
+// nothing in Flux starts the server. See README.md.
 package grpc
 
 import (
@@ -34,21 +40,17 @@ type ChatResponse struct {
 }
 
 // ChatService is the flux gRPC service contract: a single unary Chat RPC.
-// A concrete implementation will adapt conversation.Engine; see README.md.
+// EngineChatService is the conversation.Engine-backed implementation.
 type ChatService interface {
 	Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error)
 }
 
-// noopChatService is the default ChatService. It returns ErrUnimplemented so
-// callers get a clear signal that the gRPC backend has not been wired up.
+// noopChatService is the placeholder ChatService. It returns ErrUnimplemented
+// so callers get a clear signal that no backend was supplied.
 type noopChatService struct{}
 
-// ErrUnimplemented is returned by the default ChatService until a real
-// gRPC-backed implementation is provided.
-//
-// When google.golang.org/grpc and the generated protobuf stubs are added
-// (see README.md), replace noopChatService with an engine-backed adapter
-// and register it via server_grpc.go (build tag "grpc").
+// ErrUnimplemented is returned by the placeholder ChatService from
+// NewChatService and by an EngineChatService built with a nil engine.
 var ErrUnimplemented = errUnimplemented{}
 
 type errUnimplemented struct{}
@@ -59,9 +61,8 @@ func (noopChatService) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, e
 	return nil, ErrUnimplemented
 }
 
-// NewChatService returns the default (no-op) ChatService. It exists so callers
-// have a stable constructor; once a real backend exists this will return the
-// engine-backed implementation instead.
+// NewChatService returns the placeholder (no-op) ChatService. Use
+// NewEngineChatService for a working backend.
 func NewChatService() ChatService {
 	return noopChatService{}
 }
@@ -74,7 +75,8 @@ type EngineChatService struct {
 }
 
 // NewEngineChatService returns a ChatService backed by a conversation.Engine.
-// It is the real backend referenced by the gRPC server (build tag "grpc").
+// Pass it to NewServer or Serve (build tag "grpc") to expose the engine over
+// gRPC.
 func NewEngineChatService(engine *conversation.Engine) ChatService {
 	return &EngineChatService{engine: engine}
 }

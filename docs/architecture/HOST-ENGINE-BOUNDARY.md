@@ -32,7 +32,7 @@ Provider model APIs
 
 The dependency is one-way: Flux must not import Rho. Rho's integration layer
 may import `flux/engine`; Rho command, conversation, and UI packages must not
-assemble Flux's `catalog`, `client`, `config`, `credentials`, `router`,
+assemble Flux's `catalog`, `provider`, `config`, `credentials`, `router`,
 `runtime`, or `setup` packages.
 
 ## Composition root
@@ -76,6 +76,37 @@ Provider-specific wire types, authentication headers, retry behavior, and raw
 stream events do not cross this boundary. `Model` keeps distinct `Owner`,
 `ProviderID`, `GatewayID`, `CanonicalID`, `Source`, and `LiveMetadata` fields so
 Rho does not reconstruct catalog meaning.
+
+## Frozen engine-internal types
+
+Contract v2 is not closed over `engine`, `llm`, `graph`, and `tools`. The
+engine-internal symbols below are reachable from the facade through aliases,
+`Options` fields, and re-exported functions, so they are frozen as part of
+contract v2. Changing their names, fields, method sets, or signatures breaks
+hosts exactly like changing `engine` itself and needs a contract-version bump.
+
+| Frozen symbol | Reached through |
+|---|---|
+| `credentials.Store` | `Options.SecretStore`; `SetDefaultStore` / `DefaultStore` signatures |
+| `credentials.MapStore` | alias `engine.MapStore` (test fixture) |
+| `credentials.SetDefaultStore` | `engine.SetDefaultStore` (test fixture) |
+| `credentials.DefaultStore` | `engine.DefaultStore` (test fixture) |
+| `operationsgraph.Input` | alias `engine.OperationsGraphInput` |
+| `operationsgraph.Export` | alias `engine.OperationsGraphExport` |
+| `provider/resilience.AdaptiveRateLimitConfig` | `Options.RateLimitConfig` |
+| `provider/resilience.HeaderExtractor` | `AdaptiveRateLimitConfig.HeaderExtractor` |
+| `provider/resilience.RateLimitHeaders` | result of `HeaderExtractor` |
+| `provider/cache.CacheConfig` | `Options.CacheConfig` |
+
+Rho uses `engine.MapStore`, `engine.DefaultStore`, `engine.SetDefaultStore`,
+`engine.OperationsGraphInput`, and `engine.BuildOperationsGraph` today, and its
+import-path boundary checks cannot see through the aliases. Flux therefore
+guards the set itself: `engine/host_surface_test.go` walks the exported surface
+of the four contract packages, follows every engine-internal symbol it reaches
+through struct fields, signatures, and exported methods, and fails when the
+reachable set differs from this table. To drop an entry, give `engine` its own
+type and bump the contract version; to add one, update the test's list and
+this table in the same change.
 
 ## Credential-to-conversation flow
 
@@ -206,6 +237,7 @@ Rho with `GOWORK=off`.
 ## Compatibility policy
 
 Lower-level Flux packages remain public for non-Rho consumers and staged
-migration, but they are not part of Rho's product boundary. Additive fields
+migration, but they are not part of Rho's product boundary, apart from the
+frozen symbols listed above. Additive fields
 and stream events are allowed within contract v2. Removing or changing stable
 DTO semantics requires a contract-version and semantic-version boundary.

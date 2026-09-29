@@ -1,25 +1,18 @@
-// Package runtime is the **recommended entry point** for host applications
-// (e.g. rho). Start by calling runtime.Load to get a *Runtime, then
-// rt.ChatProvider to obtain a core.Provider that you can hand to your
-// agent loop.
+// Package runtime resolves the active provider, model, deployment routing and
+// credentials into a ready-to-use core.Provider: Load returns a *Runtime whose
+// ChatProvider builds the transport for the current selection.
 //
-// Note: the "stable" surface of flux is actually a set of cooperating
-// subpackages, not just this one. The full list rho (and other host
-// applications) actually import is:
+// runtime is engine-internal. Hosts such as Rho must not import it; the host
+// contract is limited to github.com/GrayCodeAI/flux/engine, llm, graph and
+// tools (see docs/architecture/HOST-ENGINE-BOUNDARY.md), and engine calls this
+// package on the host's behalf. The package stays importable for Flux's own
+// packages and non-Rho integrations, but its exported names are not covered by
+// engine.ContractVersion and may change in any release.
 //
-//	github.com/GrayCodeAI/flux/runtime          (this package — bootstrap facade)
-//	github.com/GrayCodeAI/flux/provider           (Provider interface, message/response types)
-//	github.com/GrayCodeAI/flux/catalog         (model catalog: pricing, capabilities, registry)
-//	github.com/GrayCodeAI/flux/catalog/registry (ProviderSpec catalog: 16 registered providers)
-//	github.com/GrayCodeAI/flux/catalog/xiaomi  (Xiaomi-specific catalog helpers)
-//	github.com/GrayCodeAI/flux/config          (provider config + env var resolution)
-//	github.com/GrayCodeAI/flux/credentials     (OS keyring + OIDC keyless CI auth)
-//	github.com/GrayCodeAI/flux/setup           (CLI/setup wiring, RoutingPreviewJSON)
-//	github.com/GrayCodeAI/flux/storage         (conversation DAG persistence)
-//
-// They are all considered part of the public API; changes to exported
-// names are gated by semver. Anything under internal/ is implementation
-// detail and may change without notice.
+// Provider metadata (IDs, credential variables, protocols, regions) comes from
+// the catalog registry in github.com/GrayCodeAI/flux/catalog/registry; do not
+// restate its size here, it is checked against the docs by
+// catalog/registry/docs_test.go.
 package runtime
 
 import (
